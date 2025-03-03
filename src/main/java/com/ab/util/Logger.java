@@ -22,6 +22,7 @@ package com.ab.util;
 import com.ab.jpref.config.Config;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -77,7 +78,7 @@ public class Logger {
             return false;
         });
         logFileName = logDir + File.separator + String.format("%s%03d%s", date, lastNum[0] + 1, LOG_EXT);
-        PrintStream res = new PrintStream(Files.newOutputStream(Paths.get(logFileName)));
+        PrintStream res = new PrintStream(logFileName, StandardCharsets.UTF_8.name());
         return res;
     }
 
