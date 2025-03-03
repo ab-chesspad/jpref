@@ -1,0 +1,14 @@
+#declare-game
+#8s9sXs7c8c9cXc7d9d7hAsAh 1 -> misere, ♠A, ♥A # small hole
+♠89X ♣789X ♦79 ♥7 ♠A ♥A 1 -> misere, ♠A, ♥A # ?? small hole
+#♠ ♣ ♦ ♥
+♠J ♣78KA ♦XQ ♥89JKA 1 -> 7♥, ♦X, ♠j
+♠9 ♣89JQ ♦78XA ♥7XQ 1 -> pass, ♥7, ♠9
+♠78XQKA ♣8X ♦9XJK 1 -> 8♠, ♣X, ♣8
+♠78K ♣QA ♦7X ♥89QKA 2 -> 6♥, ♦7, ♦X
+
+♠7A ♣789XA ♦79J ♥79 1 -> misere, ♠A, ♥9 # clean
+♠7A ♣789X ♦79J ♥79A 1 -> misere, ♠A, ♥A # clean
+♠QA ♣789X ♦79J ♥79 ♣A 1 -> misere, ♠A, ♣A # singleton
+♠Q ♣789X ♦79J ♥79 ♠A ♣A 2 -> pass, ♠A, ♣A # singleton on 2nd hand
+

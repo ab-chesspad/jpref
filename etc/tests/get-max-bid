@@ -1,0 +1,11 @@
+#getmaxbid hand, turn, left bid, right bid -> max bid
+♠Q ♣789X ♦79J ♥79  0 -- -- -> misere # singleton
+♠Q ♣789X ♦79J ♥79  1 -- -- -> pass # singleton on 2nd hand
+♠89X ♣789X ♦79 ♥7  0  6♠ 6♣ -> misere # small hole ?
+♠7 ♣789X ♦79J ♥7X  0 -- -- -> misere # small hole 7-10
+♠7XQ ♣XJK ♦7 ♥89K  0 -- -- -> pass
+♠89 ♣79 ♦9QK ♥XJQ  0 -- 6♠ -> pass
+♠JKA ♣XJQ ♦8XJA  0 -- -- 7♠ -> pass
+♠7 ♣789X ♦79J ♥79  0 -- -- -> misere # clean
+♠7 ♣789X ♦79 ♥7XJ  0 -- -- -> misere # 7-10-J
+

@@ -1,0 +1,57 @@
+<html>
+<head><meta http-equiv="content-type" content="text/html; charset=utf-8"></head><body>
+<font size="6"><b>JPref V 0.0.0.1</b></font><br/><br/>
+The goal of this project is building a program to play Russian Preferans, two bots agains a human player.
+Honest game, no peeping or cheating.
+<br/>
+This version is far from completion. It's only a graphical ptatform for testing.<br/>
+It can only do bidding and play all-pass.
+<br/>
+<br/>
+<font size="5"><b>Installation</b></font><br/>
+The program can run on all OS that support standard Java, like Windows, macOS, Linux.<br/>
+JRE 1.8 or later is needed to run JPref.<br/>
+If you do not have JRE installed, you can find all the necessary instructions here: <a href="https://www.java.com/en/download/help/download_options.html">www.java.com/en/download/help/download_options.html.</a>
+If you do not plan to build this project and just want to play with the program, JRE will be enough, JDK is not necessary. In this case you can get the pre-build program ... here.
+<br/>
+<br/>
+<font size="5"><b>Launch</b></font><br/>
+Open Terminal window (cmd.exe on Mindows) and type:<br/>
+<b>java -jar &lt;path to jpref.jar&gt; [list of deals]</b><br/>
+If the list of deals is specified, it will be used for play instead of random deals.
+This allows better program testing.<br/>
+One can use a log that the program generates (see below) as a list of deals.<br/>
+JPref can work на русском и in English. If you use English OS and want JPref to use Russian, change the launching command to:<br/>
+<b>java -Duser.language=ru -jar &lt;path to jpref.jar&gt; [list of deals]</b>
+<br/>
+<br/>
+<font size="5"><b>Running the program</b></font><br/>
+JPref can only play all-pass, so this version goes directly there, skipping bidding. Also card selection during play is simplified, it requires
+a single left-button mouse click (in the real game the confirmation will be needed).<br/>
+The program menu is invoked with a right-button mouse click:
+<ul>
+    <li>New Game - the current gane will be aborted.</li>
+    <li>Replay - replay the current deal.</li>
+    <li>Пуля - not implemented yet.</li>
+    <li>Послать лог - see below.</li>
+</ul>
+The program has a bunch of settings, but so far only the window location and size can be changed, the rest are not configurable.<br/>
+The important program feature is logging. The program records there all the games. Logs are located in 'logs' directory, either next to jpref.jar
+file (macOS, Linux), or in &lt;your home folder&gt;\jpref (Windows). New log is opened with a new program launch or with e new day.<br/>
+Button Comments (second right in the bottom right corner) invokes a comment window. Important to record program errors, stupid moves, etc.<br/>
+The whole comment text will be written into the log that the user can submit to the developer:
+<ul>
+    <li>Through the menu. Limitations - only the current log and once a day.</li>
+    <li>Via github - open an issue.</li>
+    <li>Send the log file to <a href="mailto:ab.jpref@gmail.com">ab.jpref@gmail.com</a></li>
+</ul>
+<br/>
+<font size="5"><b>Exit</b></font><br/>
+It is recommended to exit the program via 'x' button at the top of the program window. Then it will remember the window size and location and
+it will open it on the same spot next time.<br/><br/>
+
+Please participate in the development and/or testing.<br/>
+Thank you for reading this whole text.
+
+</body>
+</html>

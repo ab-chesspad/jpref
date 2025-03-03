@@ -1,0 +1,10 @@
+#fixedplay
+deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> all-pass
+deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> all-pass
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> 0 misere # small hole 7-10
+deal: ♠J ♣7KA ♦Q ♥89JKA   ♠9 ♣9JQ ♦78A ♥7XQ   ♠78XQKA ♣X ♦9JK     ♣8X 1 -> 0 6♣
+deal: ♠78KA ♣XJQ ♦9JK   ♠J ♣7KA ♦Q ♥89JKA   ♠9XQ ♣9 ♦78A ♥7XQ     ♣8X 1 -> 1 6♠
+deal: ♠78Q ♣9 ♦89A ♥78A   ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK     ♥JQ 2  -> 1 6♠
+deal: ♠9JQA ♣7K ♦8JQ ♥X   ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♦7X 2 -> 1 6♠
+deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠89QA ♣9X ♥789X     ♠X8 0 -> 0 6♠
+
