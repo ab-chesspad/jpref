@@ -23,8 +23,6 @@ import com.ab.jpref.config.Config;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -66,7 +64,7 @@ public class Logger {
                 return false;
             }
             name = name.substring(date.length());
-            int num = 0;
+            int num;
             try {
                 num = Integer.parseInt(name);
             } catch (NumberFormatException e) {
