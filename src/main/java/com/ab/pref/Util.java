@@ -44,6 +44,9 @@ public class Util {
     }
 
     public static BufferedImage scale(BufferedImage original, int newWidth, int newHeight) {
+        if (newWidth < 10 || newHeight < 10) {
+            return original;    // quick & dirty
+        }
         BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
         double scale = (double) newWidth / original.getWidth(null);
         double scaleH = (double) newHeight / original.getHeight(null);
@@ -64,7 +67,7 @@ public class Util {
         InputStream is = null;
         File f = new File(filePath);
         String fileName = f.getName();
-        String GUID = JPrefConfig.getInstance().GUID.get();
+        String GUID = PConfig.getInstance().GUID.get();
         String remoteFileName = GUID + "-" + fileName;
         System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
 

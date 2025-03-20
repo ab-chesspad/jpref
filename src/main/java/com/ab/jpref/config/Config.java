@@ -43,9 +43,10 @@ import java.net.URISyntaxException;
 
 public class Config implements Serializable {
     public final Property<IntTriplet> animDelay = new Property<>("Animation Time", new IntTriplet(100,1,200));
+    public final Property<String> gameType = new Property<>("Game Type", "Miami");
     public final Property<Integer> poolSize = new Property<>("Pool Length", 10);
     public final Property<String> playerNames = new Property<>("Player's Names", "Ann, Bob, Cat");
-    public final Property<Integer> sleepBetweenRounds = new Property<>("Round Timeout", 100);
+    public final Property<Integer> sleepBetweenRounds = new Property<>("After Round Timeout", 100);
 
     public static final String PROJECT_NAME = "jpref";
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
@@ -89,8 +90,7 @@ public class Config implements Serializable {
         BID_XD(103, "10♦"),
         BID_XH(104, "10♥"),
         BID_XN(105, "10-"),
-        
-        dummy(-1, "null");
+        ;
 
         private final int value;
         private final String name;
@@ -207,11 +207,8 @@ public class Config implements Serializable {
         try (FileInputStream file = new FileInputStream(configFile);
              ObjectInputStream in = new ObjectInputStream(file)) {
             object = in.readObject();
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-        } catch (ClassNotFoundException e) {
-//            e.printStackTrace();
-            System.err.println(e.getMessage());
+        } catch (IOException | ClassNotFoundException e) {
+            Logger.println(e.getMessage());
         }
         return object;
     }
@@ -227,7 +224,7 @@ public class Config implements Serializable {
         }
     }
 
-
+    // not sure that I'll need it
     public static class IntTriplet implements Serializable {
         private int min, max, value;
 

@@ -27,46 +27,40 @@ import java.util.*;
 
 public abstract class Player {
     public enum PlayerPoints {
-        leftPoints, rightPoints, poolPoints, dumpPoints, total
+        leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
     protected final String name;
     protected Config.Bid bid;
     protected final CardList[] mySuits = new CardList[Card.Suit.values().length - 1];
-    //    private final CardList[] theirSuits = new CardList[Suit.values().length - 1];
-    @SuppressWarnings("unchecked")
-    protected final Set<Card>[] theirSuits = new Set[Card.Suit.values().length - 1];
+    protected final CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
+    protected final CardList[] rightSuits = new CardList[Card.Suit.values().length - 1];
+
     final List<RoundResults> history = new LinkedList<>();
     int tricks;
     RoundData roundData;
 
-//    private final List<Card> leftHand = new ArrayList<>();    // cards of left player (supposed or open)
-//    private final List<Card> rightHand = new ArrayList<>();   // cards of right player (supposed or open)
+//    public abstract Config.Bid getBid(Config.Bid minBid, int turn);
+//    //    public abstract Config.Bid getMaxBid(Config.Bid minBid, int turn, Config.Bid leftBid, Config.Bid rightBid);
+//    public abstract Player.RoundData declareRound(Config.Bid minBid, int turn);
+    public abstract Card play(Trick trick);
 
-    // minBid needed to compare loss between pass and bid
-//    public abstract Config.Bid getMaxBid(CardList[] mySuits, Set<Card> discarded, int turn, Config.Bid leftBid, Config.Bid rightBid, Config.Bid minBid);
-//    public abstract Player.RoundData declareRound(int turn, Config.Bid leftBid, Config.Bid rightBid, Config.Bid minBid);
-//    public abstract Card play(Card.Suit startSuit, Card leftCard, Card rightCard, Set<Card> discarded);
-
-    public abstract Config.Bid getBid(Config.Bid minBid, int turn);
-    //    public abstract Config.Bid getMaxBid(Config.Bid minBid, int turn, Config.Bid leftBid, Config.Bid rightBid);
-    public abstract Player.RoundData declareRound(Config.Bid minBid, int turn);
-    public abstract Card play(GameManager.Trick trick);
-
-    // to be implemented in a subclass
+    // to be implemented in a subclass (human player)
     public void accept(Queueable q) {}
 
-    // to be implemented in a subclass
+    // to be implemented in a subclass (human player)
     public void clearQueue() {}
 
-    // to be implemented in a subclass
-    public void abortThread() {}
+    // to be implemented in a subclass (human player)
+    public void abortThread(GameManager.RestartCommand restartCommand) {}
 
     public Player(String name) {
         this.name = name;
         for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
             mySuits[i] = new CardList();
-            theirSuits[i] = new HashSet<>();
+            leftSuits[i] = new CardList();
+            rightSuits[i] = new CardList();
         }
+        roundData = new RoundData();
     }
 
     public Player(String name, Collection<Card> cards) {
@@ -81,22 +75,30 @@ public abstract class Player {
         CardList deck = CardList.getDeck();
         for (Card card : deck) {
             if (hand.contains(card)) {
-                mySuits[card.getSuit().ordinal()].add(card);
+                mySuits[card.getSuit().getValue()].add(card);
             } else {
-                theirSuits[card.getSuit().ordinal()].add(card);
+                leftSuits[card.getSuit().getValue()].add(card);
+                rightSuits[card.getSuit().getValue()].add(card);
             }
         }
-        bid = Config.Bid.BID_UNDEFINED;
-
-        // debug:
-        for (int i = 0; i < 7; ++i) {
-            history.add(new RoundResults(2 + i, 3 + i,
-                    10 + 2 * i, 11 + 2 * i));
+        for (CardList cardList : leftSuits) {
+            Collections.sort(cardList);
         }
+        for (CardList cardList : rightSuits) {
+            Collections.sort(cardList);
+        }
+        bid = Config.Bid.BID_UNDEFINED;
+        roundData = new RoundData();
     }
 
     public void clear() {
         for (CardList cardList : mySuits) {
+            cardList.clear();
+        }
+        for (CardList cardList : leftSuits) {
+            cardList.clear();
+        }
+        for (CardList cardList : rightSuits) {
             cardList.clear();
         }
         this.tricks = 0;
@@ -119,9 +121,6 @@ public abstract class Player {
         StringBuilder sb = new StringBuilder();
         Card.Suit oldSuit = null;
         for (CardList suit : this.mySuits) {
-//            if (!suit.equals(oldSuit)) {
-//                sb.append(" ");
-//            }
             String s = suit.toString();
             if (!s.isEmpty()) {
                 sb.append(s).append(" ");
@@ -130,14 +129,8 @@ public abstract class Player {
         return sb.toString();
     }
 
-    public void updateWithRound() {
-/*
-        poolPonts += roundData.poolPonts;
-        dumpPoints += roundData.dumpPoints;
-        leftPoints += roundData.leftPoints;
-        rightPoints += roundData.rightPoints;
-*/
-//        roundData.clear();
+    public RoundResults getRoundResults() {
+        return roundData.roundResults;
     }
 
     public RoundData getRoundData() {
@@ -158,9 +151,9 @@ public abstract class Player {
 
     public void takeTalon(CardList talon) {
         for (Card card : talon) {
-            mySuits[card.getSuit().ordinal()].add(card);
-            theirSuits[card.getSuit().ordinal()].remove(card);
-//            theirSuits[card.getSuit().ordinal()].remove(card);
+            mySuits[card.getSuit().getValue()].add(card);
+            leftSuits[card.getSuit().getValue()].remove(card);
+            rightSuits[card.getSuit().getValue()].remove(card);
         }
         talon.clear();
     }
@@ -173,20 +166,17 @@ public abstract class Player {
         return history;
     }
 
-    protected Card play(Card card, Set<Card> discarded) {
-        roundData = new RoundData();
-        history.add(roundData.getRoundResults());
+    public void discard(Card card) {
         int suitNum = card.getSuit().getValue();
-        CardList suit = mySuits[suitNum];
-        suit.remove(card);      // fix it
-        discarded.add(card);
-        return card;
+        mySuits[suitNum].remove(card);
+        leftSuits[suitNum].remove(card);
+        rightSuits[suitNum].remove(card);
     }
 
     public interface Queueable {}
 
     public static class RoundResults {
-        final int[] points = new int[PlayerPoints.total.ordinal()];
+        final int[] points = new int[PlayerPoints.values().length];
 
         public RoundResults() {
         }
@@ -202,35 +192,22 @@ public abstract class Player {
             return points[location.ordinal()];
         }
 
-        public void setPoints(int location, int points) {
-            this.points[location] = points;
-        }
-
-        public int getPoints(int location) {
-            return this.points[location];
+        public void setPoints(PlayerPoints location, int points) {
+            this.points[location.ordinal()] = points;
         }
     }
 
     public static class RoundData {
         public final Config.Bid bid;
-        public final int holes;
-        public final Set<Card> discarded = new HashSet<>();
-        RoundResults roundResults;
+        Player declarer;
+        RoundResults roundResults = new RoundResults();
 
         public RoundData() {
-            this(null, 0, null);
+            this(null);
         }
 
-        public RoundData(Config.Bid bid, Set<Card> discarded) {
-            this(bid, 0, discarded);
-        }
-
-        public RoundData(Config.Bid bid, int holes, Set<Card> discarded) {
+        public RoundData(Config.Bid bid) {
             this.bid = bid;
-            this.holes = holes;
-            if (discarded != null) {
-                this.discarded.addAll(discarded);
-            }
         }
 
         public RoundResults getRoundResults() {
@@ -239,8 +216,8 @@ public abstract class Player {
     }
 
     public static class PrefExceptionRerun extends RuntimeException {
-        public PrefExceptionRerun() {
-            super("game restarted");
+        public PrefExceptionRerun(String msg) {
+            super(msg);
         }
     }
 }

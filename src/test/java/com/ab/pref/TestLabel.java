@@ -27,7 +27,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
 public class TestLabel {
-    static final boolean USE_PLabel = false;
+    static final boolean USE_PLabel = true;
     JFrame mainFrame;
 
     public static void main(String[] args) {
@@ -74,20 +74,26 @@ public class TestLabel {
             });
 
             if (USE_PLabel) {
-                this.setOpaque(true);
-                this.setBackground(Color.green);
+//                this.setOpaque(true);
+//                this.setBackground(Color.green);
                 this.setLayout(null);
+
                 westLabel = new PLabel(Math.PI / 2); // west
-                westLabel.setText("West");
+                westLabel.setText("<html>Very very wild <font color=\"white\">West</font>");
+                westLabel.setOpaque(true);
+                westLabel.setBackground(Color.magenta);
                 this.add(westLabel);
 
                 eastLabel = new PLabel(-Math.PI / 2);  // east
                 eastLabel.setText("East");
-                this.add(eastLabel);
+//                this.add(eastLabel);
 
                 southLabel = new PLabel(0);  // south
-                southLabel.setText("South");
+                southLabel.setText("<html><font color=\"white\">Very</font> very far South");
+                southLabel.setOpaque(true);
+                southLabel.setBackground(Color.green);
                 this.add(southLabel);
+
                 resized();
             }
         }
@@ -98,12 +104,13 @@ public class TestLabel {
             }
             Rectangle bounds = this.getBounds();
             Logger.printf("jPrefPanel.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), bounds);
-            int fontSizeW = 40, fontSizeE = 40, fontSizeS = 40;
+            int fontSizeW = 20, fontSizeE = 40, fontSizeS = 40;
             int heightW = bounds.height / 4;
             int heightE = bounds.height / 4;
             int widthS = bounds.width / 2;
             westLabel.setFont(new Font("Serif", Font.PLAIN, fontSizeW));
-            westLabel.setBounds(bounds.x, bounds.y + bounds.height - heightW, fontSizeW, heightW);
+//            westLabel.setPBounds(bounds.x + 100, bounds.y, 150, 400);
+            westLabel.setPBounds(0, 0, 100, 400);
 
             eastLabel.setFont(new Font("Serif", Font.PLAIN, fontSizeE));
             eastLabel.setBounds(bounds.x + bounds.width - fontSizeE,
@@ -120,19 +127,23 @@ public class TestLabel {
         @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
+
+            Graphics2D g2d = (Graphics2D) g;
+            Rectangle r = westLabel.getBounds();
+
+            Rectangle bounds = this.getBounds();
+            int x0 = r.x + r.width / 2;
+            int y0 = r.y + r.height / 2;
+
+            // axes
+            g2d.drawLine( x0, bounds.y, x0, bounds.y + bounds.width);
+            g2d.drawLine( bounds.x, y0, bounds.x + bounds.height, y0);
+
+            g2d.drawRect(r.x - 1, r.y - 1, r.width + 2, r.height + 2);  // vertical
+
             if (USE_PLabel) {
                 return;
             }
-
-            Graphics2D g2d = (Graphics2D) g;
-            Rectangle r;
-//            r = new Rectangle(100, 40, 40, 300);
-//            r = new Rectangle(100, 40, 40, 400);
-            r = new Rectangle(100, 40, 60, 400);
-//            r = new Rectangle(100, 40, 80, 400);
-//            r = new Rectangle(100, 40, 80, 300);
-//            r = new Rectangle(100, 40, 20, 400);
-//            r = new Rectangle(100, 40, 40, 300);
 
             drawLabel(g2d, "a string", -Math.PI / 2, r);
             r.x += 200;

@@ -14,4 +14,11 @@ public class Point extends Pair<Integer, Integer> {
         super(x, y);
     }
 
+    public int getX() {
+        return first;
+    }
+
+    public int getY() {
+        return second;
+    }
 }

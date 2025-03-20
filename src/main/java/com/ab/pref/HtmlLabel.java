@@ -99,5 +99,6 @@ public class HtmlLabel extends JLabel {
         }
         text = sb.toString();
         setText(text);
+        g.dispose();
     }
 }

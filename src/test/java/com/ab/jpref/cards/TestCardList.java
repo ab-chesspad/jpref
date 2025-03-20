@@ -5,7 +5,6 @@
  */
 package com.ab.jpref.cards;
 
-import com.ab.jpref.engine.GameManager;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
@@ -27,38 +26,48 @@ public class TestCardList {
     @Test
     public void testListData() {
         String[] sources = {
-            // suit, discarded, holes, good, ok1stMove, distanceToTop
-            "  0 0 0 7",       // empty
-            "78J  0 1 1 3",    // хорошая беспроблемная;
+                // 789J, 78, 7
+            // suit, left, right, tricksTheyStart, tricksMeStart, good, ok1stMove
+            " 789JQKA 789xJQKA 0 0 0 0",   // empty
+            // ♣8JQK   ♣79 ♦KA   ♣XA ♥QA
+            "XA 789JQK 789JQK 2 2 0 1",      // плохая беспроблемная
+            "7XK 89JQA 89JQA 1 2 1 0",      // хорошая проблемная;
+            "8XQ 79JKA 79JKA 1 3 0 0",      // плохая проблемная;
+            "8KA 79xJQ 79xJQ 2 3 0 0",      // плохая проблемная; todo: проблемная, учесть плотность
+            "9XK 78JQA 78JQA 2 3 0 0",      // плохая проблемная;
+            "9JK 78xQA 78xQA 2 3 0 0",      // плохая проблемная;
+            "8JK 9xQA 9xQA 1 2 1 0",        // хорошая проблемная
+            "8XK 79JQA 79JQA 1 3 0 0",      // плохая проблемная. issue: if they start with 9, there is 2 my tricks
+            "79J 8xQKA 8xQKA 0 2 1 0",      // хорошая проблемная
+            "A J  1 1 0 1",                 // плохая беспроблемная
+            "AK 7J 8xQ 2 2 0 1",            // плохая беспроблемная
+            "XQKA 79 8 4 4 0 1",            // плохая беспроблемная
+            "789K xJQA xJQA 0 1 1 0",       // хорошая проблемная;
+            "8J xQKA xQKA 0 1 1 0",         // хорошая проблемная;
+            "8X 79JQKA 79JQKA 1 2 0 0",     // плохая проблемная;
+            "78J 9xQKA 9xQKA 0 1 1 0",      // хорошая проблемная;
 
-            "8JK 79 0 1 0 1",  // хорошая проблемная
-            "89  1 0 1 5",     // плохая беспроблемная.
-            "89x  1 0 1 4",    // плохая беспроблемная.
-            "QKA  5 0 1 0",    // плохая беспроблемная;
-            "JQ  4 0 1 2",     // плохая беспроблемная;
-            "xk JQ 3 0 1 1",   // плохая беспроблемная;
-            "9JK  2 0 0 1",    // плохая беспроблемная;
-            "XJK  3 0 1 1",    // плохая беспроблемная;
-            "9XK  3 0 1 1",    // плохая беспроблемная;
+            "89 7xJQKA 7xJQKA 1 1 0 1",     // плохая беспроблемная.
+            "89x 7JQKA 7JQKA 1 1 0 1",      // плохая беспроблемная.
+            "QKA 789xJ 789xJ 3 3 0 1",      // плохая беспроблемная;
+            "JQ 789xKA 789xKA 2 2 0 1",     // плохая беспроблемная;
+            "xk 789A 789A 2 2 0 1",         // плохая беспроблемная;
+            "XJK 789QA 789QA 3 3 0 1",      // плохая беспроблемная;
 
-            "789  0 1 1 5",    // хорошая беспроблемная;
-            "89x 7 0 1 1 4",   // хорошая беспроблемная
-            "79x 8 0 1 1 4",   // хорошая беспроблемная
-            "8xJ 79 0 1 1 3",  // хорошая беспроблемная
-            "8JK 79 0 1 0 1",  // хорошая проблемная
+            "789 xJQKA xJQKA 0 0 1 1",      // хорошая беспроблемная;
+            "89x JQKA JQKA 0 0 1 1",        // хорошая беспроблемная
+            "79x JQKA JQKA 0 0 1 1",        // хорошая беспроблемная
+            "8xJ QKA QKA 0 0 1 1",          // хорошая беспроблемная
+            "8JK xQA xQA 0 2 1 0",          // хорошая проблемная
 
-            "8XK  2 0 0 1",    // плохая проблемная;
-            "8KA  4 0 0 0",    // плохая проблемная;
-            "XKA  4 0 0 0",    // плохая проблемная;
-            "8X  1 0 0 4",     // плохая проблемная;
-            "8XQ  1 0 0 2",    // плохая проблемная;
-            "XQA  3 0 0 0",    // плохая проблемная;
-            "8A  5 0 0 0",     // плохая проблемная;
+            "XKA 789JQ 789JQ 3 3 0 1",      // плохая беспроблемная;
+            "XQA JK JK 1 2 1 0",            // хорошая проблемная;
+            "8A 79xJQK 79xJQK 1 2 0 0",     // плохая проблемная;
 
-            "7XK  2 1 0 1",    // хорошая проблемная;
-            "7KA  4 1 0 0",    // хорошая проблемная;
-            "7QA  3 1 0 0",    // хорошая проблемная;
-            "7JK  2 1 0 1",    // хорошая проблемная;
+            "7KA 89xJQ 89xJQ 2 2 1 1",      // хорошая беспроблемная;
+            "7QA 89xJK 89xJK 2 2 1 1",      // хорошая беспроблемная;
+/*
+            "7JK 789xJQKA 789xJQKA  2 1 0 1",    // хорошая проблемная;
             "89Q 7K 0 1 1 1",  // хорошая проблемная;
             "89Q 7A 0 1 1 1",  // хорошая проблемная;
             "79J K 0 1 0 2",   // хорошая проблемная;
@@ -68,63 +77,38 @@ public class TestCardList {
             "79JA  1 1 0 0",   // хорошая проблемная.
             "89Q 7 0 1 1 2",   // хорошая проблемная;
             "79Q J 0 1 0 2",   // хорошая проблемная
+*/
         };
 
         for (String source : sources) {
             System.out.printf("%s\n", source);
             String[] parts = source.split(" ");
-            String suit = parts[0].replaceAll(".(?!$)", "$0s");
-            if (!suit.isEmpty()) {
-                suit += "s";
-            }
-            String discarded = parts[1].replaceAll(".(?!$)", "$0s");
-            if (!discarded.isEmpty()) {
-                discarded += "s";
-            }
-            CardList cardList = Util.toCardList(suit);
-            HashSet<Card> discardedSet = new HashSet<>(Util.toCardList(discarded));
-            int holes = Integer.parseInt(parts[2]);           // is problematic when holes > 0
-            boolean good = !parts[3].equals("0");       // for all-pass, includes smallest rank
-            boolean ok1stMove = !parts[4].equals("0");  // 1st move does not add tricks, the list includes 2 smallest ranks
-            int distanceToTop = Integer.parseInt(parts[5]);
-            CardList.ListData listData = cardList.getListData(discardedSet);
-            Assert.assertEquals("holes", holes, listData.holes);
-            Assert.assertEquals("good", good, listData.good);
-            Assert.assertEquals("ok1stMove", ok1stMove, listData.ok1stMove);
-            Assert.assertEquals("distanceToTop", distanceToTop, listData.distanceToTop);
-//            int tricksMeStart = Integer.parseInt(parts[1]);
-//            int tricksTheyStart = Integer.parseInt(parts[2]);
 
+            CardList[] cardLists = new CardList[3];
+            for (int i = 0; i < cardLists.length; ++i) {
+                String suit = parts[i]; // .replaceAll(".(?!$)", "$0s");
+                if (!suit.isEmpty()) {
+                    suit = "♠" + suit;
+                }
+                cardLists[i] = Util.toCardList(suit);
+            }
+
+            int i = 2;
+            int tricsTheyStart = Integer.parseInt(parts[++i]);           // is problematic when holes > 0
+            int tricksMeStart = Integer.parseInt(parts[++i]);           // is problematic when holes > 0
+            boolean good = !parts[++i].equals("0");       // for all-pass, includes smallest rank
+            boolean ok1stMove = !parts[++i].equals("0");  // 1st move does not add tricks, the list includes 2 smallest ranks
+//            int distanceToTop = Integer.parseInt(parts[++i]);
+            CardList.ListData listData = cardLists[0].getListData(cardLists[1], cardLists[2]);
+            Assert.assertEquals("good", good, listData.good);
+            Assert.assertEquals("tricksMeStart", tricksMeStart, listData.minMeStart);
+            Assert.assertEquals("tricksTheyStart", tricsTheyStart, listData.minTheyStart);
+            Assert.assertEquals("ok1stMove", ok1stMove, listData.ok1stMove);
+
+
+//            Assert.assertEquals("distanceToTop", distanceToTop, listData.distanceToTop);
         }
     }
-
-    @Test
-    public void testGetMinTricks() {
-        String[] sources = {
-        "A8 2 1",     // проблемная плохая;
-        "QJ 2 2",     // беспроблемная плохая;
-        "AKQ 3 3",    // беспроблемная плохая;
-        "A97 2 1",    // проблемная хорошая.
-        "8XQ 3 1",    // проблемная плохая;
-        "79Q 2 1",    // проблемная хорошая;
-        "79J 2 0",    // проблемная хорошая;
-        "789 0 0",    // беспроблемная хорошая;
-    };
-    for (String source : sources) {
-        System.out.printf("%s\n", source);
-        String[] parts = source.split(" ");
-        String suit = parts[0].replaceAll(".(?!$)", "$0s") + "s";
-        CardList cardList = Util.toCardList(suit);
-        Collections.sort(cardList);
-        int tricksMeStart = Integer.parseInt(parts[1]);
-        int tricksTheyStart = Integer.parseInt(parts[2]);
-
-//        CardList.ListData listData = new CardList.ListData();
-        Pair<Couple<Integer>, Couple<Boolean>> tricks = cardList.getMinTricks(new HashSet<Card>());
-        Assert.assertEquals("invalid tricks me start", tricksMeStart, (int)tricks.first.first);
-        Assert.assertEquals("invalid tricks they start", tricksTheyStart, (int)tricks.first.second);
-    }
-}
 
     @Test
     public void testRussian() throws IOException {

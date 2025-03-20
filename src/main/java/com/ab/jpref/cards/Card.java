@@ -121,6 +121,12 @@ public class Card implements Comparable<Card>, Player.Queueable {
             return values()[value - SIX.value];
         }
 
+        public int compare(Rank o) {
+            // compare for sorting
+            if (o == null) return 1;
+            return this.value - o.value;
+        }
+
     }
 
     private final Suit suit;
@@ -161,6 +167,9 @@ public class Card implements Comparable<Card>, Player.Queueable {
     }
 
     public int compareInTrick(Card o) {
+        if (o == null) {
+            return 1;
+        }
         if (suit.compareTo(o.suit) == 0) {
             return rank.compareTo(o.rank);
         } else {

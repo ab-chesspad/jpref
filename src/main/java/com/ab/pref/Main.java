@@ -32,15 +32,20 @@ import java.util.Timer;
 public class Main {
     static final boolean DEBUG = false;
     public static final boolean ALL_HUMANS = false;
+    static {
+        if (ALL_HUMANS) {
+            GameManager.SHOW_ALL = true;
+        }
+    }
 
-    final JPrefConfig jPrefConfig = JPrefConfig.getInstance();
+    final PConfig pConfig = PConfig.getInstance();
     String GUID;
     static Rectangle mainRectangle;
     static Insets insets;
 
     public static Container mainContainer;
     public static JFrame mainFrame;
-    private static MainPanel mainPanel;
+    public static MainPanel mainPanel;
 
     transient private Timer timer;
 
@@ -54,8 +59,8 @@ public class Main {
      * @param args optional [fixed-games-file]
      */
     public static void main(String[] args) {
-//        Logger.set(System.out);
-        Logger.set(null);   // output to file
+        Logger.set(System.out);
+//        Logger.set(null);   // output to file
 
 /*
         Signal.handle(new Signal("INT"),  // SIGINT
@@ -77,10 +82,10 @@ public class Main {
 
     public Main(String[] args) {
         // we need it to upload log files
-        GUID = jPrefConfig.GUID.get();
+        GUID = pConfig.GUID.get();
         if (GUID == null) {
             GUID = java.util.UUID.randomUUID().toString();
-            jPrefConfig.GUID.set(GUID);
+            pConfig.GUID.set(GUID);
         }
 
         if (args.length > 0) {
@@ -120,11 +125,11 @@ public class Main {
         mainFrame.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG, "main.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG,"main.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
                 insets = mainFrame.getInsets();
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 mainRectangle.height -= insets.top;
-                jPrefConfig.mainRectangle.set(mainRectangle);
+                pConfig.mainRectangle.set(mainRectangle);
                 Metrics.getInstance().recalculateSizes();
                 setMainPanel();
             }
@@ -133,7 +138,7 @@ public class Main {
             public void componentMoved(ComponentEvent e) {
                 Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
-                jPrefConfig.mainRectangle.set(mainRectangle);
+                pConfig.mainRectangle.set(mainRectangle);
             }
         });
 
@@ -155,7 +160,7 @@ public class Main {
 
     private void saveConfig() {
         mainRectangle.height += insets.top;
-        jPrefConfig.serialize();
+        pConfig.serialize();
     }
 
     void setMainPanel() {
@@ -165,12 +170,12 @@ public class Main {
         }
 
         if (gameManager == null) {
-            String param = I18n.m(jPrefConfig.playerNames.get());
+            String param = I18n.m(pConfig.playerNames.get());
             final String[] names = param.split(", ");
-            gameManager = new GameManager(jPrefConfig, mainPanel,
+            gameManager = new GameManager(pConfig, mainPanel,
                     i -> {
 //*
-                        if (GameManager.TRICK_TIMEOUT < 50) {
+                        if (GameManager.TRICK_TIMEOUT == 0) {
                             return new Bot(names[i]);
                         }
 //*/
@@ -220,7 +225,7 @@ public class Main {
         Insets insets = new Insets(0,0,0,0);
         Logger.printf(DEBUG, "insets=(%dx%dx%dx%d\n)",
                 insets.left, insets.right, insets.top, insets.bottom);
-        mainRectangle = jPrefConfig.mainRectangle.get();
+        mainRectangle = pConfig.mainRectangle.get();
         if (mainRectangle.width == 0) {
             mainRectangle.width = (fullScreen.width - insets.left - insets.right) / 2;
             mainRectangle.height = (fullScreen.height - insets.top - insets.bottom) / 2;

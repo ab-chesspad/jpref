@@ -24,6 +24,7 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.engine.Trick;
 import com.ab.util.I18n;
 import com.ab.util.Logger;
 
@@ -35,7 +36,7 @@ import java.util.Arrays;
 
 class MainPanelLayout {
     public static final boolean DEBUG = false;
-    public static final JPrefConfig jPrefConfig = JPrefConfig.getInstance();
+    public static final PConfig pConfig = PConfig.getInstance();
     final MainPanel mainPanel;
 
 //    private final String BACK_FILENAME = "back-5.png";
@@ -47,10 +48,10 @@ class MainPanelLayout {
     private final int[] suitOrderInDeck = {3, 2, 1, 0};
 
     final BufferedImage sourceDeckImage, sourceBackImage;
-    BufferedImage scaledDeckImage, scaledBackImage;
     final Image[][] cardImages = new Image[Card.Suit.values().length - 1][Card.Rank.values().length];
     final Metrics metrics = Metrics.getInstance();
     final HandVisualData[] handVisualData = new HandVisualData[4];
+    BufferedImage scaledDeckImage, scaledBackImage;
     int panelWidth, panelHeight;
 
     public final Object lock = new Object();
@@ -67,7 +68,6 @@ class MainPanelLayout {
         double h = (double) fullH / deckAttributes.deckRows;
         metrics.cardAspectRatio = h / w;
         sourceBackImage = loadImageCrop(BACK_FILENAME);
-
     }
 
     private BufferedImage loadImageCrop(String name) {
@@ -113,6 +113,10 @@ class MainPanelLayout {
         int height = metrics.panelHeight;
         Rectangle bounds;
 
+        mainPanel.trickPanel.setPreferredSize(new Dimension((int)(2 * metrics.cardW), (int)(2 *metrics.cardH)));
+        centerPanel(mainPanel.trickPanel);
+        mainPanel.trickPanel.setBackground(Color.darkGray);
+
         centerPanel(mainPanel.firstBidPanel);
         centerPanel(mainPanel.bidPanel);
         centerPanel(mainPanel.declareGamePanel);
@@ -127,8 +131,6 @@ class MainPanelLayout {
         bounds.x = width - mainPanel.menuPanel.getPreferredSize().width - metrics.xMargin;
         bounds.y = height - mainPanel.menuPanel.getPreferredSize().height - metrics.yMargin;
         mainPanel.menuPanel.setBounds(bounds);
-
-
     }
 
     private void recalculateSizes() {
@@ -159,25 +161,16 @@ class MainPanelLayout {
             scaledBackImage = Util.scale(sourceBackImage, (int) metrics.cardW, (int) metrics.cardH);
 
             if (metrics.horizontalLayout) {
-//                int _w = (int) (metrics.cardW * metrics.wHand); // hand width
-//                int _h = (int) metrics.cardH;           // hand height
-//                int x = (int) (metrics.xLabel * metrics.cardW + 2 * metrics.xMargin);
-                // bottom player:
-//            int _x = (int)((metrics.panelWidth - wHand) / 2 - xLabel * metrics.cardW - metrics.xMargin);
                 handVisualData[0] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.South);
                 handVisualData[1] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.West);
                 handVisualData[2] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.East);
-//                x = (int) (metrics.panelWidth - _w - (metrics.xLabel * metrics.cardW)) / 2 + metrics.xMargin;
                 // talon
                 handVisualData[3] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.South);
             } else {
-//                int dy = (int) (metrics.cardH * metrics.hHand);
-//                int x = (metrics.panelWidth - (int) (metrics.cardW * metrics.wHand)) / 2 + metrics.xMargin;
                 handVisualData[0] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.South);
                 handVisualData[1] = new HandVisualData(0, metrics.yVisible, MainPanel.Alignment.West);
                 handVisualData[2] = new HandVisualData(0, metrics.yVisible, MainPanel.Alignment.East);
                 // talon
-//                handVisualData[3] = new HandVisualData((int) metrics.cardW / 2, 0, MainPanel.Alignment.South);
                 handVisualData[3] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.South);
             }
         }
@@ -185,20 +178,23 @@ class MainPanelLayout {
 
     void paintComponent(Graphics g) {
         synchronized (lock) {
+            if (metrics.panelWidth == 0) {
+                return;
+            }
             if (metrics.panelWidth != panelWidth ||
                     metrics.panelHeight != panelHeight) {
                 panelWidth = metrics.panelWidth;
                 panelHeight = metrics.panelHeight;
                 recalculateSizes();
-//            scorePanel._update();
             }
 
-            Logger.printf(DEBUG, "paintComponent %dx%d - %dx%d\n",
-                    metrics.panelWidth, metrics.panelHeight, panelWidth, panelHeight);
+            Logger.printf(DEBUG, "paintComponent %dx%d - %dx%d, main %dx%d\n",
+                metrics.panelWidth, metrics.panelHeight, panelWidth, panelHeight,
+                Main.mainRectangle.width, Main.mainRectangle.height);
 
             Graphics2D g2d = (Graphics2D) g;
 
-            g2d.setColor(jPrefConfig.bgColor.getColor());
+            g2d.setColor(pConfig.bgColor.getColor());
 //        g2d.setColor(Color.white);
 
             g2d.fillRect(0, 0, metrics.panelWidth, metrics.panelHeight);
@@ -218,13 +214,13 @@ class MainPanelLayout {
                 }
                 handVisualData[i].showFaces = GameManager.getInstance().showCards(i);
                 paintHand(g2d, handVisualData[i]);
-//            break;
             }
             int i = 3;
             handVisualData[i].allCards = GameManager.getInstance().getTalonCards();
             handVisualData[i].showFaces = GameManager.getInstance().showCards(i);
             paintHand(g2d, handVisualData[i]);
-            paintTrick(g2d);
+            Trick trick = GameManager.getInstance().getTrick();
+            paintTrick(g2d, trick);
 
 /*
         if (GameManager.RoundStage.trickTaken.equals(GameManager.getState().getRoundState())) {
@@ -234,27 +230,37 @@ class MainPanelLayout {
         }
     }
 
-    private void paintTrick(Graphics2D g) {
+    void paintTrick(Graphics2D g, Trick trick) {
         Point[] positions = {
-            new Point(-(int)(metrics.cardW * .7), (int)(metrics.cardH * .2)),
-            new Point(-(int)(metrics.cardW * 1), -(int)(metrics.cardH * .2)),
-            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .2))
+            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .9)),
+            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .25)),
+            new Point(-(int)(metrics.cardW * .75), -(int)(metrics.cardH * .75)),
+            new Point(-(int)(metrics.cardW * .25), -(int)(metrics.cardH * .7)),
         };
-        GameManager.Trick trick = GameManager.getInstance().getTrick();
-        int turn = trick.getStarted();
         CardList trickCards = trick.getTrickCards();
         if (trickCards.isEmpty()) {
             return;
         }
-        Logger.printf(DEBUG, "trick turn %d, %s\n", trick.getTurn(), trickCards);
+        int turn = trick.getStartedBy();
+
+        int panelWidth = g.getClipBounds().width;
+        int panelHeight = g.getClipBounds().height;
+        Logger.printf(DEBUG, "trick started %d, %s\n", turn, trickCards);
         try {
-            for (Card card : trickCards) {
+            for (int j = 0; j < trickCards.size(); ++j) {
+                Card card = trickCards.get(j);
                 Image im = getCardImage(card);
-                int x = positions[turn].x + metrics.panelWidth / 2;
-                int y = positions[turn].y + metrics.panelHeight / 2;
-                Logger.printf(DEBUG, "trick %s %dx%d\n", card, x, y);
-                g.drawImage(im, x, y, mainPanel);
-                turn = ++turn % 3;
+                int i = turn + 1;
+                if (j == 0 && trickCards.size() > GameManager.NUMBER_OF_PLAYERS) {
+                    i = 0;
+                    --turn;
+                }
+                int x = positions[i].x + panelWidth / 2;
+                int y = positions[i].y + panelHeight / 2;
+                Logger.printf(DEBUG, "trick %s %d\n", card, i);
+//                g.drawImage(im, x, y, mainPanel);
+                g.drawImage(im, x, y, null);
+                turn = ++turn % GameManager.NUMBER_OF_PLAYERS;
             }
         } catch (java.util.ConcurrentModificationException e) {
             // todo: fix it!
@@ -324,9 +330,9 @@ class MainPanelLayout {
         if (handVisualData.player != null) {
             Player player = handVisualData.player;
             if (player == mainPanel.currentPlayer) {
-                g.setColor(jPrefConfig.currentPlayerBGColor.getColor());
+                g.setColor(pConfig.currentPlayerBGColor.getColor());
             } else {
-                g.setColor(jPrefConfig.labelBGColor.getColor());
+                g.setColor(pConfig.labelBGColor.getColor());
             }
             g.fillRect(handVisualData.label.x,
                     labelY,
@@ -349,7 +355,7 @@ class MainPanelLayout {
             int height = fontMetrics.getHeight();
             int _x = handVisualData.label.x + (handVisualData.label.width - width) / 2;
             int _y = labelY + (handVisualData.label.height - height) / 2 + height;
-            g.setColor(jPrefConfig.labelTextColor.getColor());
+            g.setColor(pConfig.labelTextColor.getColor());
             g.setFont(metrics.font);
             g.drawString(text, _x, _y);
         }
@@ -365,7 +371,6 @@ class MainPanelLayout {
         if (handVisualData.player == null) {
             // talon, quick & dirty
             xOffset = 0;
-//            xOffset = (int) ((1 - handVisualData.xVisible) * cardW);
         }
         int yOffset = (int) ((1 - handVisualData.yVisible + metrics.ySuitGap) * cardH);
         for (Card card : handVisualData.allCards) {

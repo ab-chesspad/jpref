@@ -22,6 +22,8 @@ package com.ab.pref;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.engine.Player;
+import com.ab.jpref.engine.Trick;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 
@@ -34,16 +36,16 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     private final BlockingQueue<Queueable> queue = new LinkedBlockingQueue<>();
     private final Clickable clickable;
 
-    private boolean blocked;
-    private boolean abort;
+    GameManager.RestartCommand restartCommand;
 
     public HumanPlayer(String name, Clickable clickable) {
         super(name);
         this.clickable = clickable;
     }
 
-    public void abortThread() {
-        abort = true;
+    @Override
+    public void abortThread(GameManager.RestartCommand restartCommand) {
+        this.restartCommand = restartCommand;
         clearQueue();
     }
 
@@ -65,16 +67,18 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
         }
     }
 
-    private Queueable takeFromQueue() {
+    private Queueable takeFromQueue() throws Player.PrefExceptionRerun {
         try {
-            if (abort) {
-                throw new PrefExceptionRerun();
+            if (restartCommand != null) {
+                GameManager.RestartCommand _restartCommand = restartCommand;
+                restartCommand = null;
+                throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
             }
-            blocked = true;
             Queueable q = queue.take();
-            blocked = false;
-            if (abort) {
-                throw new PrefExceptionRerun();
+            if (restartCommand != null) {
+                GameManager.RestartCommand _restartCommand = restartCommand;
+                restartCommand = null;
+                throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
             }
             return q;
         } catch (InterruptedException e) {
@@ -82,6 +86,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
         }
     }
 
+/*
     @Override
     public Config.Bid getBid(Config.Bid minBid, int turn) {
         Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
@@ -96,17 +101,18 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     public RoundData declareRound(Config.Bid minBid, int turn) {
         return null;
     }
+*/
 
     @Override
-    public Card play(GameManager.Trick trick) {
+    public Card play(Trick trick) {
         Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         Card card = (Card)takeFromQueue();
-        return play(card, GameManager.getState().getDiscarded());
+        return card;
     }
 
     public boolean isOK2Play(Card card) {
-        GameManager.Trick trick = GameManager.getInstance().getTrick();
+        Trick trick = GameManager.getInstance().getTrick();
         if (trick.getStartingSuit() == null) {
             return true;
         }

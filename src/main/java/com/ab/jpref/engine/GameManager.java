@@ -34,7 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class GameManager {
     public static boolean DEBUG = false;
-    public static final boolean SHOW_ALL = false;
+    public static boolean SHOW_ALL = true;
     public static final int TRICK_TIMEOUT = 1000;
 
     public static final int ROUND_SIZE = 10;   // total tricks == initial hand size
@@ -55,6 +55,16 @@ public class GameManager {
         trickTaken,
         roundEnded,
         idle,
+
+        goon,
+        replay,
+        newGame,
+    }
+
+    public enum RestartCommand implements Player.Queueable {
+        goon,
+        replay,
+        newGame,
     }
 
     static RoundState roundState;
@@ -64,26 +74,24 @@ public class GameManager {
     private final Config config;
     private Thread gameThread;
     private final EventObserver eventObserver;
-    private final PlayerFactory playerFactory;
 
     final Player[] players = new Player[NUMBER_OF_PLAYERS];
     private final CardList talonCards = new CardList();
-    private final Trick trick = new Trick();
+    private Trick trick = new Trick();
+    private Trick lastTrick = new Trick();
 
     public String testFileName;
     private int lineCount = 0;
 
-    private CardList deck;
-    private int turn;
     private Config.Bid minBid = Config.Bid.BID_6S;
     Player.RoundData currentRound;
+    int elderHand;
 
     // eventObserver == null for test run
     public GameManager(Config config, EventObserver eventObserver, PlayerFactory playerFactory) {
         instance = this;
         this.config = config;
         this.eventObserver = eventObserver;
-        this.playerFactory = playerFactory;
         if (eventObserver == null) {
             Logger.set(System.out);
         }
@@ -152,7 +160,7 @@ public class GameManager {
                             return;     // ignore
                         }
                         --lineCount;
-                        int turn = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
+                        elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
                         CardList deck = new CardList();
                         for (String token : tokens) {
                             if (token.endsWith(":")) {
@@ -160,8 +168,9 @@ public class GameManager {
                             }
                             deck.addAll(Util.toCardList(token));
                         }
-                        playRound(deck, turn);
+                        playRound(deck, elderHand);
                         roundState.set(RoundStage.idle);
+                        elderHand = ++elderHand % NUMBER_OF_PLAYERS;
                     });
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -171,17 +180,76 @@ public class GameManager {
 
     // run random rounds
     protected void runGame() {
-        int turn = new Random().nextInt(3);
+        elderHand = new Random().nextInt(NUMBER_OF_PLAYERS);
         for (int round = 0; round < config.poolSize.get(); ++round) {
             CardList deck = CardList.getDeck();
             Collections.shuffle(deck);
 
-            playRound(deck, turn);
+            RoundStage next;
+            do {
+                next = playRound(deck, elderHand);
+                elderHand = ++elderHand % NUMBER_OF_PLAYERS;
+            } while (RoundStage.replay.equals(next));
             Util.sleep(10);     // give jPrefPanel a chance to paint
-            turn = ++turn % 3;
+            if (next.equals(RoundStage.newGame)) {
+                break;
+            }
         }
+        Logger.printf("game ended\n");
+        // now Main will continue launching games
     }
 
+    RoundStage playRound(CardList deck, int elderHand) {
+        RoundStage next;
+        try {
+            gameThread = Thread.currentThread();
+            trick.clear(elderHand);
+            deal(deck);
+            currentRound = new Player.RoundData();
+
+/*  debug
+        roundState.set(RoundStage.bidding);
+//        Logger.printf("  %s %d\n", talonCards.toString(), turn + 1);
+        currentRound.declarer = bidding(turn);
+        if (currentRound.declarer == null) {
+            Logger.printf("playing all-pass\n");
+            playRoundAllPass(turn);
+        } else {
+            Logger.printf("declarer %s, %s %s\n",
+                    currentRound.declarer.getName(), currentRound.declarer.getBid(), currentRound.declarer);
+            roundState.set(RoundStage.discard);
+            currentRound.declarer.takeTalon(talonCards);
+//            Util.sleep(100);
+            Logger.printf("%s declareRound()\n", currentRound.declarer.toString());
+            roundState.set(RoundStage.declareRound);
+            currentRound = currentRound.declarer.declareRound(minBid, turn);
+        }
+/*/
+            playRoundAllPass();
+//*/
+            String sep = "";
+            for (int j = 0; j < players.length; ++j) {
+                Player player = players[j];
+                Logger.printf("%s%s: %s", sep, player.getName(), player.getTricks());
+                sep = ", ";
+            }
+            Logger.printf("\n");
+            ScoreCalculator.getInstance().calculate(currentRound.declarer, players, 1);
+            ++lineCount;
+            next = roundState.set(RoundStage.roundEnded);
+            if (eventObserver != null) {
+                Util.sleep(config.sleepBetweenRounds.get());
+            }
+            Logger.printf("round ended\n");
+        } catch (Player.PrefExceptionRerun e) {
+            String msg = e.getMessage();
+            Logger.println(msg);
+            next = RoundStage.valueOf(msg);     // a little ugly
+        }
+        return next;
+    }
+
+/*
     Player bidding(int turn) {
         Config.Bid[] bids = new Config.Bid[players.length];
         // in the future bot should be able to pass even if it can declare a round
@@ -235,121 +303,59 @@ public class GameManager {
         }
         return declarer;
     }
+*/
 
-    void deal(CardList deck, int turn) {
-        roundState.discarded.clear();
+    void deal(CardList deck) {
         int index = 0;
         StringBuilder sb = new StringBuilder();
         for (Player player : players) {
             player.setHand(deck.subList(index, index + ROUND_SIZE));
-            sb.append(player.toString()).append(" ");
+            sb.append(player).append(" ");
             index += ROUND_SIZE;
         }
         talonCards.clear();
         talonCards.addAll(deck.subList(index, index + 2));
         sb.append(talonCards);
-        Logger.printf("%s %s  %d\n", DEAL_MARK, sb, turn);
+        Logger.printf("%s %s  %d\n", DEAL_MARK, sb, trick.getStartedBy());
     }
 
-    void playRound(CardList deck, int turn) {
-        gameThread = Thread.currentThread();
-        this.deck = (CardList)deck.clone();
-        this.turn = turn;
-//        Logger.printf("deal: %s  %d\n", deck.toString(), turn);
-        deal(deck, turn);
-/*  debug
-        roundState.set(RoundStage.bidding);
-//        Logger.printf("  %s %d\n", talonCards.toString(), turn + 1);
-        Player declarer = bidding(turn);
-        if (declarer == null) {
-            Logger.printf("playing all-pass\n");
-            playRoundAllPass(turn);
-        } else {
-            Logger.printf("declarer %s, %s %s\n", declarer.getName(), declarer.getBid(), declarer);
-            roundState.set(RoundStage.discard);
-            declarer.takeTalon(talonCards);
-//            Util.sleep(100);
-            Logger.printf("%s declareRound()\n", declarer.toString());
-            roundState.set(RoundStage.declareRound);
-            currentRound = declarer.declareRound(minBid, turn);
-        }
-/*/
-        playRoundAllPass(turn);
-//*/
-        String sep = "";
-        for (int j = 0; j < 3; ++j) {
-            Player player = players[j];
-            Logger.printf("%s%s: %s", sep, player.getName(), player.getTricks());
-            sep = ", ";
-        }
-        Logger.printf("\n");
-        ++lineCount;
-        roundState.set(RoundStage.roundEnded);
-        if (eventObserver != null) {
-            Util.sleep(config.sleepBetweenRounds.get());
-        }
-        Logger.printf("round ended\n");
-    }
-
-    void playRoundAllPass(int turn) {
-        trick.turn = turn;
-        roundState.discarded.clear();
+    void playRoundAllPass() {
         for (int c = 0; c < ROUND_SIZE; ++c) {
-            trick.clear();
             roundState.set(RoundStage.newTrick);
             if (!talonCards.isEmpty()) {
                 Card card = talonCards.get(talonCards.size() - 1);
                 Logger.printf("talon: %s, ", card.toString());
                 roundState.set(RoundStage.play);
-                roundState.discarded.add(card);
-                trick.startingSuit = card.getSuit();
+                trick.add(card, true);
             }
-            int top = -1;
-            Card topCard = null;
             String sep = "";
-            trick.started = trick.turn;
-            for (int j = 0; j < 3; ++j) {
-                Player player = players[trick.turn];
+            for (int j = 0; j < players.length; ++j) {
+                Player player = players[trick.getTurn()];
                 Card card = player.play(trick);
-                trick.trickCards.add(card);
+                trick.add(card);
                 roundState.set(RoundStage.play);
                 Logger.printf("%s%s: %s", sep, player.getName(), card.toString());
                 sep = ", ";
-                if (trick.startingSuit == null) {
-                    trick.startingSuit = card.getSuit();
-                }
-                if (trick.startingSuit.equals(card.getSuit())) {
-                    if (topCard == null) {
-                        topCard = card;
-                        top = trick.turn;
-                    } else {
-                        if (topCard.compareInTrick(card) < 0) {
-                            topCard = card;
-                            top = trick.turn;
-                        }
-                    }
-                }
-                trick.leftCard = trick.rightCard;
-                trick.rightCard = card;
-                trick.turn = ++trick.turn % 3;
             }
-            players[top].incrementTricks();
+            lastTrick.clear();
+            players[trick.top].incrementTricks();
             if (eventObserver != null) {
                 Util.sleep(TRICK_TIMEOUT);
             }
-            Logger.printf("\n %s takes it, total %d\n\n", players[top].getName(), players[top].getTricks());
-            for (int j = 0; j < 3; ++j) {
+            Logger.printf("\n %s takes it, total %d\n\n", players[trick.top].getName(), players[trick.top].getTricks());
+            for (int j = 0; j < players.length; ++j) {
                 Player player = players[j];
                 Logger.printf("%s  ", player.toString());
             }
             Logger.printf("\n");
-            if (c < 2) {
-                trick.turn = turn;
-            } else {
-                trick.turn = top;
-            }
+            Card talonCard = null;
             if (!talonCards.isEmpty()) {
-                talonCards.remove(talonCards.size() - 1);
+                talonCard = talonCards.remove(talonCards.size() - 1);
+            }
+            lastTrick.trickCards = (CardList)trick.trickCards.clone();
+            lastTrick.startedBy = trick.startedBy;
+            if (talonCard != null) {
+                lastTrick.trickCards.add(0, talonCard);
             }
             trick.clear();  // not to repaint
             roundState.set(RoundStage.trickTaken);
@@ -360,107 +366,53 @@ public class GameManager {
         }
     }
 
-    private void clearQueue() {
-        try {
-            // unblock gameManager
-            stageQueue.put(RoundStage.roundEnded);
-            Util.sleep(100);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+    public Trick getLastTrick() {
+        return lastTrick;
+    }
+
+    private void clearHistory(RestartCommand command) {
+        for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+            if (players[i].getHistory().size() == 0) {
+                continue;
+            }
+            if (command.equals(RestartCommand.replay)) {
+                players[i].getHistory().remove(players[i].getHistory().size() - 1);
+            } else {
+                players[i].getHistory().clear();
+            }
         }
+    }
+
+    private void clearQueue() {
         while (stageQueue.peek() != null) {
             stageQueue.remove();
         }
     }
 
-    public void restart(boolean replay) {
+    public void restart(RestartCommand command) {
         Logger.printf("this %s, game %s\n", Thread.currentThread().getName(), gameThread.getName());
-        Thread t = new Thread(() -> {
-            try {
-                gameThread.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+
+        try {
+            switch (command) {
+                case goon:
+                    clearQueue();
+                    GameManager.getQueue().put(RoundStage.goon);
+                    break;
+
+                case replay:
+                    clearQueue();
+                    clearHistory(command);
+                    GameManager.getQueue().put(RoundStage.replay);
+                    break;
+
+                case newGame:
+                    clearQueue();
+                    clearHistory(command);
+                    GameManager.getQueue().put(RoundStage.newGame);
+                    break;
             }
-            clearQueue();
-            Logger.printf("%s ended\n", gameThread.getName());
-            for (Player p : players) {
-                p.clearQueue();
-            }
-            GameManager _gameManager = new GameManager(config, eventObserver, playerFactory);
-            if (replay) {
-                try {
-                    _gameManager.playRound(deck, turn);
-                    Logger.println("replay ended!");
-                } catch (Player.PrefExceptionRerun e) {
-                    // ignore
-                    Logger.println("replay ended!");
-                }
-            }
-            Logger.printf("GameManager needs to rerun %s\n", Thread.currentThread().getName());
-            _gameManager.lineCount = 0;
-            try {
-                while (true) {
-                    _gameManager.runGame(testFileName, lineCount);
-                    lineCount = 0;
-                }
-            } catch (Player.PrefExceptionRerun e) {
-                // todo: happens when there were no moves in playRound, just replay
-            }
-        });
-        t.start();
-        for (Player p : players) {
-            p.abortThread();
-        }
-    }
-
-    public static class Trick {
-        Card.Suit startingSuit, trumpSuit;
-        Config.Bid minBid;
-        int started, turn;
-        Card leftCard, rightCard;
-        final CardList trickCards = new CardList();
-
-        public Card.Suit getStartingSuit() {
-            return startingSuit;
-        }
-
-        public int getStarted() {
-            return started;
-        }
-
-        public Card.Suit getTrumpSuit() {
-            return trumpSuit;
-        }
-
-        public void setTrumpSuit(Card.Suit trumpSuit) {
-            this.trumpSuit = trumpSuit;
-        }
-
-        public Config.Bid getMinBid() {
-            return minBid;
-        }
-
-        public int getTurn() {
-            return turn;
-        }
-
-        public Card getLeftCard() {
-            return leftCard;
-        }
-
-        public Card getRightCard() {
-            return rightCard;
-        }
-
-        public CardList getTrickCards() {
-            return trickCards;
-        }
-
-        public void clear() {
-            trickCards.clear();
-            leftCard = rightCard = null;
-            startingSuit = null;
-            minBid = null;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -468,7 +420,6 @@ public class GameManager {
         RoundStage roundStage;
         Config.Bid round;
         Player declarer;
-        final Set<Card> discarded = new HashSet<>();
 
         public void setRound(Config.Bid round, Player declarer) {
             this.round = round;
@@ -480,13 +431,13 @@ public class GameManager {
             }
         }
 
-        public void set(RoundStage state) {
+        public RoundStage set(RoundStage state) {
+            RoundStage q = null;
             Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getName(), state);
             this.roundStage = state;
-            //PQueue queue = PQueue.getInstance();
 
             if (GameManager.instance.eventObserver == null) {
-                return;     // running in test
+                return q;     // running in test
             }
 
             try {
@@ -496,11 +447,12 @@ public class GameManager {
             }
             GameManager.instance.eventObserver.update();
             try {
-                RoundStage q = GameManager.getQueue().take();
+                q = GameManager.getQueue().take();
                 Logger.printf(DEBUG, "GameManager unblocked %s\n", q.toString());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+            return q;
         }
 
         public RoundStage getRoundStage() {
@@ -515,9 +467,6 @@ public class GameManager {
             return declarer;
         }
 
-        public Set<Card> getDiscarded() {
-            return discarded;
-        }
     }
 
     public interface EventObserver {

@@ -23,56 +23,31 @@ import com.ab.jpref.config.Config;
 
 import java.awt.*;
 
-public class JPrefConfig extends Config {
+public class PConfig extends Config {
     // update serialVersionUID every time another property is being added!
-    private static final long serialVersionUID = 9L;
+    private static final long serialVersionUID = 12L;
 
     public final Property<Rectangle> mainRectangle = new Property<>("", new Rectangle());
+    public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
     public final ColorProperty bgColor = new ColorProperty("Table Color", "#007000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
     public final Property<String> GUID = new Property<>("", null);
 
-/*
-    public interface ConfigHolder {
-        JPrefConfig getConfig();
-        default void onConfigEnd(boolean ok) {}
-    }
-*/
-
-/*
-    private static JPrefConfig instance;
-
-    private static class InstanceHolder {
-        public static JPrefConfig instance = (JPrefConfig)Config.unserialize();
-    }
-
-    public static JPrefConfig getInstance() {
-        return JPrefConfig.InstanceHolder.instance;
-    }
-*/
-/*
-    public static JPrefConfig getInstance() {
-        if (InstanceHolder.instance == null) {
-            InstanceHolder.instance = new Config();
-        }
-        return (Config)InstanceHolder.instance;
-    }
-*/
     protected static Object instance;
 
-    public static JPrefConfig getInstance() {
+    public static PConfig getInstance() {
         if (instance == null) {
             instance = Config.unserialize();
         }
         if (instance == null) {
-            instance = new JPrefConfig();
+            instance = new PConfig();
         }
-        return (JPrefConfig)instance;
+        return (PConfig)instance;
     }
 
-    protected JPrefConfig() {
+    protected PConfig() {
         super();
     }
 

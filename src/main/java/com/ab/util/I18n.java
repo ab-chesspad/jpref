@@ -20,6 +20,7 @@
 package com.ab.util;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 
@@ -77,12 +78,12 @@ public class I18n {
     }
 
     public static String loadString(String path) {
-//        path = path.replace("<lang>", instance.iso639_1_2002_code);
-        Logger.println(path);
+//        Logger.println(path);
         StringBuilder sb = new StringBuilder();
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-        try (InputStream is = classloader.getResourceAsStream(String.format("i18n/%s/%s", getInstance().iso639_1_2002_code, path));
-                BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+        path = String.format("i18n/%s/%s", getInstance().iso639_1_2002_code, path);
+        try (InputStream is = classloader.getResourceAsStream(path);
+                BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8.name()))) {
             String line;
             while ((line = br.readLine()) != null) {
                 sb.append(line).append("<br/>").append("\r");

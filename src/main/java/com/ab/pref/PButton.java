@@ -31,7 +31,6 @@ import java.awt.image.BufferedImage;
 public class PButton extends JButton {
     private static final Metrics metrics = Metrics.getInstance();
 
-
     final MainPanel.ButtonHandler command;
     final private double scaleW;
     final private double scaleH;
@@ -43,7 +42,7 @@ public class PButton extends JButton {
         this.scaleH = scaleH;
         this.command = command;
         this.addActionListener(actionEvent -> {
-            System.out.printf("clicked %s\n", command.command.name());
+//            System.out.printf("clicked %s\n", command.command.name());
             if (command != null) {
                 command.buttonListener.onClick(command.command);
             }
@@ -69,10 +68,10 @@ public class PButton extends JButton {
                 BufferedImage scaledImage = Util.scale(image, width, height);
                 this.setIcon(new ImageIcon(scaledImage));
             }
+            Font f = this.getFont();
+            f = new Font(f.getFontName(), f.getStyle(), height / 2);
+            this.setFont(f);
         }
-        Font f = this.getFont();
-        f = new Font(f.getFontName(), f.getStyle(), height / 2);
-        this.setFont(f);
         return new Dimension(width, height);
     }
 

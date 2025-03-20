@@ -1,3 +1,7 @@
+Game Type->Вид игры
+Miami->Сочи
+Leningrad->Ленинград
+Rostov->Ростов
 Pass -> пас
 Whist -> вист
 Misère -> мизер
@@ -7,9 +11,9 @@ Ann, Bob, Cat->Аня, Боря, Витя
 Pool Length->Размер пули
 Animation Time->Время анимации
 Table Color->Цвет стола
-Round Timeout->Задержка после раунда
-Comment->Комментарий
-Record and close->Запомнить и закрыть
+After Round Timeout->Задержка после раунда
+Comments->Комментарии
+Record Notes->Запомнить
 Your notes->Ваши замечания
 Not implemented yet->Пока не работает
 New Game->Новая игра
@@ -21,3 +25,4 @@ Replay->Переиграть
 New game->Новая игра
 What would you like to do?->Что вы хотите делать?
 Please select->Выберите
+Last Trick->Последняя взятка

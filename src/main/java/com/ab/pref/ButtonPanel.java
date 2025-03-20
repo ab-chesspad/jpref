@@ -19,7 +19,6 @@
  */
  package com.ab.pref;
 
-
 import javax.swing.*;
 import java.awt.*;
 
@@ -61,7 +60,6 @@ public class ButtonPanel extends JPanel {
                 ((PButton) c).rescale();
             }
         }
-
         return new Dimension(width, height);
     }
 

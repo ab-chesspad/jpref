@@ -35,7 +35,6 @@ public class Util {
         unknown
     }
 
-    public static final String END_OF_DATA = "...";
     public static final Random myRand = new Random();
 
     public static OS getOS() {
@@ -55,16 +54,14 @@ public class Util {
     public static void getList(String filePath, LineHandler lineHandler) throws IOException {
         File f = new File(filePath);
         String s = f.getAbsolutePath();
-        int count = 0;
         try (BufferedReader reader =
-                     new BufferedReader(new InputStreamReader(Files.newInputStream(Paths.get(filePath))))) {
+                 new BufferedReader(new InputStreamReader(Files.newInputStream(Paths.get(filePath))))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                ++count;
+                line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) {
                     continue;
                 }
-//                System.out.println(line);
                 String[] parts = line.split(" -> ");
                 String[] tokens = parts[0].split(" ");
                 String res = "...";

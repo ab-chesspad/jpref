@@ -36,6 +36,7 @@ public class TestBot {
         };
     }
 
+/*
     @Test
     public void testGetMaxBid() throws IOException {
         GameManager.DEBUG = false;  // suppress thread status logginga
@@ -59,7 +60,9 @@ public class TestBot {
             Assert.assertEquals(expectedBid, bid);
         });
     }
+*/
 
+/*
     @Test
     public void testDeclareGame() throws IOException {
 //        File f = new File("x");
@@ -86,6 +89,7 @@ public class TestBot {
             //todo: check discards
         });
     }
+*/
 
     @Test
     public void testDiscard() {

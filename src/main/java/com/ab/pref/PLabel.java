@@ -19,48 +19,34 @@
  */
 package com.ab.pref;
 
+import javax.swing.*;
 import java.awt.*;
 
 public class PLabel extends javax.swing.JLabel {
-    private final double rotation;
-    final Rectangle bounds = new Rectangle(); // sometimes bounds get wiped out
-
-    public PLabel(String text) {
-        super((text));
-        rotation = 0;
-    }
+    public static final double fontFactor = .4;    // relative to cardW
+    protected final double rotation;
 
     public PLabel(double rotation) {
+        setOpaque(false);
         this.rotation = rotation;
     }
 
-//*
-    public void setPBounds(int x, int y, int width, int height) {
-        super.setBounds(x, y, width, height);
-        this.bounds.x = x;
-        this.bounds.y = y;
-        this.bounds.width = width;
-        this.bounds.height = height;
+    // not width and height but edge points
+    public void setPBounds(int x0, int y0, int x1, int y1) {
+        super.setBounds(x0, y0, x1 - x0, y1 - y0);
+        Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW * fontFactor));
+        this.setFont(font );
     }
-
-    public void setPBounds(Rectangle r) {
-//        super.setBounds(r);
-        this.setPBounds(r.x, r.y, r.width, r.height);
-    }
-
-    @Override
-    public void paint(Graphics g) {
-        super.paint(g);
-//        paintComponent(g);
-    }
-
-//*/
 
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2d = (Graphics2D) g.create();
+        if (rotation == 0) {
+            super.paintComponent(g);
+            return;
+        }
 
-        Rectangle bounds = this.bounds;
+        Graphics2D g2d = (Graphics2D) g.create();
+        Rectangle bounds = super.getBounds();
         Color bgColor;
         if ((bgColor = getBackground()) != null) {
             g2d.setColor(bgColor);
@@ -70,8 +56,6 @@ public class PLabel extends javax.swing.JLabel {
         String text = getText();
         g2d.setFont(getFont());
         FontMetrics fontMetrics = g2d.getFontMetrics();
-        int textHeight = fontMetrics.getHeight();
-        int textWidth = fontMetrics.stringWidth(text);
 
         int x0 =  bounds.width / 2;
         int y0 =  bounds.height / 2;
@@ -81,13 +65,14 @@ public class PLabel extends javax.swing.JLabel {
         g2d.drawLine( 0, y0, bounds.width, y0);
         g2d.drawRect(0, 0,  bounds.width,  bounds.height);  // without rotation
 //*/
+        int x = x0 - bounds.height / 2;
 
-        if (rotation == 0) {
-            g2d.drawString(text, 0, y0 + fontMetrics.getDescent());
-        } else {
-            g2d.rotate(rotation, x0, y0);
-            g2d.drawString(text, x0 - bounds.height / 2, y0 + fontMetrics.getDescent());
+        if (getHorizontalAlignment() == SwingConstants.CENTER) {
+            int textWidth = fontMetrics.stringWidth(text);
+            x = x0 - textWidth / 2;
         }
+        g2d.rotate(rotation, x0, y0);
+        g2d.drawString(text, x, y0 + fontMetrics.getDescent());
         g2d.dispose();
     }
 }

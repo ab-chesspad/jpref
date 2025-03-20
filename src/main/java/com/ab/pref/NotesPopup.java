@@ -28,73 +28,37 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class NotesPopup extends JDialog {
-    public static Logger logger;
+    Metrics metrics = Metrics.getInstance();
 
     NotesPopup(JFrame frame) {
         super(frame, false);
-        setTitle(I18n.m("Комментарий"));
-        setSize(Main.mainRectangle.width / 2, Main.mainRectangle.height / 2);
-//        this.setBounds(bounds);
+        setTitle(I18n.m("Comments"));
+        setSize(Main.mainRectangle.width, Main.mainRectangle.height);
 
         setLocationRelativeTo(frame);
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JLabel label = new JLabel(I18n.m("Ваши замечания"));
+        JLabel label = new JLabel(I18n.m("Your notes"));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label.setFont(metrics.font);
         panel.add(label);
 
         JTextArea text = new JTextArea();
         text.setAlignmentX(Component.CENTER_ALIGNMENT);
+        text.setFont(metrics.font);
         panel.add(text);
 
         panel.add(Box.createVerticalGlue()); // Add vertical glue above button
-        JButton b = new JButton(I18n.m("Запомнить и закрыть"));
+        JButton b = new JButton(I18n.m("Record Notes"));
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
+        b.setFont(metrics.font);
         panel.add(b);
         b.addActionListener(evnt -> {
-            Logger.println(text.getText());
+            Logger.printf("\ncomment: %s\n", text.getText());
             dispose();
         });
         add(panel);
         setVisible(true);
     }
-
-/*
-    Dimension rescale() {
-        int width = metrics.panelWidth / 2;
-        int height = metrics.panelHeight / 2;
-        return new Dimension(width, height);
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return rescale();
-    }
-
-    @Override
-    public Dimension getMinimumSize() {
-        return rescale();
-    }
-
-    @Override
-    public Dimension getMaximumSize() {
-        return rescale();
-    }
-
-    @Override
-    public Dimension getSize() {
-        return rescale();
-    }
-
-    @Override
-    public Rectangle getBounds() {
-        Rectangle r = super.getBounds();
-        Dimension d = rescale();
-        r.width = d.width;
-        r.height = d.height;
-        return r;
-    }
-*/
-
 }

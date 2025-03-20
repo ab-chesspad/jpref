@@ -80,6 +80,10 @@ public class Metrics {
 
             int panelWidth = Main.mainRectangle.width;
             int panelHeight = Main.mainRectangle.height;
+            if (Main.mainPanel != null) {
+                panelWidth = Main.mainPanel.getBounds().width;
+                panelHeight = Main.mainPanel.getBounds().height;
+            }
             if (cardAspectRatio == 0 || this.panelWidth == panelWidth && this.panelHeight == panelHeight) {
                 return;
             }
