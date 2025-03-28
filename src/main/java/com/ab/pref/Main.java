@@ -27,6 +27,7 @@ import com.ab.util.Logger;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.PrintStream;
 import java.util.Timer;
 
 public class Main {
@@ -47,10 +48,7 @@ public class Main {
     public static JFrame mainFrame;
     public static MainPanel mainPanel;
 
-    transient private Timer timer;
-
     GameManager gameManager;
-    boolean done = false;
     Thread gameThread;
 
     static String testFileName = null;
@@ -59,8 +57,10 @@ public class Main {
      * @param args optional [fixed-games-file]
      */
     public static void main(String[] args) {
-        Logger.set(System.out);
-//        Logger.set(null);   // output to file
+//        PrintStream out = System.out;   // output to System.out
+        PrintStream out = null;         // output to files
+        System.out.println("output to " + out);
+        Logger.set(out);
 
 /*
         Signal.handle(new Signal("INT"),  // SIGINT
