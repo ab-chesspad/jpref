@@ -21,29 +21,22 @@ package com.ab.pref;
 
 import com.ab.util.I18n;
 import com.ab.util.Logger;
-//import com.sun.java.util.jar.pack.Attribute;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.Locale;
 
 public class TestHtml {
-    static Metrics metrics = Metrics.getInstance();
-    JFrame mainFrame;
+    static final Metrics metrics = Metrics.getInstance();
+    final JFrame mainFrame;
     static Rectangle mainRectangle;
     MainPanel mainPanel;
 
     public static void main(String[] args) {
         Logger.set(System.out);
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new TestHtml();
-            }
-        });
+        javax.swing.SwingUtilities.invokeLater(() -> new TestHtml());
     }
 
     public TestHtml() {
@@ -75,12 +68,9 @@ public class TestHtml {
             this.setOpaque(true);
             this.setBackground(Color.red);
             JButton jButton = new JButton("pop up");
-            jButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent actionEvent) {
-                    Logger.println(actionEvent.toString());
-                    popup();
-                }
+            jButton.addActionListener(actionEvent -> {
+                Logger.println(actionEvent.toString());
+                popup();
             });
             this.add(jButton);
         }

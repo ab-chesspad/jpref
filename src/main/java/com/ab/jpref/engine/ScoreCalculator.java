@@ -23,8 +23,11 @@ package com.ab.jpref.engine;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public abstract class ScoreCalculator {
-    static Config config = Config.getInstance();
+    static final Config config = Config.getInstance();
     protected static ScoreCalculator instance;
 
     private static ScoreCalculator getScoreCalculator() {
@@ -50,10 +53,13 @@ public abstract class ScoreCalculator {
     }
 
     abstract void calculateAllPass(Player[] players, int trickCost);
+    abstract void calculateWithout3(Player player);
 
     public void calculate(Player declarer, Player[] players, int trickCost) {
         if (declarer == null) {
             instance.calculateAllPass(players, trickCost);
+        } else if (Config.Bid.BID_WITHOUT_THREE.equals(declarer.getBid())) {
+            instance.calculateWithout3(declarer);
         }
         // todo: calc declared round
 
@@ -66,7 +72,7 @@ public abstract class ScoreCalculator {
         for (int i = 0; i < totals.length; ++i) {
             totals[i] = new Player.RoundResults();
             Player player = players[i];
-            for (Player.RoundResults roundResults : player.history) {
+            for (Player.RoundResults roundResults : player.getHistory()) {
                 for (int j = 0; j < roundResults.points.length; ++j) {
                     Player.PlayerPoints playerPoints = Player.PlayerPoints.values()[j];
                     switch (playerPoints) {
@@ -135,6 +141,14 @@ public abstract class ScoreCalculator {
     }
 
     private static class MiamiScoreCalculator extends ScoreCalculator {
+        private final Map<Integer, Integer> fines = new HashMap<Integer, Integer>() {{
+            put(6, 2);
+            put(7, 4);
+            put(8, 6);
+            put(9, 8);
+            put(10, 10);
+        }};
+
         @Override
         void calculateAllPass(Player[] players, int trickCost) {
             int minTricks = Integer.MAX_VALUE;
@@ -152,8 +166,15 @@ public abstract class ScoreCalculator {
                     int tricks = player.getTricks() - minTricks;
                     roundResults.setPoints(Player.PlayerPoints.dumpPoints, trickCost * tricks);
                 }
-                player.history.add(roundResults);
+                player.endRound();
             }
+        }
+
+        void calculateWithout3(Player player) {
+            int dumpPoints = 3 * fines.get(GameManager.getInstance().getMinBid().getValue() / 10);
+            Player.RoundResults roundResults = player.getRoundResults();
+            roundResults.setPoints(Player.PlayerPoints.dumpPoints, dumpPoints);
+            player.endRound();
         }
     }
 }

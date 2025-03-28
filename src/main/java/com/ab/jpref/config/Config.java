@@ -16,8 +16,8 @@
  * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 12/22/2024
- */
-/**
+ *
+ *
  * https://en.wikipedia.org/wiki/Preferans
  * terms:
  * move  - the process of a player placing the card on the table;
@@ -40,6 +40,8 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.*;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Config implements Serializable {
     public final Property<IntTriplet> animDelay = new Property<>("Animation Time", new IntTriplet(100,1,200));
@@ -52,13 +54,13 @@ public class Config implements Serializable {
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
 
     public enum Bid implements Comparable<Bid>, Player.Queueable {
-        BID_WHIST(40, "whist"),
-        BID_HALF_WHIST(41, "half"),
-        BID_WITHOUT_THREE(42, "xx"),
+        BID_WHIST(40, "Whist"),
+        BID_HALF_WHIST(41, "Half"),
+        BID_WITHOUT_THREE(42, "Without 3"),
 
         BID_UNDEFINED(50, "---"),     // before actual bidding
-        BID_ALL_PASS(55, "all-pass"),
-        BID_PASS(60, "pass"),
+        BID_ALL_PASS(55, "All-pass"),
+        BID_PASS(60, "Pass"),
         BID_6S(61, "6♠"),
         BID_6C(62, "6♣"),
         BID_6D(63, "6♦"),
@@ -77,7 +79,7 @@ public class Config implements Serializable {
         BID_8H(84, "8♥"),
         BID_8N(85, "8-"),
 
-        BID_MISERE(86, "misere"),
+        BID_MISERE(86, "Misère"),
 
         BID_9S(91, "9♠"),
         BID_9C(92, "9♣"),

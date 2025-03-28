@@ -80,8 +80,7 @@ public class Logger {
             return false;
         });
         logFileName = logDir + File.separator + String.format("%s%03d%s", date, lastNum[0] + 1, LOG_EXT);
-        PrintStream res = new PrintStream(logFileName, StandardCharsets.UTF_8.name());
-        return res;
+        return new PrintStream(logFileName, StandardCharsets.UTF_8.name());
     }
 
     public static void close() {

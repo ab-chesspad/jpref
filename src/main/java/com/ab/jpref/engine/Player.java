@@ -35,13 +35,14 @@ public abstract class Player {
     protected final CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
     protected final CardList[] rightSuits = new CardList[Card.Suit.values().length - 1];
 
-    final List<RoundResults> history = new LinkedList<>();
+    private final List<RoundResults> history = new LinkedList<>();
     int tricks;
-    RoundData roundData;
+    protected RoundResults roundResults;
 
-//    public abstract Config.Bid getBid(Config.Bid minBid, int turn);
+    public abstract Config.Bid getBid(Config.Bid minBid, boolean meStart);
 //    //    public abstract Config.Bid getMaxBid(Config.Bid minBid, int turn, Config.Bid leftBid, Config.Bid rightBid);
-//    public abstract Player.RoundData declareRound(Config.Bid minBid, int turn);
+//    public abstract void discardTwo();
+    public abstract void declareRound(Config.Bid minBid, boolean elderHand);
     public abstract Card play(Trick trick);
 
     // to be implemented in a subclass (human player)
@@ -53,6 +54,12 @@ public abstract class Player {
     // to be implemented in a subclass (human player)
     public void abortThread(GameManager.RestartCommand restartCommand) {}
 
+    // to be implemented in a subclass (human player)
+    // returns BID_WITHOUT_THREE or a game
+    public Config.Bid discard() {
+        return Config.Bid.BID_PASS;
+    }
+
     public Player(String name) {
         this.name = name;
         for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
@@ -60,7 +67,7 @@ public abstract class Player {
             leftSuits[i] = new CardList();
             rightSuits[i] = new CardList();
         }
-        roundData = new RoundData();
+//        roundData = new RoundData();
     }
 
     public Player(String name, Collection<Card> cards) {
@@ -88,7 +95,7 @@ public abstract class Player {
             Collections.sort(cardList);
         }
         bid = Config.Bid.BID_UNDEFINED;
-        roundData = new RoundData();
+        roundResults = new RoundResults();
     }
 
     public void clear() {
@@ -130,15 +137,11 @@ public abstract class Player {
     }
 
     public RoundResults getRoundResults() {
-        return roundData.roundResults;
+        return roundResults;
     }
 
-    public RoundData getRoundData() {
-        return roundData;
-    }
-
-    public void setRoundData(RoundData roundData) {
-        this.roundData = roundData;
+    public void endRound() {
+        history.add(roundResults);
     }
 
     public void incrementTricks() {
@@ -151,9 +154,11 @@ public abstract class Player {
 
     public void takeTalon(CardList talon) {
         for (Card card : talon) {
-            mySuits[card.getSuit().getValue()].add(card);
-            leftSuits[card.getSuit().getValue()].remove(card);
-            rightSuits[card.getSuit().getValue()].remove(card);
+            int suitNum = card.getSuit().getValue();
+            mySuits[suitNum].add(card);
+            Collections.sort(mySuits[suitNum]);
+            leftSuits[suitNum].remove(card);
+            rightSuits[suitNum].remove(card);
         }
         talon.clear();
     }
@@ -194,24 +199,6 @@ public abstract class Player {
 
         public void setPoints(PlayerPoints location, int points) {
             this.points[location.ordinal()] = points;
-        }
-    }
-
-    public static class RoundData {
-        public final Config.Bid bid;
-        Player declarer;
-        RoundResults roundResults = new RoundResults();
-
-        public RoundData() {
-            this(null);
-        }
-
-        public RoundData(Config.Bid bid) {
-            this.bid = bid;
-        }
-
-        public RoundResults getRoundResults() {
-            return roundResults;
         }
     }
 

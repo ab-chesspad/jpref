@@ -24,8 +24,6 @@ import com.ab.util.I18n;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 public class PButton extends JButton {
@@ -38,11 +36,13 @@ public class PButton extends JButton {
     int width, height;
 
     PButton(double scaleW, double scaleH, MainPanel.ButtonHandler command) {
+        this.setHorizontalTextPosition(JButton.CENTER);
+        this.setVerticalTextPosition(JButton.CENTER);
+        setMargin(new Insets(0, 0, 0, 0));
         this.scaleW = scaleW;
         this.scaleH = scaleH;
         this.command = command;
         this.addActionListener(actionEvent -> {
-//            System.out.printf("clicked %s\n", command.command.name());
             if (command != null) {
                 command.buttonListener.onClick(command.command);
             }
@@ -69,7 +69,7 @@ public class PButton extends JButton {
                 this.setIcon(new ImageIcon(scaledImage));
             }
             Font f = this.getFont();
-            f = new Font(f.getFontName(), f.getStyle(), height / 2);
+            f = new Font(f.getFontName(), f.getStyle(), height / 3);
             this.setFont(f);
         }
         return new Dimension(width, height);

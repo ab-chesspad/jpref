@@ -117,9 +117,9 @@ class MainPanelLayout {
         centerPanel(mainPanel.trickPanel);
         mainPanel.trickPanel.setBackground(Color.darkGray);
 
-        centerPanel(mainPanel.firstBidPanel);
         centerPanel(mainPanel.bidPanel);
-        centerPanel(mainPanel.declareGamePanel);
+        centerPanel(mainPanel.declareRoundPanel);
+        centerPanel(mainPanel.discardPanel);
 
         // to southwest
         bounds = mainPanel.buttonPanel.getBounds();
@@ -270,7 +270,7 @@ class MainPanelLayout {
     }
 
     private void paintHand(Graphics2D g, HandVisualData handVisualData) {
-        int actualW = 0, actualH = 0;
+        int actualW, actualH;
         int totalCards = handVisualData.allCards.size();
         int totalSuits = handVisualData.totalSuits;
         int cardW = 0, cardH = 0, dx = 0, dy = 0;
@@ -342,7 +342,7 @@ class MainPanelLayout {
             if (mainPanel.isStage(GameManager.RoundStage.bidding)) {
                 Config.Bid bid = player.getBid();
                 if (!Config.Bid.BID_UNDEFINED.equals(bid)) {
-                    text += ": " + bid.getName();
+                    text += ": " + I18n.m(bid.getName());
                 }
             } else {
                 int tricks = player.getTricks();
@@ -397,7 +397,7 @@ class MainPanelLayout {
             }
 //            System.out.printf("size %dx%d\n", im.getWidth(null), im.getHeight(null));
             Point position = new Point(x, y);
-            if (card == mainPanel.selectedCard) {
+            if (mainPanel.selectedCards.contains(card)) {
                 if (handVisualData.xVisible == 0) {
                     // vertical
                     if (x < metrics.panelWidth / 2) {

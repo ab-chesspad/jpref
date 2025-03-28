@@ -24,11 +24,9 @@ import com.ab.util.Logger;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class NotesPopup extends JDialog {
-    Metrics metrics = Metrics.getInstance();
+    final Metrics metrics = Metrics.getInstance();
 
     NotesPopup(JFrame frame) {
         super(frame, false);

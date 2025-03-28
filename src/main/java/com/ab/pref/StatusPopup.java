@@ -420,7 +420,7 @@ public class StatusPopup extends JDialog {
         return new ButtonPanel(3, .7, buttonList);
     }
 
-    private class PlayerArea {
+    private static class PlayerArea {
         // debug:
         Color[] bgColors = {Color.green, Color.magenta, Color.red, Color.cyan, Color.yellow};
         final SLabel[] pLabels = new SLabel[Player.PlayerPoints.values().length];
@@ -476,7 +476,7 @@ public class StatusPopup extends JDialog {
             List<Player.RoundResults> history = player.getHistory();
             if (label.equals(Player.PlayerPoints.status)) {
                 String text = "";
-                if (history.size() > 0) {
+                if (!history.isEmpty()) {
                     Player.RoundResults roundResults = history.get(history.size() - 1);
                     int curr = roundResults.getPoints(label);
                     int prev = 0;

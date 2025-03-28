@@ -5,19 +5,13 @@
  */
 package com.ab.jpref.engine;
 
-import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
-import com.ab.util.Util;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.*;
-
 public class TestBot {
-    static Config config = Config.getInstance();
+    static final Config config = Config.getInstance();
     static GameManager gameManager;
 
     @BeforeClass
@@ -28,12 +22,7 @@ public class TestBot {
     }
 
     private static GameManager.PlayerFactory playerFactory() {
-        return new GameManager.PlayerFactory() {
-            @Override
-            public Player getPlayer(int index) {
-                return new Bot("" + index);
-            }
-        };
+        return index -> new Bot("" + index);
     }
 
 /*

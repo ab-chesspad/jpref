@@ -1,3 +1,22 @@
+/*  This file is part of JPref.
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see [http://www.gnu.org/licenses/].
+ *
+ * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ *
+ * Created: 3/20/2025
+ */
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
@@ -46,10 +65,6 @@ public class Trick {
         return minBid;
     }
 
-    public int Started() {
-        return startedBy;
-    }
-
     public CardList getTrickCards() {
         return trickCards;
     }
@@ -78,14 +93,13 @@ public class Trick {
         // 2 -> 1:left, 0:right
         int[][] others = {{2,1},{0,2},{1,0}};   // right, left
         int discardingPlayer = -1;
-        int suitNum = card.getSuit().getValue();
+//        int suitNum = card.getSuit().getValue();
         if (startingSuit != null && !card.getSuit().equals(startingSuit)) {
             discardingPlayer = getTurn();
         }
 
         Player[] players = GameManager.getInstance().players;
-        for (int i = 0; i < players.length; ++i) {
-            Player player = players[i];
+        for (Player player : players) {
             player.discard(card);
         }
         if (discardingPlayer >= 0) {

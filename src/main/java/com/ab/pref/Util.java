@@ -26,6 +26,8 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Util {
     public static boolean DEBUG = true;
@@ -71,7 +73,7 @@ public class Util {
         String remoteFileName = GUID + "-" + fileName;
         System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
 
-        try (InputStream input = new FileInputStream(filePath)) {
+        try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
             byte[] fileData= new byte[input.available()];
             input.read(fileData);
 //            System.out.println("url:" + url);

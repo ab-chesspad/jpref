@@ -34,8 +34,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class GameManager {
     public static boolean DEBUG = false;
-    public static boolean SHOW_ALL = true;
-    public static final int TRICK_TIMEOUT = 1000;
+    public static boolean SHOW_ALL = false;
+    public static final int TRICK_TIMEOUT = 500;
 
     public static final int ROUND_SIZE = 10;   // total tricks == initial hand size
     public static final int NUMBER_OF_PLAYERS = 3;
@@ -77,14 +77,14 @@ public class GameManager {
 
     final Player[] players = new Player[NUMBER_OF_PLAYERS];
     private final CardList talonCards = new CardList();
-    private Trick trick = new Trick();
-    private Trick lastTrick = new Trick();
+    private final Trick trick = new Trick();
+    private final Trick lastTrick = new Trick();
 
     public String testFileName;
     private int lineCount = 0;
 
     private Config.Bid minBid = Config.Bid.BID_6S;
-    Player.RoundData currentRound;
+    Player declarer;
     int elderHand;
 
     // eventObserver == null for test run
@@ -168,8 +168,12 @@ public class GameManager {
                             }
                             deck.addAll(Util.toCardList(token));
                         }
-                        playRound(deck, elderHand);
-                        roundState.set(RoundStage.idle);
+                        RoundStage next = RoundStage.replay;
+                        while (RoundStage.replay.equals(next)) {
+                            next = playRound(deck, elderHand);
+                            roundState.set(RoundStage.idle);
+                            Util.sleep(10);     // give jPrefPanel a chance to paint
+                        }
                         elderHand = ++elderHand % NUMBER_OF_PLAYERS;
                     });
             } catch (IOException e) {
@@ -185,12 +189,13 @@ public class GameManager {
             CardList deck = CardList.getDeck();
             Collections.shuffle(deck);
 
-            RoundStage next;
-            do {
+            RoundStage next = RoundStage.replay;
+            while (RoundStage.replay.equals(next)) {
                 next = playRound(deck, elderHand);
-                elderHand = ++elderHand % NUMBER_OF_PLAYERS;
-            } while (RoundStage.replay.equals(next));
-            Util.sleep(10);     // give jPrefPanel a chance to paint
+                roundState.set(RoundStage.idle);
+                Util.sleep(10);     // give jPrefPanel a chance to paint
+            }
+            elderHand = ++elderHand % NUMBER_OF_PLAYERS;
             if (next.equals(RoundStage.newGame)) {
                 break;
             }
@@ -205,26 +210,47 @@ public class GameManager {
             gameThread = Thread.currentThread();
             trick.clear(elderHand);
             deal(deck);
-            currentRound = new Player.RoundData();
+            declarer = null;
 
 /*  debug
         roundState.set(RoundStage.bidding);
 //        Logger.printf("  %s %d\n", talonCards.toString(), turn + 1);
-        currentRound.declarer = bidding(turn);
-        if (currentRound.declarer == null) {
+        declarer = bidding(elderHand);
+        if (declarer == null) {
             Logger.printf("playing all-pass\n");
-            playRoundAllPass(turn);
+            playRoundAllPass();
         } else {
             Logger.printf("declarer %s, %s %s\n",
-                    currentRound.declarer.getName(), currentRound.declarer.getBid(), currentRound.declarer);
+                declarer.getName(), declarer.getBid(), declarer);
+            declarer.takeTalon(talonCards);
             roundState.set(RoundStage.discard);
-            currentRound.declarer.takeTalon(talonCards);
-//            Util.sleep(100);
-            Logger.printf("%s declareRound()\n", currentRound.declarer.toString());
-            roundState.set(RoundStage.declareRound);
-            currentRound = currentRound.declarer.declareRound(minBid, turn);
+            Config.Bid bid = declarer.discard();
+            if (!Config.Bid.BID_WITHOUT_THREE.equals(bid)) {
+//            Util.sleep(10);
+                Logger.printf("%s declareRound()\n", declarer.getName());
+                if (Config.Bid.BID_MISERE.equals(declarer.getBid())) {
+                    // todo: play misere round
+                } else {
+                    roundState.set(RoundStage.declareRound);
+                    boolean _elderHand = false;
+                    for (int i = 0; i < players.length; ++i) {
+                        Player player = players[i];
+                        if (player == declarer) {
+                            _elderHand = elderHand == i;
+                        }
+                    }
+                    declarer.declareRound(minBid, _elderHand);
+                    // todo: whist/pass and play trick round
+            playRoundAllPass();
+                }
+            }
+
         }
 /*/
+//            roundState.set(RoundStage.declareRound);
+//            declarer = players[0];
+//            declarer.setBid(Config.Bid.BID_7D);
+//            declarer.declareRound(minBid, true);
             playRoundAllPass();
 //*/
             String sep = "";
@@ -234,7 +260,7 @@ public class GameManager {
                 sep = ", ";
             }
             Logger.printf("\n");
-            ScoreCalculator.getInstance().calculate(currentRound.declarer, players, 1);
+            ScoreCalculator.getInstance().calculate(declarer, players, 1);
             ++lineCount;
             next = roundState.set(RoundStage.roundEnded);
             if (eventObserver != null) {
@@ -249,8 +275,7 @@ public class GameManager {
         return next;
     }
 
-/*
-    Player bidding(int turn) {
+    Player bidding(int elderHand) {
         Config.Bid[] bids = new Config.Bid[players.length];
         // in the future bot should be able to pass even if it can declare a round
         Config.Bid currentBid = Config.Bid.BID_PASS;    // todo: m.b ♠7
@@ -260,7 +285,7 @@ public class GameManager {
         boolean misereDeclared = false;
         while (passCount < 2) {
             for (int i = 0; i < players.length; ++i) {
-                int j = (i + turn) % players.length;
+                int j = (i + elderHand) % players.length;
                 Player currentBidder = players[j];
                 if (currentBidder.equals(declarer)) {
                     continue;
@@ -273,7 +298,7 @@ public class GameManager {
                         !(misereDeclared && Config.Bid.BID_9S.equals(minBid))) {
                     minBid = minBid.prev();
                 }
-                Config.Bid bid = currentBidder.getBid(minBid, turn);
+                Config.Bid bid = currentBidder.getBid(minBid, i == 0);
                 if (Config.Bid.BID_MISERE.equals(bid)) {
                     misereDeclared = true;
                 }
@@ -303,7 +328,6 @@ public class GameManager {
         }
         return declarer;
     }
-*/
 
     void deal(CardList deck) {
         int index = 0;
@@ -332,6 +356,9 @@ public class GameManager {
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
                 Card card = player.play(trick);
+                if (card == null) {
+                    trick.add(card);
+                }
                 trick.add(card);
                 roundState.set(RoundStage.play);
                 Logger.printf("%s%s: %s", sep, player.getName(), card.toString());
@@ -372,7 +399,7 @@ public class GameManager {
 
     private void clearHistory(RestartCommand command) {
         for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-            if (players[i].getHistory().size() == 0) {
+            if (players[i].getHistory().isEmpty()) {
                 continue;
             }
             if (command.equals(RestartCommand.replay)) {
@@ -447,8 +474,9 @@ public class GameManager {
             }
             GameManager.instance.eventObserver.update();
             try {
+                Logger.printf(DEBUG,"GameManager blocked %s\n", state.toString());
                 q = GameManager.getQueue().take();
-                Logger.printf(DEBUG, "GameManager unblocked %s\n", q.toString());
+                Logger.printf(DEBUG,"GameManager unblocked %s\n", q.toString());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -477,4 +505,27 @@ public class GameManager {
         Player getPlayer(int index);
     }
 
+/*
+    public static class RoundData {
+//        public Config.Bid bid;
+        Player declarer;
+        final Player.RoundResults roundResults = new Player.RoundResults();
+
+*/
+/*
+        public RoundData() {
+            this(null);
+        }
+
+        public RoundData(Config.Bid bid) {
+            this.bid = bid;
+        }
+*//*
+
+
+        public Player.RoundResults getRoundResults() {
+            return roundResults;
+        }
+    }
+*/
 }

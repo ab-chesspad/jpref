@@ -23,8 +23,6 @@
 
 package com.ab.pref;
 
-import com.ab.util.Logger;
-
 import javax.swing.*;
 import java.awt.*;
 
@@ -60,20 +58,12 @@ public class HtmlLabel extends JLabel {
 
         text = text.replaceAll("<head.*?head>|\r", "");    // remove <head>
         String[] lines = text.split("\n|<p>|</p>|<br>|<br/>");
-//        int emptyLines = 0;
         StringBuilder sb = new StringBuilder();
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty()) {
-/*
-                if (++emptyLines != 2) {
-                    continue;   // only single empty lines
-                }
-                sb.append(lb);
-*/
                 continue;
             }
-//            emptyLines = 0;
             line = line.replaceAll("<a.*?>|</a>", "");    // remove all unprintable tags
             int textWidth = fontMetrics.stringWidth(line);
             if (textWidth > lineWidth) {

@@ -28,14 +28,10 @@ import java.awt.event.ComponentEvent;
 
 public class TestLabel {
     static final boolean USE_PLabel = true;
-    JFrame mainFrame;
+    final JFrame mainFrame;
 
     public static void main(String[] args) {
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new TestLabel(args);
-            }
-        });
+        javax.swing.SwingUtilities.invokeLater(() -> new TestLabel(args));
     }
 
     public TestLabel(String[] args) {

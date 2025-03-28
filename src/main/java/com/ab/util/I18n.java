@@ -83,7 +83,7 @@ public class I18n {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         path = String.format("i18n/%s/%s", getInstance().iso639_1_2002_code, path);
         try (InputStream is = classloader.getResourceAsStream(path);
-                BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8.name()))) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
                 sb.append(line).append("<br/>").append("\r");

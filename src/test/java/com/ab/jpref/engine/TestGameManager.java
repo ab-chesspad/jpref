@@ -9,21 +9,16 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Util;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
 public class TestGameManager {
-    static Config config = Config.getInstance();
+    static final Config config = Config.getInstance();
     GameManager gameManager;
 
     @Before
@@ -35,14 +30,10 @@ public class TestGameManager {
     }
 
     private GameManager.PlayerFactory playerFactory() {
-        return new GameManager.PlayerFactory() {
-            @Override
-            public Player getPlayer(int index) {
-                return new Bot("" + index);
-            }
-        };
+        return index -> new Bot("" + index);
     }
 
+    // ♣8 ♥789   ♦78X ♥Q   ♠K ♦K ♥XJ   2
 /*
     @Test
     public void testBidding() throws IOException {
@@ -104,6 +95,7 @@ public class TestGameManager {
 
     private void testAllPass(CardList deck, int turn, String res) {
         gameManager.deal(deck);
+        gameManager.getTrick().clear(turn);
         gameManager.playRoundAllPass();
         System.out.printf("1: %d, 2: %d, 3: %d\n"
                 , gameManager.players[0].tricks
@@ -186,7 +178,7 @@ public class TestGameManager {
 */
 
     public static class BidHelper {
-        List<Config.Bid> bids = new LinkedList<>();
+        final List<Config.Bid> bids = new LinkedList<>();
         int index = 0;
 
         public Config.Bid nextBid() {
@@ -203,7 +195,7 @@ public class TestGameManager {
 
     @Test
     public void testQue() throws InterruptedException {
-        java.util.concurrent.BlockingQueue<Integer> que = new LinkedBlockingQueue();
+        java.util.concurrent.BlockingQueue<Integer> que = new LinkedBlockingQueue<>();
 
         que.put(1);
         que.put(2);
