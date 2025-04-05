@@ -57,8 +57,8 @@ public class Main {
      * @param args optional [fixed-games-file]
      */
     public static void main(String[] args) {
-//        PrintStream out = System.out;   // output to System.out
-        PrintStream out = null;         // output to files
+        PrintStream out = System.out;   // output to System.out
+        out = null;         // output to files
         System.out.println("output to " + out);
         Logger.set(out);
 

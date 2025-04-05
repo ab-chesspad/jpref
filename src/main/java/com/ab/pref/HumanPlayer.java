@@ -20,7 +20,6 @@
 package com.ab.pref;
 
 import com.ab.jpref.cards.Card;
-import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
@@ -104,19 +103,6 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
             bid = (Config.Bid)q;
         }
         return bid;
-    }
-
-    void discard(CardList discard) {
-        StringBuilder sb = new StringBuilder(String.format("human:%s discard ",
-            Thread.currentThread().getName()));
-        String sep = "";
-        for (Card card : discard) {
-            sb.append(sep).append(card);
-            sep = ", ";
-            mySuits[card.getSuit().getValue()].remove(card);
-        }
-        Logger.printf(DEBUG, sb + "\n");
-        accept(Config.Bid.BID_6S);
     }
 
     @Override

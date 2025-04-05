@@ -22,6 +22,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
+import com.ab.util.Logger;
 
 import java.util.*;
 
@@ -40,8 +41,6 @@ public abstract class Player {
     protected RoundResults roundResults;
 
     public abstract Config.Bid getBid(Config.Bid minBid, boolean meStart);
-//    //    public abstract Config.Bid getMaxBid(Config.Bid minBid, int turn, Config.Bid leftBid, Config.Bid rightBid);
-//    public abstract void discardTwo();
     public abstract void declareRound(Config.Bid minBid, boolean elderHand);
     public abstract Card play(Trick trick);
 
@@ -169,6 +168,19 @@ public abstract class Player {
 
     public List<RoundResults> getHistory() {
         return history;
+    }
+
+    public void discard(CardList discard) {
+        StringBuilder sb = new StringBuilder(String.format("player %s discarded ",
+            this.getName()));
+        String sep = "";
+        for (Card card : discard) {
+            sb.append(sep).append(card);
+            sep = ", ";
+            discard(card);
+        }
+        Logger.printf(Bot.DEBUG, sb + "\n");
+        accept(Config.Bid.BID_6S);
     }
 
     public void discard(Card card) {

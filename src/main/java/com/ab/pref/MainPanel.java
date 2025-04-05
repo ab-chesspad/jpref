@@ -397,8 +397,6 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         }
         helpShown = true;
         Rectangle bounds = (Rectangle) Main.mainRectangle.clone();
-//        bounds.width = bounds.width / 2;
-//        bounds.height = bounds.height / 2;
         bounds.x = (Main.mainRectangle.width - bounds.width) / 2;
         bounds.y = (Main.mainRectangle.height - bounds.height) / 2;
 

@@ -32,14 +32,7 @@ public class Trick {
     boolean startedFromTalon;
     int top = -1;
     Card topCard;
-    //        Card leftCard, rightCard;
     CardList trickCards = new CardList();
-
-/*
-    public Trick(int startedBy) {
-        this.startedBy = startedBy;
-    }
-*/
 
     public Card.Suit getStartingSuit() {
         return startingSuit;

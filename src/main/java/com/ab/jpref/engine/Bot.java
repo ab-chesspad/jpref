@@ -22,10 +22,12 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
+import com.ab.util.Logger;
 
-import java.util.Collection;
+import java.util.*;
 
-public class Bot extends Player{
+public class Bot extends Player {
+    public static boolean DEBUG = false;
 
     public Bot(String name) {
         super(name);
@@ -37,87 +39,14 @@ public class Bot extends Player{
 
     @Override
     public void declareRound(Config.Bid minBid, boolean elderHand) {
+        SuitResults suitResults = null;
+        if (Config.Bid.BID_MISERE.equals(minBid)) {
+            suitResults = discardForMisere(elderHand);
+        }
+        // todo
 
+        discard(suitResults.discarded);
     }
-
-    // consider single 8 or 7-10 or 7-9-Q or 7-9-J-A as 'small holes'
-    // also a singleton on the 1st turn
-    private int holesForMisere(CardList[] mySuits, boolean meStart) {
-        int totalHoles = 0;
-        boolean ok1stMove = !meStart;
-        for (CardList suit : mySuits) {
-//            CardList.ListData listData = suit.getListData(new HashSet<>());
-            CardList.ListData listData = null;
-            int _holes = listData.holes;
-            if (_holes > 0 && suit.size() == 1 && meStart) {
-                ++totalHoles;       // singleton
-                ok1stMove = true;   // this will be the 1st move
-            } else {
-                totalHoles += _holes;
-            }
-            if (listData.ok1stMove) {
-                ok1stMove = true;
-            }
-        }
-        if (!ok1stMove) {
-            ++totalHoles;
-        }
-        return totalHoles;
-    }
-
-/*
-//    private RoundData declareMisere(int turn, Config.Bid leftBid, Config.Bid rightBid, Config.Bid minBid) {
-    private RoundData declareMisere(int turn) {
-        List<RoundData> allRes = new LinkedList<>();
-        int minHoles = 99;
-        for (int s = 0; s < this.mySuits.length; ++s) {
-            CardList suit = this.mySuits[s];
-            for (int ii : new int[]{0, 1}) {
-                int i = suit.size() - 1 - ii;
-                if (i < 0) {
-                    break;
-                }
-                for (int s1 = s; s1 < this.mySuits.length; ++s1) {
-                    CardList suit1 = this.mySuits[s1];
-                    for (int kk : new int[]{0, 1}) {
-                        int k = suit1.size() - 1 - kk;
-                        if (s1 == s) {
-                            if (i <= k) {
-                                continue;
-                            }
-                        }
-                        if (k < 0) {
-                            continue;
-                        }
-                        CardList[] mySuits = CardList.clone(this.mySuits.clone());
-//                        CardList[] theirSuits = CardList.clone(this.theirSuits.clone());
-                        Set<Card> discarded = new HashSet<>();
-                        Card c1 = mySuits[s].remove(i);
-                        Card c2 = mySuits[s1].remove(k);
-                        discarded.add(c1);
-                        discarded.add(c2);
-                        int total = holesForMisere(mySuits, turn);
-                        if (minHoles > total) {
-                            minHoles = total;
-                            allRes.clear();
-                            allRes.add(new RoundData(Bid.BID_MISERE));
-//                            System.out.printf("discard %s, %s -> %d\n", c1, c2, total);
-                        } else if (minHoles == total) {
-                            allRes.add(new RoundData(Bid.BID_MISERE));
-//                            System.out.printf("discard %s, %s -> %d\n", c1, c2, total);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (allRes.size() > 1) {
-            // todo: find good discard option!
-        }
-
-        return allRes.get(0);
-    }
-*/
 
     private Card discardAny() {
         int maxProblemTricks = 0;
@@ -162,13 +91,6 @@ public class Bot extends Player{
         int maxNoProblemTricks = -1;
         CardList noProblemSuit = null;
 
-/*
-        // ♠XQ ♥89   ♠9JA ♦K   ♠78 ♣K ♥A
-        // debug:
-        if (tricks == 2) {
-            noProblemSuit = null;
-        }
-//*/
         // ♣8JQK ♦89 ♥79   ♠A ♣79 ♦XJKA ♥8   ♠J ♣XA ♦7 ♥XJQA 1 - must: ♠A, ♦X and ♦XJ?
         for (int i = 0; i < this.mySuits.length; ++i) {
             CardList suit = this.mySuits[i];
@@ -205,7 +127,6 @@ public class Bot extends Player{
         Card res;
         if (noProblemSuit != null) {
             // further check?
-//            res = noProblemSuit.get(0);
             res = noProblemSuit.get(noProblemSuit.size() - 1);
         } else if (problems != null) {
             res = problems;
@@ -242,11 +163,11 @@ public class Bot extends Player{
         CardList.ListData listData = suit.getListData(leftSuits[suitNum], rightSuits[suitNum]);
         if (myMin.compareInTrick(topTrickCard) > 0) {
             Card leftMin = null;
-            if (listData.leftSuit.size() > 0) {
+            if (!listData.leftSuit.isEmpty()) {
                 leftMin = listData.leftSuit.get(0);
             }
             Card rightMin = null;
-            if (listData.rightSuit.size() > 0) {
+            if (!listData.rightSuit.isEmpty()) {
                 rightMin = listData.rightSuit.get(0);
             }
             if (myMin.compareInTrick(leftMin) > 0 && myMin.compareInTrick(rightMin) > 0) {
@@ -286,10 +207,12 @@ public class Bot extends Player{
             int suitNum = suit.get(0).getSuit().getValue();
             CardList.ListData listData = new CardList.ListData();
             listData.suit = suit.get(0).getSuit();
-            if (!meStart) {
-                listData.maxMeStart = 0;
-            } else {
+            if (meStart) {
                 listData.maxTheyStart = 0;
+                listData.minTheyStart = 0;
+            } else {
+                listData.maxMeStart = 0;
+                listData.minMeStart = 0;
             }
             suit.calcMaxTricks(listData, leftSuits[suitNum], rightSuits[suitNum]);
             totalTricks += listData.maxMeStart + listData.maxTheyStart;
@@ -300,12 +223,9 @@ public class Bot extends Player{
         }
         Config.Bid bid = null;
         if (totalTricks < 10) {
-/*
-            if (holesForMisere(this.mySuits, meStart) <= 1) {     // m.b 2 is ok?
+            if (evalMisere(meStart)) {
                 bid = Config.Bid.BID_MISERE;
-            } else
-*/
-            if (totalTricks < 6) {
+            } else if (totalTricks < 6) {
                 // todo: compare all-pass loss vs minimal bid
                 bid = Config.Bid.BID_PASS;
             }
@@ -317,4 +237,150 @@ public class Bot extends Player{
         return bid;
     }
 
+    boolean evalMisere(boolean meStart) {
+        int minMeStart = 0, minTheyStart = 0;
+        CardList badSuit = null;
+        for (CardList suit : mySuits) {
+            if (suit.isEmpty()) {
+                continue;
+            }
+            int suitNum = suit.get(0).getSuit().getValue();
+            CardList.ListData listData = new CardList.ListData();
+            listData.suit = suit.get(0).getSuit();
+            suit.calcMinTricks(listData, leftSuits[suitNum], rightSuits[suitNum]);   // me start
+            suit.calcMinTricks(listData, leftSuits[suitNum], rightSuits[suitNum]);   // they start
+            minMeStart += listData.minMeStart;
+            minTheyStart += listData.minTheyStart;
+            if (meStart && listData.minMeStart == 0) {
+                meStart = false;
+            }
+            if (minTheyStart > 0) {
+                badSuit = suit;
+            }
+        }
+
+        if (badSuit == null) {
+            // let's go for it even if we have no good starting move
+            return true;
+        }
+
+        // applying 'the rule of 7 cards'
+        // https://gambiter.ru/pref/mizer-preferans.html
+        // brute force
+        Set<Card> myHand = new HashSet<>();
+        Set<Card> talonCandidates = new HashSet<>(CardList.getDeck());
+        for (CardList suit : mySuits) {
+            myHand.addAll(suit);
+            for (Card card : suit) {
+                talonCandidates.remove(card);
+            }
+        }
+
+        Logger.printf(DEBUG,"good from talon:\n");
+        int goodCards = 0;
+        for (Card card : talonCandidates) {
+            Set<Card> probeHand = new HashSet<>(myHand);
+            probeHand.add(card);
+            for (Card c : myHand) {
+                probeHand.remove(c);
+                SuitResults suitResults = new Bot("probe" + card + c, probeHand).misereTricks(meStart);
+                if (suitResults.totalTricks == 0) {
+                    ++goodCards;
+                    Logger.printf(DEBUG, "talon %s, discard %s\n", card, c);
+                    if (goodCards >= 7) {
+                        return true;
+                    }
+                    break;
+                }
+                probeHand.add(c);
+            }
+        }
+        return false;
+    }
+
+    SuitResults misereTricks(boolean meStart) {
+        SuitResults suitResults = new SuitResults();
+        int maxTricks = 0;
+        int eval = 0;
+        for (CardList suit : mySuits) {
+            if (suit.isEmpty()) {
+                continue;
+            }
+            int suitNum = suit.get(0).getSuit().getValue();
+            CardList.ListData listData = new CardList.ListData();
+            listData.suit = suit.get(0).getSuit();
+            if (meStart) {
+                listData.minTheyStart = 0;
+            } else {
+                listData.minMeStart = 0;
+            }
+            suit.calcMinTricks(listData, leftSuits[suitNum], rightSuits[suitNum]);
+            int tricks = listData.minMeStart + listData.minTheyStart;
+            if (maxTricks < tricks || eval < listData.misereEval) {
+                eval = listData.misereEval;
+                suitResults.listData = listData;
+                maxTricks = tricks;
+            }
+            suitResults.totalTricks += tricks;
+        }
+        return suitResults;
+    }
+
+    // select 2 cards to discard to minimize tricks and their probability
+    SuitResults discardForMisere(boolean elderHand) {
+        // optimistically we assume that there will be a way to turn elderHand to false
+        boolean _elderHand = false;
+        Set<Card> myHand = new HashSet<>();
+        for (CardList suit : mySuits) {
+            myHand.addAll(suit);
+        }
+
+        SuitResults suitResults = new SuitResults();
+        Set<Card> probeSet1 = new HashSet<>(myHand);
+probes:
+        for (Card card1 : myHand) {
+            probeSet1.remove(card1);
+            for (Card card2 : probeSet1) {
+                Set<Card> probeHand = new HashSet<>(myHand);
+                probeHand.remove(card1);
+                probeHand.remove(card2);
+                Bot bot = new Bot("test"+card1+card2, probeHand);
+                Logger.printf(DEBUG, "probe discard %s, %s, bot %s\n",
+                    card1, card2, bot.toString());
+                SuitResults _suitResults = bot.misereTricks(_elderHand);
+                boolean refresh;
+                int eval = 0;
+                if (_suitResults.totalTricks == 0) {
+                    refresh = true;
+                } else {
+                    eval = _suitResults.listData.misereEval;
+                    refresh = suitResults.eval > eval;
+                }
+                if (refresh) {
+                    suitResults = _suitResults;
+                    suitResults.eval = 0;
+                    if (suitResults.listData != null) {
+                        suitResults.eval = suitResults.listData.misereEval;
+                    }
+                    suitResults.discarded.clear();
+                    suitResults.discarded.add(card1);
+                    suitResults.discarded.add(card2);
+                    Logger.printf(DEBUG, "discard %s, %s, tricks %d, eval=%d\n",
+                        card1, card2, suitResults.totalTricks, eval);
+                    if (suitResults.totalTricks == 0) {
+                        break probes;
+                    }
+                }
+            }
+        }
+        return suitResults;
+    }
+
+    static class SuitResults {
+        CardList discarded = new CardList();
+        int totalTricks = 0;    // the best
+        // the worst:
+        int eval = Integer.MAX_VALUE;
+        CardList.ListData listData;
+    }
 }

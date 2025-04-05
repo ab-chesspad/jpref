@@ -51,7 +51,20 @@ public class Util {
         return os;
     }
 
+    public static Card[] toCardArray(String src) {
+        Card[] cards = new Card[src.length() / 2];
+        for (int i = 0; i < cards.length; ++i) {
+            cards[i] = new Card(src.substring(2 * i, 2 * i + 2));
+        }
+        return cards;
+    }
+
     public static void getList(String filePath, LineHandler lineHandler) throws IOException {
+        getList(filePath, null, lineHandler);
+    }
+
+    // charMap format "from->to"
+    public static void getList(String filePath, String[] charMap, LineHandler lineHandler) throws IOException {
         File f = new File(filePath);
         String s = f.getAbsolutePath();
         try (BufferedReader reader =
@@ -63,11 +76,25 @@ public class Util {
                     continue;
                 }
                 String[] parts = line.split(" -> ");
-                String[] tokens = parts[0].split(" ");
                 String res = "...";
                 if (parts.length >= 2) {
                     res = parts[1];
                 }
+                String src = parts[0];
+                if (charMap != null) {
+                    for (String replace : charMap) {
+                        String[] translate = replace.split("->");
+                        String result = "";
+                        if (translate.length > 1) {
+                            result = translate[1];
+                        }
+                        src = src.replaceAll(translate[0], result);
+                    }
+                }
+                if (src.isEmpty()) {
+                    continue;
+                }
+                String[] tokens = src.split(" ");
                 List<String> strings = new LinkedList<>();
                 for (String t : tokens) {
                     if (t.isEmpty()) {
@@ -80,14 +107,6 @@ public class Util {
         }
     }
 
-    public static Card[] toCardArray(String src) {
-        Card[] cards = new Card[src.length() / 2];
-        for (int i = 0; i < cards.length; ++i) {
-            cards[i] = new Card(src.substring(2 * i, 2 * i + 2));
-        }
-        return cards;
-    }
-
     public static CardList toCardList(String src) {
         CardList cards = new CardList();
         if (src.isEmpty()) {
@@ -97,7 +116,12 @@ public class Util {
         String suit = null;
         int i = 0;
         while (i < src.length()) {
-            int suitIndex = suits.indexOf(src.charAt(i));
+            char ch = src.charAt(i);
+            if (ch == ' ') {
+                ++i;
+                continue;
+            }
+            int suitIndex = suits.indexOf(ch);
             if (suitIndex >= 0) {
                 suit = "" + Card.Suit.values()[suitIndex].getCode();
                 ++i;

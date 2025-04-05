@@ -11,8 +11,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class TestCardList {
 
     @BeforeClass
@@ -25,6 +23,7 @@ public class TestCardList {
         String[] sources = {
             // suit, left, right, tricksTheyStart, tricksMeStart, good, ok1stMove
             " 789JQKA 789xJQKA 0 0 0 0",   // empty
+            "89x 7JQKA 7JQKA 1 1 0 1",      // плохая беспроблемная.
             "8JK xQA xQA 0 2 0 0",          // плохая проблемная; плохая because the best move is with J
             "8J xQKA xQKA 0 1 0 0",         // плохая проблемная; плохая because the best move is with J
             "789K xJQA xJQA 0 1 1 0",       // хорошая проблемная;
@@ -45,7 +44,6 @@ public class TestCardList {
             "78J 9xQKA 9xQKA 0 1 1 0",      // хорошая проблемная;
 
             "89 7xJQKA 7xJQKA 1 1 0 1",     // плохая беспроблемная.
-            "89x 7JQKA 7JQKA 1 1 0 1",      // плохая беспроблемная.
             "QKA 789xJ 789xJ 3 3 0 1",      // плохая беспроблемная;
             "JQ 789xKA 789xKA 2 2 0 1",     // плохая беспроблемная;
             "xk 789A 789A 2 2 0 1",         // плохая беспроблемная;
@@ -104,31 +102,6 @@ public class TestCardList {
 
 //            Assert.assertEquals("distanceToTop", distanceToTop, listData.distanceToTop);
         }
-    }
-
-    @Test
-    public void testRussian() {
-        String[] sources = {
-"ТК, ТД, ТВ, Т8, Т7, К7, КД, Д7, Д8, Т10, К10, Д10, ДВ, В10, К9, Д9, К8, В8, В7, В9, 109, 107",
-        };
-
-        String fromChars = "ТКДВ1";
-        String toChars =   "AKQJX";
-
-        for (String source : sources) {
-            String s1 = source.replaceAll("0", "");
-            StringBuilder sb = new StringBuilder();
-            for (char c : s1.toCharArray()) {
-                int i = fromChars.indexOf("" + c);
-                if (i < 0) {
-                    sb.append(c);
-                } else {
-                    sb.append(toChars.charAt(i));
-                }
-            }
-            System.out.println(sb);
-        }
-        System.out.println("done");
     }
 
 }

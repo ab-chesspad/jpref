@@ -46,8 +46,6 @@ public class Metrics {
     public final double xSelected = .15;     // selected cards
     public final double ySelected = .15;     // selected cards
 
-    public static Logger logger;
-
     double cardAspectRatio;
 
     public int panelWidth, panelHeight;
@@ -104,15 +102,11 @@ public class Metrics {
             horizontalLayout = false;
 
             int hV = (int) (vMetrics.second * (hHand + yLabel + 1) + 4 * yMargin);
-//                ((double) panelHeight - 3 * MIN_Y_MARGIN) / (yLabel + hHand);
-//        Logger.printf("vert %d vs. %d\n", hV, panelHeight);
             this.cardW = vMetrics.first;
             this.cardH = vMetrics.second;
 
             // select layout that provides fitting all the components
             if (hV > panelHeight) {
-//        if (false) {     // debug!
-
                 // horizontal layout:
                 Couple<Double> hMetrics = new Couple<>();
                 // horizontally: 2 * xLabel + 2 * wHand + talon + 2 * x-margins + 2 * xHandGap

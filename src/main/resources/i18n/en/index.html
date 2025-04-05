@@ -19,11 +19,15 @@ In this case you can get the pre-build program <a href="https://github.com/ab-ch
 <font size="5"><b>Launch</b></font><br/>
 Open Terminal window (cmd.exe on Windows) and type:<br/>
 <b>java -jar &lt;path to jpref.jar&gt; [list of deals]</b><br/>
-If the list of deals is specified, it will be used for play instead of random deals.
+If the list of deals is specified, it will be used for playing instead of random deals.
 This allows better program testing.<br/>
 One can use a log that the program generates (see below) as a list of deals.<br/>
-JPref can work на русском и in English. If you use English OS and want JPref to use Russian, change the launching command to:<br/>
+JPref can work in Russian и in English. If you use English OS and want JPref to use Russian, change the launching command to:<br/>
 <b>java -Duser.language=ru -jar &lt;path to jpref.jar&gt; [list of deals]</b>
+<br/>
+On Windows to use Russian:
+<br/>
+<b>java -Dfile.encoding=UTF8 -Duser.language=ru -jar &lt;path to jpref.jar&gt; [list of deals]</b>
 <br/>
 <br/>
 <font size="5"><b>Running the program</b></font><br/>

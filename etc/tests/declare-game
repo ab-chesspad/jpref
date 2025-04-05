@@ -1,6 +1,5 @@
 #declare-game
-#8s9sXs7c8c9cXc7d9d7hAsAh 1 -> misere, ♠A, ♥A # small hole
-♠89X ♣789X ♦79 ♥7 ♠A ♥A 1 -> misere, ♠A, ♥A # ?? small hole
+#♠89X ♣789X ♦79 ♥7 ♠A ♥A 1 -> pass, ♠A, ♥A
 #♠ ♣ ♦ ♥
 ♠J ♣78KA ♦XQ ♥89JKA 1 -> 7♥, ♦X, ♠j
 ♠9 ♣89JQ ♦78XA ♥7XQ 1 -> pass, ♥7, ♠9

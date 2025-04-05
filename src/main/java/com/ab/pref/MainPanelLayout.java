@@ -221,12 +221,6 @@ class MainPanelLayout {
             paintHand(g2d, handVisualData[i]);
             Trick trick = GameManager.getInstance().getTrick();
             paintTrick(g2d, trick);
-
-/*
-        if (GameManager.RoundStage.trickTaken.equals(GameManager.getState().getRoundState())) {
-            scorePanel.paint(g2d);
-        }
-*/
         }
     }
 

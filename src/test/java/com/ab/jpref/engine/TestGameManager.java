@@ -105,6 +105,90 @@ public class TestGameManager {
 
     }
 
+    @Test
+    public void testEtudes() throws IOException {
+        // https://www.gambler.ru/forum/index.php?s=3966c74ecd08ea375730d1fc88fe7392&showtopic=503067&st=10
+        final String[] sources = {
+            "5",
+            "1", "2", "3", "4",
+        };
+
+        final String[] charMap = {
+            "[\\s\t\\,—-]->",   // -,
+            "Север|Запад|Восток|Юг|Снос|N|W|E|S|\\.gif->",
+            "Т->A",
+            "К->K",
+            "Д->Q",
+            "В->J",
+            "10->X",
+            "s->♠",
+            "c->♣",
+            "d->♦",
+            "h->♥",
+            "([♠♣♦♥012])-> $1",
+        };
+
+        for (String source : sources) {
+            String testFileName = "etc/tests/" + source;
+//        gameManager.runGame(testFile, 0);
+            final int[] elderHand = {-1};
+            List<CardList> cardLists = new LinkedList<>();
+            cardLists.add(new CardList());
+            Util.getList(testFileName, charMap,
+                (res, tokens) -> {
+                    for (String token : tokens) {
+                        if (token.length() == 1) {
+                            try {
+                                elderHand[0] = Integer.parseInt(token);
+                            } catch (NumberFormatException e) {
+                                // ignore
+//                                Logger.println(e.getMessage());
+                            }
+                            continue;
+                        }
+                        int size = 10;
+                        if (cardLists.size() == 4) {
+                            size = 2;   // talon
+                        }
+                        CardList cardList = cardLists.get(cardLists.size() - 1);
+                        if (cardList.size() >= size) {
+                            cardList = new CardList();
+                            cardLists.add(cardList);
+                        }
+                        cardList.addAll(Util.toCardList(token));
+                    }
+
+//                int elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
+
+                });
+
+            CardList deck = new CardList();
+            // order: North, East, South, Talon
+            deck.addAll(cardLists.get(2));
+/*  todo: it's either 1,0 or 0,1 depending on who the dealer is
+            deck.addAll(cardLists.get(1));
+            deck.addAll(cardLists.get(0));
+/*/
+            deck.addAll(cardLists.get(0));
+            deck.addAll(cardLists.get(1));
+//*/
+            deck.addAll(cardLists.get(3));
+            Logger.printf("%s, %d\n", deck.toString(), elderHand[0]);
+            gameManager.deal(deck);
+            gameManager.declarer = null;
+            gameManager.declarer = gameManager.bidding(elderHand[0]);
+            if (gameManager.declarer == null) {
+                Logger.println("all pass");
+            } else {
+                gameManager.declarer.takeTalon(gameManager.getTalonCards());
+                Config.Bid bid = gameManager.declarer.discard();
+                gameManager.declarer.declareRound(gameManager.getMinBid(), elderHand[0] == 0);
+                Logger.printf("declarer %s, round %s, %s\n",
+                    gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toString());
+            }
+        }
+    }
+
     private Player testPlayer(final BidHelper bidHelper, int i) {
 /*
         return new Bot("" + i) {

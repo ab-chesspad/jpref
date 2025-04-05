@@ -276,9 +276,7 @@ public class GameManager {
     }
 
     Player bidding(int elderHand) {
-        Config.Bid[] bids = new Config.Bid[players.length];
         // in the future bot should be able to pass even if it can declare a round
-        Config.Bid currentBid = Config.Bid.BID_PASS;    // todo: m.b ♠7
         minBid = Config.Bid.BID_6S;
         int passCount = 0;
         Player declarer = null;
@@ -304,7 +302,6 @@ public class GameManager {
                 }
 
                 if (bid.compareTo(minBid) >= 0) {
-                    currentBid = bid;
                     if (declarer != null && declarer.getBid().equals(Config.Bid.BID_MISERE)) {
                         declarer.setBid(Config.Bid.BID_PASS);
                         ++passCount;
@@ -504,28 +501,4 @@ public class GameManager {
     public interface PlayerFactory {
         Player getPlayer(int index);
     }
-
-/*
-    public static class RoundData {
-//        public Config.Bid bid;
-        Player declarer;
-        final Player.RoundResults roundResults = new Player.RoundResults();
-
-*/
-/*
-        public RoundData() {
-            this(null);
-        }
-
-        public RoundData(Config.Bid bid) {
-            this.bid = bid;
-        }
-*//*
-
-
-        public Player.RoundResults getRoundResults() {
-            return roundResults;
-        }
-    }
-*/
 }

@@ -5,10 +5,18 @@
  */
 package com.ab.jpref.engine;
 
+import com.ab.jpref.cards.Card;
+import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
+import com.ab.util.Util;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TestBot {
     static final Config config = Config.getInstance();
@@ -25,31 +33,26 @@ public class TestBot {
         return index -> new Bot("" + index);
     }
 
-/*
     @Test
     public void testGetMaxBid() throws IOException {
-        GameManager.DEBUG = false;  // suppress thread status logginga
+        GameManager.DEBUG = false;  // suppress thread status logging
         Util.getList("etc/tests/get-max-bid",
-                (res, tokens) -> {
-            CardList cards = new CardList();
-            int i;
-            for (i = 0; cards.size() < 10; ++i) {
-                cards.addAll(Util.toCardList(tokens.get(i)));
-            }
-            int turn = Integer.parseInt(tokens.get(i++));
-            Config.Bid leftBid = Config.Bid.fromName(tokens.get(i++));
-            Config.Bid rightBid = Config.Bid.fromName(tokens.get(i++));
-            Config.Bid minBid = Config.Bid.BID_6S;
-            Bot player = new Bot("test", cards);
-            System.out.printf("%s %d %s %s \n", player, turn, leftBid, rightBid);
+            (res, tokens) -> {
+                CardList cards = new CardList();
+                int i;
+                for (i = 0; cards.size() < 10; ++i) {
+                    cards.addAll(Util.toCardList(tokens.get(i)));
+                }
+                int turn = Integer.parseInt(tokens.get(i++));
+                Config.Bid leftBid = Config.Bid.fromName(tokens.get(i++));
+                Bot player = new Bot("test", cards);
 //            Config.Bid bid = player.getMaxBid(turn, leftBid, rightBid, minBid);
-            Config.Bid bid = player.getMaxBid(turn);
-            String[] parts = res.split(" ");
-            Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
-            Assert.assertEquals(expectedBid, bid);
-        });
+                Config.Bid bid = player.getMaxBid(turn == 0);
+                String[] parts = res.split(" ");
+                Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
+                Assert.assertEquals(expectedBid, bid);
+            });
     }
-*/
 
 /*
     @Test
@@ -81,10 +84,35 @@ public class TestBot {
 */
 
     @Test
-    public void testDiscard() {
-        String[] sources = {
-        };
-        // ??
+    public void testDiscard4Misere() throws IOException {
+        GameManager.DEBUG = false;  // suppress thread status logging
+        Util.getList("etc/tests/declare-misere",
+            (res, tokens) -> {
+                CardList cards = new CardList();
+                int i;
+                for (i = 0; cards.size() < 10; ++i) {
+                    cards.addAll(Util.toCardList(tokens.get(i)));
+                }
+                boolean elderHand = Integer.parseInt(tokens.get(i++)) == 0;
+                Bot bot = new Bot("bid", cards);
+                String botHand = bot.toString();
+                boolean misereOK = bot.evalMisere(elderHand);
+                Assert.assertTrue(String.format("no misere %s %b", botHand, elderHand), misereOK);
+                for (; cards.size() < 12; ++i) {
+                    cards.addAll(Util.toCardList(tokens.get(i)));
+                }
+                bot = new Bot("declare", cards);
+                Bot.SuitResults suitResults = bot.discardForMisere(elderHand);
+                Logger.printf("%s %b -> %s, eval=%d\n",
+                    bot.toString(), elderHand, suitResults.discarded.toString(), suitResults.eval);
+                if (suitResults.eval > 0) {
+                    String[] parts = res.split(" #");
+                    Set<Card> expected = new HashSet<>(Util.toCardList(parts[0]));
+                    for (Card card : suitResults.discarded) {
+                        Assert.assertTrue(String.format("%s %b -> discarded %s", botHand, elderHand, card),
+                            expected.contains(card));
+                    }
+                }
+            });
     }
-
 }

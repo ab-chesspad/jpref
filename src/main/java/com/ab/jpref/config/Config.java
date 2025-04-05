@@ -40,8 +40,6 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class Config implements Serializable {
     public final Property<IntTriplet> animDelay = new Property<>("Animation Time", new IntTriplet(100,1,200));
@@ -135,16 +133,6 @@ public class Config implements Serializable {
         public Bid prev() {
             return values()[this.ordinal() - 1];
         }
-
-/*
-        @Override
-        public int compareTo(Bid o) {
-            // compare for sorting
-            if (o == null) return 1;
-
-            return 0;
-        }
-*/
     }
 
     public static final int MAX_DISTANCE_TO_TOP = 7;
@@ -163,19 +151,6 @@ public class Config implements Serializable {
         }
         return (Config)instance;
     }
-
-/*
-    public static class InstanceHolder {
-        protected static Object instance = Config.unserialize();
-    }
-
-    public static Config getInstance() {
-        if (InstanceHolder.instance == null) {
-            InstanceHolder.instance = new Config();
-        }
-        return (Config)InstanceHolder.instance;
-    }
-*/
 
     protected Config() {}
 
