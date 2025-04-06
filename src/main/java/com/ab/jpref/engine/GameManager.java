@@ -33,13 +33,21 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class GameManager {
+    public static final boolean RELEASE = true;
     public static boolean DEBUG = false;
-    public static boolean SHOW_ALL = false;
-    public static final int TRICK_TIMEOUT = 500;
+    public static boolean SHOW_ALL = true;
+    public static int TRICK_TIMEOUT = 500;
 
     public static final int ROUND_SIZE = 10;   // total tricks == initial hand size
     public static final int NUMBER_OF_PLAYERS = 3;
     public static final String DEAL_MARK = "deal:";
+
+    static {
+        if (RELEASE) {
+            SHOW_ALL = false;
+        }
+        TRICK_TIMEOUT = 1000;
+    }
 
     public enum RoundStage implements Player.Queueable {
         resized,
@@ -168,6 +176,13 @@ public class GameManager {
                             }
                             deck.addAll(Util.toCardList(token));
                         }
+                        // test verification:
+                        Set<Card> set = new HashSet<>(deck);
+                        if (set.size() != 32) {
+                            List<Card> tmp = new ArrayList(set);
+                            Collections.sort(tmp);
+                            throw new RuntimeException(String.format("invalid deck %s", tmp));
+                        }
                         RoundStage next = RoundStage.replay;
                         while (RoundStage.replay.equals(next)) {
                             next = playRound(deck, elderHand);
@@ -212,47 +227,49 @@ public class GameManager {
             deal(deck);
             declarer = null;
 
-/*  debug
-        roundState.set(RoundStage.bidding);
-//        Logger.printf("  %s %d\n", talonCards.toString(), turn + 1);
-        declarer = bidding(elderHand);
-        if (declarer == null) {
-            Logger.printf("playing all-pass\n");
-            playRoundAllPass();
-        } else {
-            Logger.printf("declarer %s, %s %s\n",
-                declarer.getName(), declarer.getBid(), declarer);
-            declarer.takeTalon(talonCards);
-            roundState.set(RoundStage.discard);
-            Config.Bid bid = declarer.discard();
-            if (!Config.Bid.BID_WITHOUT_THREE.equals(bid)) {
-//            Util.sleep(10);
-                Logger.printf("%s declareRound()\n", declarer.getName());
-                if (Config.Bid.BID_MISERE.equals(declarer.getBid())) {
-                    // todo: play misere round
-                } else {
-                    roundState.set(RoundStage.declareRound);
-                    boolean _elderHand = false;
-                    for (int i = 0; i < players.length; ++i) {
-                        Player player = players[i];
-                        if (player == declarer) {
-                            _elderHand = elderHand == i;
-                        }
-                    }
-                    declarer.declareRound(minBid, _elderHand);
-                    // todo: whist/pass and play trick round
-            playRoundAllPass();
-                }
-            }
-
-        }
-/*/
+            if (RELEASE) {
+                // todo!
 //            roundState.set(RoundStage.declareRound);
 //            declarer = players[0];
 //            declarer.setBid(Config.Bid.BID_7D);
 //            declarer.declareRound(minBid, true);
-            playRoundAllPass();
-//*/
+                playRoundAllPass();
+            } else {
+                roundState.set(RoundStage.bidding);
+//        Logger.printf("  %s %d\n", talonCards.toString(), turn + 1);
+                declarer = bidding(elderHand);
+                if (declarer == null) {
+                    Logger.printf("playing all-pass\n");
+                    playRoundAllPass();
+                } else {
+                    Logger.printf("declarer %s, %s %s\n",
+                        declarer.getName(), declarer.getBid(), declarer);
+                    declarer.takeTalon(talonCards);
+                    roundState.set(RoundStage.discard);
+                    Config.Bid bid = declarer.discard();
+                    if (!Config.Bid.BID_WITHOUT_THREE.equals(bid)) {
+//            Util.sleep(10);
+                        Logger.printf("%s declareRound()\n", declarer.getName());
+                        if (Config.Bid.BID_MISERE.equals(declarer.getBid())) {
+                            // todo: play misere round
+                            playRoundAllPass();
+                        } else {
+                            roundState.set(RoundStage.declareRound);
+                            boolean _elderHand = false;
+                            for (int i = 0; i < players.length; ++i) {
+                                Player player = players[i];
+                                if (player == declarer) {
+                                    _elderHand = elderHand == i;
+                                }
+                            }
+                            declarer.declareRound(minBid, _elderHand);
+                            // todo: whist/pass and play trick round
+                            playRoundAllPass();
+                        }
+                    }
+                }
+            }
+
             String sep = "";
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[j];
@@ -350,6 +367,9 @@ public class GameManager {
                 trick.add(card, true);
             }
             String sep = "";
+            if (players[0].tricks == 6) {
+                sep = "";
+            }
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
                 Card card = player.play(trick);

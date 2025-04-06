@@ -28,13 +28,16 @@ import java.util.*;
 
 public class Bot extends Player {
     public static boolean DEBUG = false;
+    protected final int number;
 
-    public Bot(String name) {
+    public Bot(String name, int number) {
         super(name);
+        this.number = number;
     }
 
     public Bot(String name, Collection<Card> cards) {
         super(name, cards);
+        number = 0;
     }
 
     @Override
@@ -197,6 +200,7 @@ public class Bot extends Player {
     }
 
     protected Config.Bid getMaxBid(boolean meStart) {
+        boolean _meStart = true;     // game declarer mostly starts tricks
         Card.Suit longestSuit = Card.Suit.NO_SUIT;    // no trump
         int maxLen = 0;
         int totalTricks = 0;
@@ -207,7 +211,7 @@ public class Bot extends Player {
             int suitNum = suit.get(0).getSuit().getValue();
             CardList.ListData listData = new CardList.ListData();
             listData.suit = suit.get(0).getSuit();
-            if (meStart) {
+            if (_meStart) {
                 listData.maxTheyStart = 0;
                 listData.minTheyStart = 0;
             } else {

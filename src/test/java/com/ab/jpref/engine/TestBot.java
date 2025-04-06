@@ -30,7 +30,7 @@ public class TestBot {
     }
 
     private static GameManager.PlayerFactory playerFactory() {
-        return index -> new Bot("" + index);
+        return index -> new Bot("test", index);
     }
 
     @Test

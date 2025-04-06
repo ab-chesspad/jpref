@@ -418,6 +418,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 {new ButtonHandler(Command.discard, command -> currentPlayer.discard(selectedCards))},
                 {new ButtonHandler(Command.without3, command -> returnBid(Config.Bid.BID_WITHOUT_THREE))},
             });
+        discardPanel.setVisible(false);
         this.add(discardPanel);
 
         declareRoundPanel = new ButtonPanel( 1.5, 1.5,
@@ -429,6 +430,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 },
                 {null, new ButtonHandler(Command.lesserGame, command -> setDeclareRoundPanel(command)), null}
             });
+        declareRoundPanel.setVisible(false);
         this.add(declareRoundPanel);
 
         bidPanel = new ButtonPanel(4, 1,
@@ -437,6 +439,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 {new ButtonHandler(Command.misere, command -> returnBid(Config.Bid.BID_MISERE))},
                 {new ButtonHandler(Command.pass, command -> returnBid(Config.Bid.BID_PASS))}
             });
+        bidPanel.setVisible(false);
         this.add(bidPanel);
 
         buttonPanel = new ButtonPanel(1, 1,
@@ -444,6 +447,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 {new ButtonHandler(Command.comment, command -> new NotesPopup(Main.mainFrame)),
                     new ButtonHandler(Command.help, command -> showHelp())}
             });
+        buttonPanel.setVisible(false);
         this.add(buttonPanel);
 
         menuPanel = new ButtonPanel(3.5, .5,
@@ -474,8 +478,8 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                     }
                 })},
             });
-        this.add(menuPanel);
         menuPanel.setVisible(false);
+        this.add(menuPanel);
     }
 
     public interface ButtonListener {

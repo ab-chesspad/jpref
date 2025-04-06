@@ -67,7 +67,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
                     return r;
                 }
             }
-            throw new IllegalArgumentException(String.valueOf(code));
+            throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
         }
         static public Suit fromUnicode(char unicode) {
             for (Suit r : values()) {

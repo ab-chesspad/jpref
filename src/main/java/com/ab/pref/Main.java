@@ -32,8 +32,11 @@ import java.util.Timer;
 
 public class Main {
     static final boolean DEBUG = false;
-    public static final boolean ALL_HUMANS = false;
+    public static boolean ALL_HUMANS = false;
     static {
+        if (GameManager.RELEASE) {
+            ALL_HUMANS = false;
+        }
         if (ALL_HUMANS) {
             GameManager.SHOW_ALL = true;
         }
@@ -58,7 +61,9 @@ public class Main {
      */
     public static void main(String[] args) {
         PrintStream out = System.out;   // output to System.out
-        out = null;         // output to files
+        if (GameManager.RELEASE) {
+            out = null;         // output to files
+        }
         System.out.println("output to " + out);
         Logger.set(out);
 
@@ -176,13 +181,13 @@ public class Main {
                     i -> {
 //*
                         if (GameManager.TRICK_TIMEOUT == 0) {
-                            return new Bot(names[i]);
+                            return new Bot(names[i], i);
                         }
 //*/
                         if (ALL_HUMANS || i == 0) {
                             return new HumanPlayer(names[i], mainPanel);
                         }
-                        return new Bot(names[i]);
+                        return new Bot(names[i], i);
                     });
             if (gameThread == null) {
                 gameThread = new Thread(() -> {

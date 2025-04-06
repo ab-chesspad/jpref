@@ -50,6 +50,12 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
+    public void clear() {
+        super.clear();
+        restartCommand = null;
+    }
+
+    @Override
     public void clearQueue() {
         accept(Config.Bid.BID_PASS);
         Util.sleep(10);

@@ -6,8 +6,6 @@
 #♠ — 7, 8, 9, ♣ — 8, 9, ♦ — 7, 8, 9, 10, ♥ — 8  0 ♥XK -> # no misere
 #♠ J 10 7 ♣ 9 8 ♦ 9 8 ♥ J 9 7 2 ♣A ♦A -> # no misere # ♠ Q 9 8 ♣ K 10 7 ♦ Q 10 ♥ 10 8 # ♠A K ♣ Q J ♦ K J 7 ♥ A K Q
 
-#78Q 9JT XK
-
 ♠9 ♣789X ♦79J ♥79 0 ♠A ♥Q -> ♠A ♠9 # elderHand
 ♠A ♣789 ♦789 ♥789 0 ♠XK -> ♠K ♠A
 ♠Q ♣789X ♦79J ♥79 1 ♠A ♥A -> ♠A ♠Q # !elderHand

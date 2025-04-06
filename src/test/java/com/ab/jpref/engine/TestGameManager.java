@@ -5,6 +5,7 @@
  */
 package com.ab.jpref.engine;
 
+import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
@@ -13,8 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class TestGameManager {
@@ -30,7 +30,7 @@ public class TestGameManager {
     }
 
     private GameManager.PlayerFactory playerFactory() {
-        return index -> new Bot("" + index);
+        return index -> new Bot("test-" + index, index);
     }
 
     // ♣8 ♥789   ♦78X ♥Q   ♠K ♦K ♥XJ   2
@@ -109,8 +109,8 @@ public class TestGameManager {
     public void testEtudes() throws IOException {
         // https://www.gambler.ru/forum/index.php?s=3966c74ecd08ea375730d1fc88fe7392&showtopic=503067&st=10
         final String[] sources = {
-            "5",
-            "1", "2", "3", "4",
+// all-pass           "3",
+            "1", "2", "4", "5",
         };
 
         final String[] charMap = {
@@ -174,6 +174,13 @@ public class TestGameManager {
 //*/
             deck.addAll(cardLists.get(3));
             Logger.printf("%s, %d\n", deck.toString(), elderHand[0]);
+            // test verification:
+            Set<Card> set = new HashSet<>(deck);
+            if (set.size() != 32) {
+                List<Card> tmp = new ArrayList(set);
+                Collections.sort(tmp);
+                throw new RuntimeException(String.format("invalid deck %s", tmp));
+            }
             gameManager.deal(deck);
             gameManager.declarer = null;
             gameManager.declarer = gameManager.bidding(elderHand[0]);
@@ -204,7 +211,7 @@ public class TestGameManager {
             }
         };
 */
-        return new Bot("" + i);
+        return new Bot("test", i);
     }
 
 /*
