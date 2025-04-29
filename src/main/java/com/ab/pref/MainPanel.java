@@ -24,6 +24,7 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
+import com.ab.jpref.engine.Bot;
 import com.ab.util.I18n;
 import com.ab.util.Logger;
 
@@ -96,7 +97,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
             @Override
             public void mouseDragged(MouseEvent e) {
                 super.mouseDragged(e);
-//                System.out.printf("%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+//                System.out.printf("%s -> %s\n", com.ab.util.Util.currMethodName(), e);
             }
 
         });
@@ -114,7 +115,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 ) {
                    return;
                 }
-                Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 if (e.getButton() == 1) {
                     menuPanel.setVisible(false);
                     // left button
@@ -139,7 +140,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
             @Override
             public void componentResized(ComponentEvent e) {
                 Logger.printf(DEBUG, "MainPanel.%s -> %s\n",
-                        Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                    com.ab.util.Util.currMethodName(), e);
                 update();   // repaint
             }
         });
@@ -273,6 +274,22 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
          return stage.equals(state.getRoundStage());
     }
 
+    boolean showCards(int index) {
+        if (Main.SHOW_ALL) {
+            return true;
+        } else {
+            Logger.printf(DEBUG, "showCards %s\n", GameManager.getState().getRoundStage().toString());
+            // depending on the round!
+            if (isStage(GameManager.RoundStage.roundDeclared)) {
+                if (GameManager.getInstance().getDeclarer() instanceof HumanPlayer &&
+                    Config.Bid.BID_MISERE.equals(GameManager.getInstance().getDeclarer().getBid())) {
+                    return true;
+                }
+            }
+            return index == 0;
+        }
+    }
+
     @Override
     public void update() {
         mainPanelLayout.update();
@@ -309,7 +326,11 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
 
         Main.mainContainer.validate();
         Main.mainContainer.repaint();
-        Logger.printf(DEBUG, "mainPanel.%s -> invalidate()\n", Thread.currentThread().getStackTrace()[1].getMethodName());
+        if (GameManager.getState() != null) {
+            Logger.printf(DEBUG, "mainPanel.%s, %s -> invalidate()\n",
+                com.ab.util.Util.currMethodName(),
+                GameManager.getState().getRoundStage());
+        }
         if (isStage(GameManager.RoundStage.roundEnded)) {
             new StatusPopup(Main.mainFrame, true);
         }
@@ -351,7 +372,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
             declareRoundPanel.getButton(Command.prevSuit).setText("");
             declareRoundPanel.getButton(Command.prevSuit).setEnabled(false);
         } else {
-            declareRoundPanel.getButton(Command.prevSuit).setText("" + Card.Suit.values()[suitValue - 2].getUnicode());
+            declareRoundPanel.getButton(Command.prevSuit).setText("" + Card.Suit.values()[suitValue - 2].getCode());
             declareRoundPanel.getButton(Command.prevSuit).setEnabled(true);
         }
 
@@ -366,7 +387,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         if (suitValue >= 5) {
             declareRoundPanel.getButton(Command.nextSuit).setText("");
         } else {
-            declareRoundPanel.getButton(Command.nextSuit).setText("" + Card.Suit.values()[suitValue].getUnicode());
+            declareRoundPanel.getButton(Command.nextSuit).setText("" + Card.Suit.values()[suitValue].getCode());
         }
         declareRoundPanel.getButton(Command.nextSuit).setEnabled(suitValue < 5);
 

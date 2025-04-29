@@ -212,12 +212,12 @@ class MainPanelLayout {
                     ++handVisualData[i].totalSuits;
                     handVisualData[i].allCards.addAll(suit);
                 }
-                handVisualData[i].showFaces = GameManager.getInstance().showCards(i);
+                handVisualData[i].showFaces = mainPanel.showCards(i);
                 paintHand(g2d, handVisualData[i]);
             }
             int i = 3;
             handVisualData[i].allCards = GameManager.getInstance().getTalonCards();
-            handVisualData[i].showFaces = GameManager.getInstance().showCards(i);
+            handVisualData[i].showFaces = mainPanel.showCards(i);
             paintHand(g2d, handVisualData[i]);
             Trick trick = GameManager.getInstance().getTrick();
             paintTrick(g2d, trick);

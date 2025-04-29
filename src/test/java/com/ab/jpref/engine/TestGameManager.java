@@ -10,7 +10,9 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Util;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -31,6 +33,39 @@ public class TestGameManager {
 
     private GameManager.PlayerFactory playerFactory() {
         return index -> new Bot("test-" + index, index);
+    }
+
+    @Test
+    @Ignore("not ready yet")
+    public void testMisere() throws IOException {
+        final String testFileName = "etc/tests/misereplay";
+//        gameManager.runGame(testFile, 0);
+        Util.getList(testFileName,
+            (res, tokens) -> {
+                if (!tokens.get(0).startsWith(GameManager.DEAL_MARK)) {
+                    return;     // ignore
+                }
+                int elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
+                CardList deck = new CardList();
+                for (String token : tokens) {
+                    if (token.endsWith(":")) {
+                        continue;
+                    }
+                    deck.addAll(Util.toCardList(token));
+                }
+                gameManager.getTrick().startedBy = elderHand;
+                gameManager.declarer = gameManager.players[0];
+                gameManager.declarer.bid = Config.Bid.BID_MISERE;
+                gameManager.minBid = Config.Bid.BID_MISERE;
+                gameManager.playRoundMisere(deck);
+                System.out.printf("1: %d, 2: %d, 3: %d\n"
+                    , gameManager.players[0].tricks
+                    , gameManager.players[1].tricks
+                    , gameManager.players[2].tricks
+                );
+            });
+
+        System.out.print("done\n");
     }
 
     // ♣8 ♥789   ♦78X ♥Q   ♠K ♦K ♥XJ   2
@@ -72,8 +107,8 @@ public class TestGameManager {
 
     @Test
     public void testAllPass() throws IOException {
-        final String testFileName = "etc/tests/fixedplay";
-//        gameManager.runGame(testFile, 0);
+        final String testFileName = "etc/tests/allpassplay";
+        final int[] count = {0};
         Util.getList(testFileName,
                 (res, tokens) -> {
                     if (!tokens.get(0).startsWith(GameManager.DEAL_MARK)) {
@@ -88,28 +123,39 @@ public class TestGameManager {
                         deck.addAll(Util.toCardList(token));
                     }
                     testAllPass(deck, turn, res);
+                    ++count[0];
                 });
-
-        System.out.print("done\n");
+        Logger.printf("passed %d tests\n", count[0]);
     }
 
     private void testAllPass(CardList deck, int turn, String res) {
-        gameManager.deal(deck);
+        gameManager.deal(deck, -1);
         gameManager.getTrick().clear(turn);
         gameManager.playRoundAllPass();
-        System.out.printf("1: %d, 2: %d, 3: %d\n"
-                , gameManager.players[0].tricks
-                , gameManager.players[1].tricks
-                , gameManager.players[2].tricks
+        System.out.printf("0: %d, 1: %d, 2: %d\n"
+            , gameManager.players[0].tricks
+            , gameManager.players[1].tricks
+            , gameManager.players[2].tricks
         );
-
+        // 0: 6, 1: 0, 2: 4
+        String[] parts =  res.split("[:|,|#] ");
+        try {
+            for (int i = 0; i < GameManager.NUMBER_OF_PLAYERS; ++i) {
+                Player p = gameManager.players[i];
+                Assert.assertEquals(String.format("tricks for player%d", p.getNumber()),
+                    Integer.parseInt(parts[2 * i + 1].trim()), p.getTricks());
+            }
+        } catch (java.lang.AssertionError e) {
+            System.out.println(e.toString());
+            Runtime.getRuntime().exit(1);
+        }
     }
 
     @Test
     public void testEtudes() throws IOException {
         // https://www.gambler.ru/forum/index.php?s=3966c74ecd08ea375730d1fc88fe7392&showtopic=503067&st=10
         final String[] sources = {
-// all-pass           "3",
+// cannot play yet          "3",
             "1", "2", "4", "5",
         };
 
@@ -174,14 +220,9 @@ public class TestGameManager {
 //*/
             deck.addAll(cardLists.get(3));
             Logger.printf("%s, %d\n", deck.toString(), elderHand[0]);
-            // test verification:
-            Set<Card> set = new HashSet<>(deck);
-            if (set.size() != 32) {
-                List<Card> tmp = new ArrayList(set);
-                Collections.sort(tmp);
-                throw new RuntimeException(String.format("invalid deck %s", tmp));
-            }
-            gameManager.deal(deck);
+
+            deck.verifyDeck();
+            gameManager.deal(deck, -1);
             gameManager.declarer = null;
             gameManager.declarer = gameManager.bidding(elderHand[0]);
             if (gameManager.declarer == null) {
@@ -194,24 +235,6 @@ public class TestGameManager {
                     gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toString());
             }
         }
-    }
-
-    private Player testPlayer(final BidHelper bidHelper, int i) {
-/*
-        return new Bot("" + i) {
-            @Override
-            public Config.Bid getBid(Config.Bid minBid, int turn) {
-                Config.Bid bid = bidHelper.nextBid();
-                if (!Config.Bid.BID_MISERE.equals(bid) && !Config.Bid.BID_PASS.equals(bid)) {
-                    Assert.assertEquals(String.format("expected %s, actual %s", bid.getName(), minBid.getName()),
-                            bid, minBid);
-                }
-                this.bid = bid;
-                return bid;
-            }
-        };
-*/
-        return new Bot("test", i);
     }
 
 /*
@@ -268,6 +291,7 @@ public class TestGameManager {
     }
 */
 
+/*
     public static class BidHelper {
         final List<Config.Bid> bids = new LinkedList<>();
         int index = 0;
@@ -283,15 +307,6 @@ public class TestGameManager {
             return bids.get(index);
         }
     }
-
-    @Test
-    public void testQue() throws InterruptedException {
-        java.util.concurrent.BlockingQueue<Integer> que = new LinkedBlockingQueue<>();
-
-        que.put(1);
-        que.put(2);
-        int res = que.take();
-        System.out.println(res);
-    }
+*/
 
 }

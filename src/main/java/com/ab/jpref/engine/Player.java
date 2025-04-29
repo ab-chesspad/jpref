@@ -40,9 +40,13 @@ public abstract class Player {
     int tricks;
     protected RoundResults roundResults;
 
-    public abstract Config.Bid getBid(Config.Bid minBid, boolean meStart);
+    public abstract Config.Bid getBid(Config.Bid minBid, boolean elderHand);
     public abstract void declareRound(Config.Bid minBid, boolean elderHand);
+    public abstract void respondOnRoundDeclaration(Config.Bid bid, int elderHand);
     public abstract Card play(Trick trick);
+
+    // number is being declared in subclasses, then it is more visible in debugger
+    public abstract int getNumber();
 
     // to be implemented in a subclass (human player)
     public void accept(Queueable q) {}
@@ -66,7 +70,6 @@ public abstract class Player {
             leftSuits[i] = new CardList();
             rightSuits[i] = new CardList();
         }
-//        roundData = new RoundData();
     }
 
     public Player(String name, Collection<Card> cards) {
@@ -74,7 +77,19 @@ public abstract class Player {
         setHand(cards);
     }
 
+    public Player(Player other) {
+        this(other.name);
+        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
+            mySuits[i] = (CardList) other.mySuits[i].clone();
+            leftSuits[i] = (CardList) other.leftSuits[i].clone();
+            rightSuits[i] = (CardList) other.rightSuits[i].clone();
+        }
+        tricks = 0;
+        bid = other.bid;
+    }
+
     // we do not check card list size
+/*
     public void setHand(Collection<Card> cards) {
         clear();
         Set<Card> hand = new HashSet<>(cards);
@@ -95,6 +110,43 @@ public abstract class Player {
         }
         bid = Config.Bid.BID_UNDEFINED;
         roundResults = new RoundResults();
+    }
+*/
+
+    public void setHand(Collection<Card> thisHand) {
+        clear();
+        split(thisHand, this.mySuits);
+        Set<Card> hand = new HashSet<>(thisHand);
+        CardList deck = CardList.getDeck();
+        Collection<Card> others = new ArrayList<>();
+        for (Card card : deck) {
+            if (!hand.contains(card)) {
+                others.add(card);
+            }
+        }
+        split(others, this.leftSuits);
+        split(others, this.rightSuits);
+        bid = Config.Bid.BID_UNDEFINED;
+        roundResults = new RoundResults();
+    }
+
+    public void setHand(Collection<Card> thisHand, Collection<Card> leftHand, Collection<Card> rightHand) {
+        clear();
+        split(thisHand, this.mySuits);
+        split(leftHand, this.leftSuits);
+        split(rightHand, this.rightSuits);
+        roundResults = new RoundResults();
+    }
+
+    void split(Collection<Card> hand, CardList[] result) {
+        for (Card card : hand) {
+            int suitNum = card.getSuit().getValue();
+            result[suitNum].add(card);
+        }
+
+        for (CardList suit : result) {
+            Collections.sort(suit);
+        }
     }
 
     public void clear() {
@@ -185,9 +237,33 @@ public abstract class Player {
 
     public void discard(Card card) {
         int suitNum = card.getSuit().getValue();
-        mySuits[suitNum].remove(card);
+        if (mySuits[suitNum].remove(card)) {
+            return;     // my own card
+        }
         leftSuits[suitNum].remove(card);
         rightSuits[suitNum].remove(card);
+    }
+
+    public int totalCards() {
+        return CardList.totalCards(mySuits);
+    }
+
+    public void updateOthers(int totalLeft, int totalRight) {
+        CardList[] allKnown = null;
+        CardList[] third = null;
+        if (totalLeft == CardList.totalCards(leftSuits)) {
+            allKnown = leftSuits;   // I know all cards, no more guessing
+            third = rightSuits;     // thus I know all the cards
+        } else if (totalRight == CardList.totalCards(rightSuits)) {
+            allKnown = rightSuits;  // I know all cards, no more guessing
+            third = leftSuits;      // thus I know all the cards
+        }
+
+        if (allKnown != null) {
+            for (int i = 0; i < allKnown.length; ++i) {
+                third[i].removeAll(allKnown[i]);
+            }
+        }
     }
 
     public interface Queueable {}

@@ -44,6 +44,11 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
+    public int getNumber() {
+        return 0;
+    }
+
+    @Override
     public void abortThread(GameManager.RestartCommand restartCommand) {
         this.restartCommand = restartCommand;
         clearQueue();
@@ -120,10 +125,20 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
+    public void respondOnRoundDeclaration(Config.Bid bid, int elderHand) {
+        // todo: whist or half or pass
+    }
+
+    @Override
     public Card play(Trick trick) {
         Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
-        return (Card)takeFromQueue();
+        Queueable q = takeFromQueue();
+        if (!(q instanceof Card)) {
+            Logger.println(q.toString());
+            return new Card("♦7");  // dummy
+        }
+        return (Card)q;
     }
 
     public boolean isOK2Play(Card card) {

@@ -46,7 +46,7 @@ public class TestLabel {
         mainFrame.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf("main.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf("main.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
 //            mainRectangle = ((JFrame)e.getSource()).getBounds();
                 jPanel.resized();
             }
@@ -64,7 +64,7 @@ public class TestLabel {
             addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
-//                    Logger.printf("jPrefPanel.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+//                    Logger.printf("jPrefPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                     resized();   // repaint
                 }
             });
@@ -99,7 +99,7 @@ public class TestLabel {
                 return;
             }
             Rectangle bounds = this.getBounds();
-            Logger.printf("jPrefPanel.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), bounds);
+            Logger.printf("jPrefPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), bounds);
             int fontSizeW = 20, fontSizeE = 40, fontSizeS = 40;
             int heightW = bounds.height / 4;
             int heightE = bounds.height / 4;

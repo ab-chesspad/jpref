@@ -128,7 +128,7 @@ public class Util {
                 continue;
             }
             if (suit != null) {
-                String cardName = src.charAt(i) + suit;
+                String cardName = suit + src.charAt(i);
                 cards.add(new Card(cardName));
                 ++i;
                 continue;
@@ -158,5 +158,9 @@ public class Util {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    public static String currMethodName() {
+        return Thread.currentThread().getStackTrace()[2].getMethodName();
     }
 }

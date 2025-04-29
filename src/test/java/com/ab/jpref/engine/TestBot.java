@@ -46,10 +46,10 @@ public class TestBot {
                 int turn = Integer.parseInt(tokens.get(i++));
                 Config.Bid leftBid = Config.Bid.fromName(tokens.get(i++));
                 Bot player = new Bot("test", cards);
-//            Config.Bid bid = player.getMaxBid(turn, leftBid, rightBid, minBid);
-                Config.Bid bid = player.getMaxBid(turn == 0);
                 String[] parts = res.split(" ");
                 Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
+                Logger.printf("%s %d -> %s\n", player, turn, expectedBid.getName());
+                Config.Bid bid = player.getMaxBid(turn == 0);
                 Assert.assertEquals(expectedBid, bid);
             });
     }

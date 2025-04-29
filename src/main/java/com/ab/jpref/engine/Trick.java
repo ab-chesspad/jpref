@@ -33,6 +33,11 @@ public class Trick {
     int top = -1;
     Card topCard;
     CardList trickCards = new CardList();
+    int number = 0;
+
+    public int getNumber() {
+        return number;
+    }
 
     public Card.Suit getStartingSuit() {
         return startingSuit;
@@ -65,15 +70,16 @@ public class Trick {
     public void clear(int elderHand) {
         clear();
         startedBy = elderHand;
+        number = 0;
     }
 
     public void clear() {
         trickCards.clear();
+        ++number;
         topCard = null;
         startingSuit = null;
         minBid = null;
         if (!startedFromTalon) {
-//            startedBy = ++startedBy % NUMBER_OF_PLAYERS;
             startedBy = top;
         }
         startedFromTalon = false;
@@ -81,24 +87,28 @@ public class Trick {
     }
 
     private void discard(Card card) {
-        // 0 -> 2:left, 1:right
-        // 1 -> 0:left, 2:right
-        // 2 -> 1:left, 0:right
-        int[][] others = {{2,1},{0,2},{1,0}};   // right, left
         int discardingPlayer = -1;
-//        int suitNum = card.getSuit().getValue();
         if (startingSuit != null && !card.getSuit().equals(startingSuit)) {
             discardingPlayer = getTurn();
         }
 
         Player[] players = GameManager.getInstance().players;
+        if (discardingPlayer >= 0) {
+            // 0 -> 2:left, 1:right
+            // 1 -> 0:left, 2:right
+            // 2 -> 1:left, 0:right
+            players[(discardingPlayer + 2) % players.length].leftSuits[startingSuit.getValue()].clear();
+            players[(discardingPlayer + 1) % players.length].rightSuits[startingSuit.getValue()].clear();
+        }
         for (Player player : players) {
             player.discard(card);
         }
-        if (discardingPlayer >= 0) {
-            int[] _others = others[discardingPlayer];
-            players[_others[0]].leftSuits[startingSuit.getValue()].clear();
-            players[_others[1]].rightSuits[startingSuit.getValue()].clear();
+
+        for (int i = 0; i < players.length; ++i) {
+            int totalLeft = players[(i + 1) % players.length].totalCards();
+            int totalRight = players[(i + 2) % players.length].totalCards();
+            Player player = players[i];
+            player.updateOthers(totalLeft, totalRight);
         }
     }
 
@@ -127,8 +137,6 @@ public class Trick {
         }
         discard(card);
         trickCards.add(card);
-
-//??        turn = ++turn % GameManager.getInstance().players.length;
     }
 
 }

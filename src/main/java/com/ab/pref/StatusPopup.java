@@ -83,7 +83,7 @@ public class StatusPopup extends JDialog {
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
                 pConfig.scoresPopupRectangle.set(popupRectangle);
                 scoresPanel.recalc();
@@ -91,7 +91,7 @@ public class StatusPopup extends JDialog {
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
                 pConfig.scoresPopupRectangle.set(popupRectangle);
             }
@@ -135,7 +135,7 @@ public class StatusPopup extends JDialog {
 
         public void recalc() {
             Rectangle scoresRectangle = StatusPopup.instance.getScoresRectangle();
-            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), scoresRectangle);
+            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), scoresRectangle);
 
             // center:
             scoresMetrics.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
@@ -314,8 +314,7 @@ public class StatusPopup extends JDialog {
         }
 
         protected void paintComponent(Graphics g) {
-            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n",
-                Thread.currentThread().getStackTrace()[1].getMethodName(),
+            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(),
                 StatusPopup.instance.getScoresRectangle());
             Graphics2D g2d = (Graphics2D) g;
             g2d.setColor(Color.white);

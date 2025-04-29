@@ -32,13 +32,23 @@ import java.util.Timer;
 
 public class Main {
     static final boolean DEBUG = false;
+    public static boolean RELEASE = true;
+    public static boolean SHOW_ALL = true;
+    public static boolean ALL_BOTS = false;
     public static boolean ALL_HUMANS = false;
     static {
-        if (GameManager.RELEASE) {
+        GameManager.RELEASE = RELEASE;
+/*
+        if (RELEASE) {
             ALL_HUMANS = false;
+            SHOW_ALL = false;
         }
+*/
         if (ALL_HUMANS) {
-            GameManager.SHOW_ALL = true;
+            SHOW_ALL = true;
+        }
+        if (ALL_BOTS) {
+            GameManager.TRICK_TIMEOUT = 0;
         }
     }
 
@@ -62,7 +72,7 @@ public class Main {
     public static void main(String[] args) {
         PrintStream out = System.out;   // output to System.out
         if (GameManager.RELEASE) {
-            out = null;         // output to files
+//            out = null;         // output to files
         }
         System.out.println("output to " + out);
         Logger.set(out);
@@ -130,7 +140,7 @@ public class Main {
         mainFrame.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG,"main.%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG,"main.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 insets = mainFrame.getInsets();
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 mainRectangle.height -= insets.top;
@@ -141,7 +151,7 @@ public class Main {
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getStackTrace()[1].getMethodName(), e);
+                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 pConfig.mainRectangle.set(mainRectangle);
             }

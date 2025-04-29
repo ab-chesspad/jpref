@@ -1,7 +1,6 @@
 #fixedplay
 
 deal: ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠A ♣AX ♦AK987 ♥A9    ♠J8  1 -> 7♦ # ?
-
 deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> misere # ловится
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> misere # Ласкера, 2 или 3 взятки
 deal: ♠JX987 ♣9 ♦X87 ♥7 ♠AQ ♣A7 ♦KQJ9 ♥J9 ♠K ♣KQJX8 ♥KQX8 ♦A ♥A  0 -> misere # ловится

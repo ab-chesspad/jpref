@@ -27,17 +27,11 @@ import java.util.Objects;
 public class Card implements Comparable<Card>, Player.Queueable {
     static int i = -1;
     public enum Suit {
-        SPADE('♠', 's', ++i),
-        CLUB('♣', 'c', ++i),
-        DIAMOND('♦', 'd', ++i),
-        HEART('♥', 'h', ++i),
-        NO_SUIT('-', '-', ++i);
-
-        private final char symbolInUnicode;
-
-        public char getUnicode() {
-            return symbolInUnicode;
-        }
+        SPADE('♠', ++i),
+        CLUB('♣', ++i),
+        DIAMOND('♦', ++i),
+        HEART('♥', ++i),
+        NO_SUIT('-', ++i);
 
         public char getCode() {
             return code;
@@ -50,15 +44,14 @@ public class Card implements Comparable<Card>, Player.Queueable {
         private final char code;
         private final int value;
 
-        Suit(char symbolInUnicode, char code, int value) {
-            this.symbolInUnicode = symbolInUnicode;
+        Suit(char code, int value) {
             this.code = code;
             this.value = value;
         }
 
         @Override
         public String toString() {
-            return String.valueOf(symbolInUnicode);
+            return String.valueOf(code);
         }
 
         static public Suit fromCode(char code) {
@@ -69,9 +62,9 @@ public class Card implements Comparable<Card>, Player.Queueable {
             }
             throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
         }
-        static public Suit fromUnicode(char unicode) {
+        static public Suit code(char unicode) {
             for (Suit r : values()) {
-                if (r.symbolInUnicode == unicode) {
+                if (r.code == unicode) {
                     return r;
                 }
             }
@@ -108,6 +101,15 @@ public class Card implements Comparable<Card>, Player.Queueable {
             return name;
         }
 
+        static public Rank fromName(char name) {
+            for (Rank r : values()) {
+                if (r.name.equalsIgnoreCase("" + name)) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException("" + name);
+        }
+
         static public Rank fromName(String name) {
             for (Rank r : values()) {
                 if (r.name.equalsIgnoreCase(name)) {
@@ -138,8 +140,8 @@ public class Card implements Comparable<Card>, Player.Queueable {
     }
 
     public Card(String cardName) {
-        this.rank = Rank.fromName(cardName.substring(0, 1).toUpperCase());
-        this.suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(1)));
+        this.suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(0)));
+        this.rank = Rank.fromName(Character.toLowerCase(cardName.charAt(1)));
     }
 
     public Suit getSuit() {
