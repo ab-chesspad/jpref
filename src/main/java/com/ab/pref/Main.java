@@ -33,7 +33,7 @@ import java.util.Timer;
 public class Main {
     static final boolean DEBUG = false;
     public static boolean RELEASE = true;
-    public static boolean SHOW_ALL = true;
+    public static boolean SHOW_ALL = false;
     public static boolean ALL_BOTS = false;
     public static boolean ALL_HUMANS = false;
     static {
@@ -71,8 +71,8 @@ public class Main {
      */
     public static void main(String[] args) {
         PrintStream out = System.out;   // output to System.out
-        if (GameManager.RELEASE) {
-//            out = null;         // output to files
+        if (RELEASE) {
+            out = null;         // output to files
         }
         System.out.println("output to " + out);
         Logger.set(out);

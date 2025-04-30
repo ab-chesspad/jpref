@@ -234,7 +234,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
     }
 
     private void showNotImplementedMessage() {
-        mainPanelLayout.showMessage("Not implemented yet");
+        mainPanelLayout.showMessage(I18n.m("Not implemented yet"));
     }
 
     private void returnBid(Config.Bid bid) {
@@ -408,7 +408,8 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
 
     private void submitLog() {
         String res = Util.submitLog(Logger.getLogFileName());
-        mainPanelLayout.showMessage(res);
+        String text = String.format(I18n.m("The file %s has been uploaded"), res);
+        mainPanelLayout.showMessage(text);
     }
 
     private boolean helpShown;
@@ -468,7 +469,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 {new ButtonHandler(Command.comment, command -> new NotesPopup(Main.mainFrame)),
                     new ButtonHandler(Command.help, command -> showHelp())}
             });
-        buttonPanel.setVisible(false);
+        buttonPanel.setVisible(true);
         this.add(buttonPanel);
 
         menuPanel = new ButtonPanel(3.5, .5,

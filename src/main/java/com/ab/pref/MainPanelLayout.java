@@ -433,11 +433,12 @@ class MainPanelLayout {
         p.setBounds(bounds);
     }
 
+    // text should be translated already
     void showMessage(String text) {
         UIManager.put("OptionPane.minimumSize", new Dimension(panelWidth - 20,panelHeight / 5));
         String msg = "<html><b>" + I18n.m(text) + "</b></html>";
         JLabel label = new JLabel(msg);
-        label.setFont(new Font("Arial", Font.BOLD, 40));
+        label.setFont(new Font("Arial", Font.BOLD, 14));
         JOptionPane.showMessageDialog(mainPanel, label,"Message", JOptionPane.WARNING_MESSAGE);
     }
 

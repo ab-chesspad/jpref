@@ -59,6 +59,7 @@ public class Util {
         return scaledImage;
     }
 
+    // return result file name
     public static String submitLog(String filePath) {
         final String CrLf = "\r\n";
         final String url = "http://jpref.elementfx.com/upload.php";
@@ -84,7 +85,6 @@ public class Util {
             message1 += CrLf;
 
             // the file is sent between the messages in the multipart message.
-
             String message2 = "";
             message2 += CrLf + "--" + boundary + "--" + CrLf;
 
@@ -96,9 +96,7 @@ public class Util {
             conn.setRequestProperty("Content-Length",
                     String.valueOf((message1.length() + message2.length() + fileData.length)));
 
-//            System.out.println("open os");
             os = conn.getOutputStream();
-//            System.out.println(message1);
             os.write(message1.getBytes());
             // SEND THE file body
             int index = 0;
@@ -130,7 +128,8 @@ public class Util {
                 }
             } while (len > 0);
             res = sb.toString();
-//            System.out.println("DONE");
+            System.out.println(res);
+            res = remoteFileName;
         } catch(IOException e) {
 //            throw new RuntimeException(e);
             res = e.toString();
