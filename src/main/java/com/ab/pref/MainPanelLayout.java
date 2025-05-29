@@ -40,8 +40,8 @@ class MainPanelLayout {
     final MainPanel mainPanel;
 
 //    private final String BACK_FILENAME = "back-5.png";
+//    private final String BACK_FILENAME = "back.png";
     private final String BACK_FILENAME = "b4.png";
-    //    private final String BACK_FILENAME = "back.png";
     private final DeckAttributes deckAttributes =
 //            new DeckAttributes("alt-deck.png", 0, 5, true);
             new DeckAttributes("full-deck.png", 4, 46, false);
@@ -252,7 +252,6 @@ class MainPanelLayout {
                 int x = positions[i].x + panelWidth / 2;
                 int y = positions[i].y + panelHeight / 2;
                 Logger.printf(DEBUG, "trick %s %d\n", card, i);
-//                g.drawImage(im, x, y, mainPanel);
                 g.drawImage(im, x, y, null);
                 turn = ++turn % GameManager.NUMBER_OF_PLAYERS;
             }
@@ -310,7 +309,6 @@ class MainPanelLayout {
                     y = metrics.yMargin;    // talon
                 } else {
                     y = metrics.panelHeight - (int) metrics.cardH - metrics.yMargin;
-//                    labelY = metrics.panelHeight - (int) metrics.cardH - metrics.yMargin;
                     labelY = (int)(metrics.panelHeight - metrics.yMargin - (1 + metrics.yLabel) * metrics.cardH / 2);
                 }
                 Logger.printf(DEBUG, "horiz center: %dx%d, panel %dx%d, %s\n",
@@ -389,7 +387,6 @@ class MainPanelLayout {
             } else {
                 im = scaledBackImage.getSubimage(0, 0, (int) metrics.cardW, (int) metrics.cardH);
             }
-//            System.out.printf("size %dx%d\n", im.getWidth(null), im.getHeight(null));
             Point position = new Point(x, y);
             if (mainPanel.selectedCards.contains(card)) {
                 if (handVisualData.xVisible == 0) {
@@ -438,7 +435,11 @@ class MainPanelLayout {
         UIManager.put("OptionPane.minimumSize", new Dimension(panelWidth - 20,panelHeight / 5));
         String msg = "<html><b>" + I18n.m(text) + "</b></html>";
         JLabel label = new JLabel(msg);
-        label.setFont(new Font("Arial", Font.BOLD, 14));
+        int fontSize = panelHeight / 50;
+        if (fontSize < 15) {
+            fontSize = 15;
+        }
+        label.setFont(new Font("Arial", Font.BOLD, fontSize));
         JOptionPane.showMessageDialog(mainPanel, label,"Message", JOptionPane.WARNING_MESSAGE);
     }
 

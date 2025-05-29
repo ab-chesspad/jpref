@@ -22,6 +22,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
+import com.ab.util.Logger;
 
 public class Trick {
     public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
@@ -34,6 +35,7 @@ public class Trick {
     Card topCard;
     CardList trickCards = new CardList();
     int number = 0;
+    int declarerNum = -1;
 
     public int getNumber() {
         return number;
@@ -59,9 +61,30 @@ public class Trick {
         this.trumpSuit = trumpSuit;
     }
 
+    public String toColorString() {
+        GameManager gameManager = GameManager.getInstance();
+        StringBuilder sb = new StringBuilder();
+        sb.append("trick ").append(this.number).append(": ");
+        String sep = "";
+        if (this.startedFromTalon) {
+            sb.append("talon: ").append(gameManager.getTalonCards().last().toColorString());
+            sep = ", ";
+        }
+
+        for (int j = 0; j < gameManager.players.length; ++j) {
+            Player player = gameManager.players[(this.startedBy + j) % gameManager.players.length];
+            sb.append(sep).append(player.getName()).append(": ")
+                .append(this.trickCards.get(j).toColorString());
+            sep = ", ";
+        }
+        return new String(sb);
+    }
+
+/*
     public Config.Bid getMinBid() {
         return minBid;
     }
+*/
 
     public CardList getTrickCards() {
         return trickCards;

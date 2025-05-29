@@ -79,6 +79,21 @@ public class CardList extends ArrayList<Card> {
         return cardList;
     }
 
+    public static CardList[] getDeckSuits() {
+        CardList[] cardLists = new CardList[Card.Suit.values().length - 1];
+        for (int i = 0; i < cardLists.length; ++i) {
+            cardLists[i] = new CardList();
+            Suit suit = Suit.values()[i];
+            for (Card.Rank rank : Card.Rank.values()) {
+                if (rank.equals(Card.Rank.SIX)) {
+                    continue;
+                }
+                cardLists[i].add(new Card(suit, rank));
+            }
+        }
+        return cardLists;
+    }
+
     public CardList() {
         super();
     }
@@ -119,6 +134,14 @@ public class CardList extends ArrayList<Card> {
 
     @Override
     public String toString() {
+        return toColorString(false);
+    }
+
+    public String toColorString() {
+        return toColorString(true);
+    }
+
+    public String toColorString(boolean color) {
         StringBuilder sb = new StringBuilder();
         Suit suit = null;
         String sep = "";
@@ -126,10 +149,20 @@ public class CardList extends ArrayList<Card> {
             Suit s = c.getSuit();
             if (!s.equals(suit)) {
                 suit = s;
-                sb.append(sep).append(suit);
+                if (color) {
+                    if (s.equals(Suit.DIAMOND) || s.equals(Suit.HEART)) {
+                        sb.append(Card.ANSI_RED);
+                    } else {
+                        sb.append(Card.ANSI_RESET);
+                    }
+                }
+                sb.append(sep).append(suit.toString());
                 sep = " ";
             }
             sb.append(c.getRank());
+        }
+        if (color) {
+            sb.append(Card.ANSI_RESET);
         }
         return sb.toString();
     }
@@ -226,21 +259,6 @@ public class CardList extends ArrayList<Card> {
         return res;
     }
 
-/*
-    public Card getMaxLessThan(Card other) {
-        Card res = this.get(0);
-        for (int i = 1; i < this.size(); ++i) {
-            Card c = this.get(i);
-            if (c.compareInTrick(other) < 0) {
-                res = c;
-            } else {
-                break;
-            }
-        }
-        return res;
-    }
-*/
-
     int getOptimalStart(CardList leftSuit, CardList rightSuit) {
         int res = 0;
         if (this.size() == 1) {
@@ -285,8 +303,9 @@ public class CardList extends ArrayList<Card> {
         return cardLists;
     }
 
-    public ListData maxUnwantedTricks(CardList leftSuit, CardList rightSuit, boolean meStart) {
-        ListData listData = new ListData();
+    public ListData maxUnwantedTricks(CardList leftSuit, CardList rightSuit, int elderHand) {
+        ListData listData = new ListData(this);
+        listData.cardsLeft = 0;
         if (this.isEmpty()) {
             return listData;
         }
@@ -302,12 +321,107 @@ public class CardList extends ArrayList<Card> {
             listData.good = myMin.compare(rightSuit.get(0).getRank()) < 0;
         }
 
-        int n = 0;
-        if (!meStart) {
-            n = 2;
-        }
+        int nextN = elderHand;
 mainLoop:
-        while (cardLists[n].size() > 0) {
+        while (cardLists[nextN].size() > 0) {
+            int n = nextN;
+            int j0 = 0;
+            if (n == 0) {
+                j0 = cardLists[n].getOptimalStart(
+                    cardLists[(n + 1) % cardLists.length], cardLists[(n + 2) % cardLists.length]);      // 8JQK should start with JQK
+            }
+
+            Card.Rank firstCard = cardLists[n].get(j0).getRank();
+            cardLists[n].remove(j0);
+            boolean myTrick = true;
+            int empty = 0;
+            for (int i = 1; i < cardLists.length; ++i) {
+                int k = (n + i) % cardLists.length;
+                if (cardLists[k].isEmpty()) {
+                    if (k == 0) {
+                        myTrick = false;
+                    }
+                    if (++empty >= 2) {
+                        if (k == 0) {
+                            ++listData.cardsLeft;
+                        }
+                        break mainLoop;
+                    }
+                    continue;
+                }
+                int j;
+                if (n == 0) {
+                    if (cardLists[k].first().getRank().compare(firstCard) < 0) {
+                        j = cardLists[k].getMaxLessThan(firstCard);
+                    } else {
+                        myTrick = false;
+                        j = cardLists[k].size() - 1;
+                        nextN = k;
+                    }
+                } else {
+                    if (cardLists[k].first().getRank().compare(firstCard) < 0) {
+                        if (k == 0) {
+                            myTrick = false;
+                        }
+                        j = cardLists[k].getMaxLessThan(firstCard);
+                    } else {
+                        j = cardLists[k].size() - 1;
+                        firstCard = cardLists[k].get(j).getRank();
+                        nextN = k;
+                    }
+                }
+                cardLists[k].remove(j);
+            }
+
+            if (elderHand == 0) {
+                if (myTrick) {
+                    ++listData.maxMeStart;
+                }
+            } else {
+                if (myTrick) {
+                    ++listData.maxTheyStart;
+                }
+            }
+        }
+
+        if (nextN == 0) {
+            listData.cardsLeft += cardLists[0].size();
+        }
+        if (listData.maxMeStart > 0 || listData.maxTheyStart > 0) {
+            listData.misereEval = getEval4Misere();
+        }
+        return listData;
+    }
+
+    public ListData maxUnwantedTricks(CardList leftSuit, CardList rightSuit, boolean meStart) {
+        ListData listData = new ListData(this);
+        if (this.isEmpty()) {
+            return listData;
+        }
+        listData.suitNum = this.get(0).getSuit().getValue();
+
+        CardList[] cardLists = simplifyHands(leftSuit, rightSuit);
+        listData.good = true;
+        Card.Rank myMin = this.get(0).getRank();
+        if (listData.good && !leftSuit.isEmpty()) {
+            listData.good = myMin.compare(leftSuit.get(0).getRank()) < 0;
+        }
+        if (listData.good && !rightSuit.isEmpty()) {
+            listData.good = myMin.compare(rightSuit.get(0).getRank()) < 0;
+        }
+
+        boolean keepDoing = true;
+        boolean firstMove = true;
+mainLoop:
+        while (keepDoing) {
+//        while (cardLists[n].size() > 0) {
+            int n = 0;
+            if (!meStart) {
+                n = 2;
+            }
+            if (cardLists[n].size() == 0) {
+                break;
+            }
             int j0 = 0;
             if (meStart) {
                 j0 = cardLists[n].getOptimalStart(
@@ -358,17 +472,24 @@ mainLoop:
             } else {
                 if (myTrick) {
                     ++listData.maxTheyStart;
+                } else if (firstMove) {
+                    meStart = false;
                 }
             }
+            firstMove = false;
         }
+
         if (meStart) {
             listData.cardsLeft = cardLists[0].size() - cardLists[2].size();
+        }
+        if (listData.maxMeStart > 0 || listData.maxTheyStart > 0) {
+            listData.misereEval = getEval4Misere();
         }
         return listData;
     }
 
     public ListData minWantedTricks(CardList leftSuit, CardList rightSuit, boolean meStart) {
-        ListData listData = new ListData();
+        ListData listData = new ListData(this);
         if (this.isEmpty()) {
             return listData;
         }
@@ -441,14 +562,10 @@ mainLoop:
     }
 
     public ListData getUnwantedTricks(CardList leftSuit, CardList rightSuit) {
-        ListData listData = maxUnwantedTricks(leftSuit, rightSuit, true);
-        ListData listData1 = maxUnwantedTricks(leftSuit, rightSuit, false);
+        ListData listData = maxUnwantedTricks(leftSuit, rightSuit, 0);
+        ListData listData1 = maxUnwantedTricks(leftSuit, rightSuit, 2);
         // consolidate:
         listData.maxTheyStart = listData1.maxTheyStart;
-        listData.ok1stMove = listData.maxMeStart == listData.maxTheyStart;
-        if (listData.maxTheyStart > 0 || listData.maxMeStart > 0) {
-            listData.misereEval = getEval4Misere();
-        }
         return listData;
     }
 
@@ -544,12 +661,15 @@ mainLoop:
         public CardList thisSuit;
         public int maxTheyStart;    // unwanted tricks
         public int maxMeStart;      // unwanted tricks
-        public int cardsLeft;       // when I always start
+        public int cardsLeft = -1;  // when I always start
         public boolean good;        // for all-pass, includes smallest rank
-        public boolean ok1stMove;   // maxMeStart == maxTheyStart
-        public int misereEval;
+        public int misereEval = 0;
 
         public int minMeStart;      // wanted tricks
         public int minTheyStart;    // wanted tricks
+
+        public ListData(CardList thisSuit) {
+            this.thisSuit = thisSuit;
+        }
     }
 }

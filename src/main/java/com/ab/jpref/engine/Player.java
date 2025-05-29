@@ -31,10 +31,11 @@ public abstract class Player {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
     protected final String name;
+    protected final int number;
     protected Config.Bid bid;
-    protected final CardList[] mySuits = new CardList[Card.Suit.values().length - 1];
-    protected final CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
-    protected final CardList[] rightSuits = new CardList[Card.Suit.values().length - 1];
+    protected CardList[] mySuits = new CardList[Card.Suit.values().length - 1];
+    protected CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
+    protected CardList[] rightSuits = new CardList[Card.Suit.values().length - 1];
 
     private final List<RoundResults> history = new LinkedList<>();
     int tricks;
@@ -42,7 +43,6 @@ public abstract class Player {
 
     public abstract Config.Bid getBid(Config.Bid minBid, boolean elderHand);
     public abstract void declareRound(Config.Bid minBid, boolean elderHand);
-    public abstract void respondOnRoundDeclaration(Config.Bid bid, int elderHand);
     public abstract Card play(Trick trick);
 
     // number is being declared in subclasses, then it is more visible in debugger
@@ -63,8 +63,15 @@ public abstract class Player {
         return Config.Bid.BID_PASS;
     }
 
+    // to be implemented in a subclass (human player)
+    // whist or half or pass
+    public void respondOnRoundDeclaration(Config.Bid bid, Trick trick) {
+
+    }
+
     public Player(String name) {
         this.name = name;
+        this.number = 0;
         for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
             mySuits[i] = new CardList();
             leftSuits[i] = new CardList();
@@ -88,31 +95,37 @@ public abstract class Player {
         bid = other.bid;
     }
 
-    // we do not check card list size
-/*
-    public void setHand(Collection<Card> cards) {
-        clear();
-        Set<Card> hand = new HashSet<>(cards);
-        CardList deck = CardList.getDeck();
-        for (Card card : deck) {
-            if (hand.contains(card)) {
-                mySuits[card.getSuit().getValue()].add(card);
-            } else {
-                leftSuits[card.getSuit().getValue()].add(card);
-                rightSuits[card.getSuit().getValue()].add(card);
-            }
+    public Set<Card> getHand() {
+        Set<Card> hand = new HashSet<>();
+        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
+            hand.addAll(mySuits[i]);
         }
-        for (CardList cardList : leftSuits) {
-            Collections.sort(cardList);
-        }
-        for (CardList cardList : rightSuits) {
-            Collections.sort(cardList);
-        }
-        bid = Config.Bid.BID_UNDEFINED;
-        roundResults = new RoundResults();
+        return  hand;
     }
-*/
 
+    public void subtract(CardList[] declarerCards) {
+        for (int i = 0; i < this.mySuits.length; ++i) {
+            declarerCards[i].removeAll(this.mySuits[i]);
+        }
+    }
+
+    // to play with open cards against declarer
+    public static Set<Card> declarerCards() {
+        GameManager gameManager = GameManager.getInstance();
+        int declarerNum = GameManager.getInstance().declarer.getNumber();
+        Set<Card> declarerCards = new HashSet<>(CardList.getDeck());
+        subtract(declarerCards, gameManager.players[(declarerNum + 1) % GameManager.NUMBER_OF_PLAYERS]);
+        subtract(declarerCards, gameManager.players[(declarerNum + 2) % GameManager.NUMBER_OF_PLAYERS]);
+        return declarerCards;
+    }
+
+    static void subtract(Set<Card> declarerCards, Player other) {
+        for (CardList suit : other.mySuits) {
+            declarerCards.removeAll(suit);
+        }
+    }
+
+    // we do not check card list size
     public void setHand(Collection<Card> thisHand) {
         clear();
         split(thisHand, this.mySuits);
@@ -176,10 +189,23 @@ public abstract class Player {
 
     @Override
     public String toString() {
+        return toColorString(false);
+    }
+
+    public String toColorString() {
+        return toColorString(true);
+    }
+
+    public String toColorString(boolean color) {
         StringBuilder sb = new StringBuilder();
         Card.Suit oldSuit = null;
         for (CardList suit : this.mySuits) {
-            String s = suit.toString();
+            String s;
+            if (color) {
+                s = suit.toColorString();
+            } else {
+                s = suit.toString();
+            }
             if (!s.isEmpty()) {
                 sb.append(s).append(" ");
             }
@@ -265,6 +291,30 @@ public abstract class Player {
             }
         }
     }
+
+    // to play with open cards
+/*
+    public void merge(Player other) {
+        boolean left = this.number < other.number;
+        int suitNum = -1;
+        for (CardList suit : other.mySuits) {
+            ++suitNum;
+            for (Card card : suit) {
+                if (left) {
+                    rightSuits[suitNum].remove(card);
+                } else {
+                    leftSuits[suitNum].remove(card);
+                }
+            }
+            if (left) {
+                leftSuits[suitNum] = (CardList) other.mySuits[suitNum].clone();
+            } else {
+                rightSuits[suitNum] = (CardList) other.mySuits[suitNum].clone();
+            }
+        }
+    }
+*/
+
 
     public interface Queueable {}
 

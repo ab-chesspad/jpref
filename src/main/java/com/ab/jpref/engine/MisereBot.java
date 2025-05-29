@@ -27,17 +27,27 @@ import com.ab.util.Logger;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
-// it replaces player[0] (humane) and finds the play plan for the other two
+// it replaces player[0] (human) and finds the play plan for the other two
 public class MisereBot extends Bot {
+/*
     public MisereBot(Player realPlayer) {
         super(realPlayer);
     }
+*/
+    public MisereBot() {
+        super("misere bot", GameManager.getInstance().declarer.getNumber());
+//        GameManager gameManager = GameManager.getInstance();
+//        Set<Card> declarerCards = declarerCards();
+        setHand(declarerCards());
+    }
 
+/*
     public void createPlan(Player left, Player right, boolean elderHand) {
         CardList plan = new CardList();
         // 1. guess discarded when the other players' cards are unknown:
-        Bot.SuitResults suitResults = discardForMisere(elderHand);
+        Bot.HandResults suitResults = discardForMisere(elderHand);
         discard(suitResults.discarded);
 
         // 2. find suits that can be caught given current hands
@@ -48,7 +58,7 @@ public class MisereBot extends Bot {
         List<CardList.ListData> holesTheyStart = new LinkedList<>();
         for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
             CardList suit = mySuits[i];
-            CardList.ListData listData = suit.getUnwantedTricks(this.leftSuits[i], this.rightSuits[i]);
+            CardList.ListData listData = suit.maxUnwantedTricks(this.leftSuits[i], this.rightSuits[i], elderHand);
             if (listData.ok1stMove) {
                 if (firstMoveTricks > listData.maxMeStart) {
                     firstMoveTricks = listData.maxMeStart;
@@ -74,4 +84,5 @@ public class MisereBot extends Bot {
 
 
     }
+*/
 }

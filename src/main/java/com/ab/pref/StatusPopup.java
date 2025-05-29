@@ -67,7 +67,6 @@ public class StatusPopup extends JDialog {
     ScoresPanel scoresPanel;
     ButtonPanel buttonPanel;
     ScoresMetrics scoresMetrics = new ScoresMetrics();
-//    boolean abort;
 
     StatusPopup(JFrame frame, boolean withButtons) {
         super(frame, true);

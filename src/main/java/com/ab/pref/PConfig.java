@@ -25,10 +25,15 @@ import java.awt.*;
 
 public class PConfig extends Config {
     // update serialVersionUID every time another property is being added!
-    private static final long serialVersionUID = 12L;
+    private static final long serialVersionUID = 13L;
 
-    public final Property<Rectangle> mainRectangle = new Property<>("", new Rectangle());
-    public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
+    // these are for my macbook pro with external display because I'a a lazy bum
+    private static final Rectangle DEFAULT_RECTANGLE = new Rectangle(7, 1634,1794,1929);
+    private static final Rectangle DEFAULT_SCORES_RECTANGLE = new Rectangle(1875,1716,1032,1128);
+
+    public final Property<Rectangle> mainRectangle;
+    public final Property<Rectangle> scoresPopupRectangle;
+
     public final ColorProperty bgColor = new ColorProperty("Table Color", "#007000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
@@ -49,6 +54,13 @@ public class PConfig extends Config {
 
     protected PConfig() {
         super();
+        if (Main.RELEASE) {
+            mainRectangle = new Property<>("", new Rectangle());
+            scoresPopupRectangle = new Property<>("", new Rectangle());
+        } else {
+            mainRectangle = new Property<>("", DEFAULT_RECTANGLE);
+            scoresPopupRectangle = new Property<>("", DEFAULT_SCORES_RECTANGLE);
+        }
     }
 
     public static class ColorProperty extends Property<String> {

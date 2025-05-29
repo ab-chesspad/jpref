@@ -34,7 +34,7 @@ public abstract class ScoreCalculator {
         ScoreCalculator instance = null;
         String gameType = config.gameType.get();
         switch (gameType) {
-            case "Miami":
+            case "Miami":   // Сочи
                 instance = new MiamiScoreCalculator();
                 break;
             case "Leningrad":

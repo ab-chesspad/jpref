@@ -96,6 +96,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
+                // for the future, play by dragging
                 super.mouseDragged(e);
 //                System.out.printf("%s -> %s\n", com.ab.util.Util.currMethodName(), e);
             }

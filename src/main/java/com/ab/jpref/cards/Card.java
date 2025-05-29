@@ -25,6 +25,17 @@ import com.ab.jpref.engine.Player;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Player.Queueable {
+    public static String ANSI_RED = "\u001B[31m";
+    public static String ANSI_RESET = "\u001B[0m";
+
+    static {
+        boolean isDebug = java.lang.management.ManagementFactory.getRuntimeMXBean().
+            getInputArguments().toString().contains("jdwp");
+        if (isDebug) {
+//            ANSI_RED = ANSI_RESET = "";
+        }
+    }
+
     static int i = -1;
     public enum Suit {
         SPADE('♠', ++i),
@@ -51,6 +62,19 @@ public class Card implements Comparable<Card>, Player.Queueable {
 
         @Override
         public String toString() {
+/*  IntelliJ debugger does not handle ansi colors, so I make a special method for logging output
+            if (this.equals(DIAMOND) || this.equals(HEART)) {
+                return ANSI_RED + String.valueOf(code) + ANSI_RESET;
+            }
+//*/
+            return String.valueOf(code);
+        }
+
+        public String toColorString() {
+/*  IntelliJ debugger does not handle ansi colors, so I make a special method for logging output */
+            if (this.equals(DIAMOND) || this.equals(HEART)) {
+                return ANSI_RED + code + ANSI_RESET;
+            }
             return String.valueOf(code);
         }
 
@@ -62,6 +86,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             }
             throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
         }
+
         static public Suit code(char unicode) {
             for (Suit r : values()) {
                 if (r.code == unicode) {
@@ -207,5 +232,16 @@ public class Card implements Comparable<Card>, Player.Queueable {
     @Override
     public String toString() {
         return suit.toString() + rank.toString();
+    }
+
+    public String toColorString() {
+        Suit suit = this.getSuit();
+        String s;
+        if (suit.equals(Suit.DIAMOND) || suit.equals(Suit.HEART)) {
+            s = Card.ANSI_RED + suit.toString() + rank.toString() + Card.ANSI_RESET;
+        } else {
+            s = suit.toString() + rank.toString();
+        }
+        return s;
     }
 }

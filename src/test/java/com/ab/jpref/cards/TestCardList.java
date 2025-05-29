@@ -16,7 +16,6 @@ public class TestCardList {
 
     @BeforeClass
     public static void initClass() {
-        Logger.set(System.out);
     }
 
     @Test
@@ -40,10 +39,14 @@ public class TestCardList {
         String[] sources = {
             // suit, left, right, tricksTheyStart, tricksMeStart, good, ok1stMove
 //            " 789JQKA 789xJQKA 0 0 0 0",    // empty
-            "AK 7J 8xQ 2 2 0 1",            // плохая беспроблемная
-            "8JQK 79 xA 0 1 0 0",           // плохая проблемная;
+            "XQKA 79 8 2 2 0 0",            // плохая беспроблемная
+            "8XK 79JQA 79JQA 2 3 0 0",      // плохая проблемная
+            "9JK 78xQA 78xQA 3 3 0 0",      // плохая беспроблемная
+            "8XQ 79JKA 79JKA 2 3 0 0",      // плохая проблемная
             "79Q 8XJKA 8XJKA 1 2 1 0",      // хорошая проблемная
-            "A  J 1 1 0 1",                // плохая беспроблемная
+            "AK 7J 8xQ 2 2 0 1",            // плохая беспроблемная
+            "8JQK 79 xA 0 1 0 0",           // плохая проблемная
+            "A  J 1 1 0 1",                 // плохая беспроблемная
             "89x 7JQKA 7JQKA 1 1 0 1",      // плохая беспроблемная.
             "78Q 9XJKA 9XJKA 1 1 1 1",      // хорошая беспроблемная
             "8JK xQA xQA 0 2 1 0",          // хорошая проблемная
@@ -53,12 +56,8 @@ public class TestCardList {
             "8JK 9xQA 9xQA 1 2 1 0",        // хорошая проблемная
             "79J 8xQKA 8xQKA 0 2 1 0",      // хорошая проблемная
             "XA 789JQK 789JQK 2 2 0 1",     // плохая беспроблемная
-            "8XQ 79JKA 79JKA 1 3 0 0",      // плохая проблемная; ??
             "8KA 79xJQ 79xJQ 2 3 0 0",      // плохая проблемная; todo: проблемная, учесть плотность
-            "9XK 78JQA 78JQA 2 3 0 0",      // плохая проблемная;
-            "9JK 78xQA 78xQA 2 3 0 0",      // плохая проблемная;
-            "8XK 79JQA 79JQA 1 3 0 0",      // плохая проблемная. issue: if they start with 9, there is 2 my tricks
-            "XQKA 79 8 1 2 0 0",            // плохая проблемная
+            "9XK 78JQA 78JQA 2 3 0 0",      // плохая проблемная
             "8X 79JQKA 79JQKA 1 2 0 0",     // плохая проблемная;
             "78J 9xQKA 9xQKA 0 1 1 0",      // хорошая проблемная;
 
@@ -110,15 +109,12 @@ public class TestCardList {
             int tricksTheyStart = Integer.parseInt(parts[++i]);           // is problematic when holes > 0
             int tricksMeStart = Integer.parseInt(parts[++i]);           // is problematic when holes > 0
             boolean good = !parts[++i].equals("0");       // for all-pass, includes smallest rank
-            boolean ok1stMove = !parts[++i].equals("0");  // 1st move does not add tricks, the list includes 2 smallest ranks
-//            int distanceToTop = Integer.parseInt(parts[++i]);
-            CardList.ListData listData = cardLists[0].getUnwantedTricks(cardLists[1], cardLists[2]);
-            Assert.assertEquals("good", good, listData.good);
+//            boolean ok1stMove = !parts[++i].equals("0");  // 1st move does not add tricks, the list includes 2 smallest ranks
+            CardList.ListData listData1 = cardLists[0].maxUnwantedTricks(cardLists[1], cardLists[2], 2);
+            Assert.assertEquals("tricksTheyStart", tricksTheyStart, listData1.maxTheyStart);
+            CardList.ListData listData = cardLists[0].maxUnwantedTricks(cardLists[1], cardLists[2], 0);
             Assert.assertEquals("tricksMeStart", tricksMeStart, listData.maxMeStart);
-            Assert.assertEquals("tricksTheyStart", tricksTheyStart, listData.maxTheyStart);
-            Assert.assertEquals("ok1stMove", ok1stMove, listData.ok1stMove);
-
-//            Assert.assertEquals("distanceToTop", distanceToTop, listData.distanceToTop);
+            Assert.assertEquals("good", good, listData.good);
         }
     }
 

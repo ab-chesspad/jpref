@@ -28,7 +28,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.PrintStream;
-import java.util.Timer;
 
 public class Main {
     static final boolean DEBUG = false;
@@ -38,14 +37,9 @@ public class Main {
     public static boolean ALL_HUMANS = false;
     static {
         GameManager.RELEASE = RELEASE;
-/*
         if (RELEASE) {
             ALL_HUMANS = false;
             SHOW_ALL = false;
-        }
-*/
-        if (ALL_HUMANS) {
-            SHOW_ALL = true;
         }
         if (ALL_BOTS) {
             GameManager.TRICK_TIMEOUT = 0;
@@ -73,11 +67,16 @@ public class Main {
         PrintStream out = System.out;   // output to System.out
         if (RELEASE) {
             out = null;         // output to files
+            GameManager.SKIP_BIDDING = true;
+            Logger.DEBUG = false;
         }
+/* unless IntelliJ adds ansi colors handling to their debugger,
+   output to System.out will be ugly and useless
         System.out.println("output to " + out);
         Logger.set(out);
+//*/
 
-/*
+/* failed attempt to handle signal
         Signal.handle(new Signal("INT"),  // SIGINT
                 signal -> System.out.println("Interrupted by Ctrl+C"));
 */
@@ -87,7 +86,7 @@ public class Main {
         javax.swing.SwingUtilities.invokeLater(() -> new Main(args));
     }
 
-/*
+/* failed attempt to handle signal
     @Override
     protected void finalize() {
         System.out.println("finalize() 1");
@@ -121,7 +120,7 @@ public class Main {
             }
         });
 
-/*
+/* failed attempt to handle signal
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
@@ -157,7 +156,7 @@ public class Main {
             }
         });
 
-/*
+/* failed attempt to handle signal
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(Window e) {
@@ -247,11 +246,6 @@ public class Main {
             mainRectangle.x = (fullScreen.width - mainRectangle.width) / 2;
             mainRectangle.y = (fullScreen.height - mainRectangle.height) / 2;
         }
-/*     // debug
-            mainRectangle.x = 10;
-            mainRectangle.y = 30;
-//*/
-
         return mainGD;
     }
 }

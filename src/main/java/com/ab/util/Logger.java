@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Logger {
+    public static boolean DEBUG = true;
     public static final String LOG_EXT = ".log";
     private static String logFileName;
     private static PrintStream out;
@@ -41,6 +42,12 @@ public class Logger {
     }
 
     private static void setOutput() {
+        if (DEBUG) {
+            if (out != null) {
+                return;
+            }
+        }
+
         if (System.out != out) {
             String date = new SimpleDateFormat("yyyy-MM-dd-").format(new Date());
             if (!date.equals(startDate)) {
@@ -59,27 +66,31 @@ public class Logger {
         File dataDir = Config.getDataDirectory();
         File logDir = new File(dataDir.getAbsolutePath(), "logs");
         logDir.mkdir();
-        final int[] lastNum = {0};
-        logDir.list((file, name) -> {
-            if (name.endsWith(LOG_EXT)) {
-                name = name.substring(0, name.length() - LOG_EXT.length());
-            }
-            if (!name.startsWith(date)) {
+        if (DEBUG) {
+            logFileName = logDir + File.separator + "0" + LOG_EXT;
+        } else {
+            final int[] lastNum = {0};
+            logDir.list((file, name) -> {
+                if (name.endsWith(LOG_EXT)) {
+                    name = name.substring(0, name.length() - LOG_EXT.length());
+                }
+                if (!name.startsWith(date)) {
+                    return false;
+                }
+                name = name.substring(date.length());
+                int num;
+                try {
+                    num = Integer.parseInt(name);
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+                if (lastNum[0] < num) {
+                    lastNum[0] = num;
+                }
                 return false;
-            }
-            name = name.substring(date.length());
-            int num;
-            try {
-                num = Integer.parseInt(name);
-            } catch (NumberFormatException e) {
-                return false;
-            }
-            if (lastNum[0] < num) {
-                lastNum[0] = num;
-            }
-            return false;
-        });
-        logFileName = logDir + File.separator + String.format("%s%03d%s", date, lastNum[0] + 1, LOG_EXT);
+            });
+            logFileName = logDir + File.separator + String.format("%s%03d%s", date, lastNum[0] + 1, LOG_EXT);
+        }
         return new PrintStream(logFileName, StandardCharsets.UTF_8.name());
     }
 

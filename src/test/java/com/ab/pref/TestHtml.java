@@ -35,7 +35,6 @@ public class TestHtml {
     MainPanel mainPanel;
 
     public static void main(String[] args) {
-        Logger.set(System.out);
         javax.swing.SwingUtilities.invokeLater(() -> new TestHtml());
     }
 

@@ -125,7 +125,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public void respondOnRoundDeclaration(Config.Bid bid, int elderHand) {
+    public void respondOnRoundDeclaration(Config.Bid bid, Trick trick) {
         // todo: whist or half or pass
     }
 

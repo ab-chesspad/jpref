@@ -47,7 +47,7 @@ public class Util {
         } else if ((osName.startsWith("windows"))) {
             os = OS.windows;
         }
-        System.out.println(String.format("running on %s", os));
+        Logger.println(String.format("running on %s", os));
         return os;
     }
 
@@ -60,7 +60,11 @@ public class Util {
     }
 
     public static void getList(String filePath, LineHandler lineHandler) throws IOException {
-        getList(filePath, null, lineHandler);
+        final String[] charMap = {
+            "\u001B\\[31m" + "->",
+            "\u001B\\[0m" + "->",
+        };
+        getList(filePath, charMap, lineHandler);
     }
 
     // charMap format "from->to"

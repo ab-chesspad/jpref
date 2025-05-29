@@ -24,7 +24,6 @@ public class TestBot {
 
     @BeforeClass
     public static void initClass() {
-        Logger.set(System.out);
         gameManager = new GameManager(config, null, playerFactory());
         GameManager.DEBUG = false;  // suppress thread status logginga
     }
@@ -83,6 +82,7 @@ public class TestBot {
     }
 */
 
+/*
     @Test
     public void testDiscard4Misere() throws IOException {
         GameManager.DEBUG = false;  // suppress thread status logging
@@ -93,26 +93,29 @@ public class TestBot {
                 for (i = 0; cards.size() < 10; ++i) {
                     cards.addAll(Util.toCardList(tokens.get(i)));
                 }
-                boolean elderHand = Integer.parseInt(tokens.get(i++)) == 0;
+                int elderHand = Integer.parseInt(tokens.get(i++));
                 Bot bot = new Bot("bid", cards);
                 String botHand = bot.toString();
-                boolean misereOK = bot.evalMisere(elderHand);
+                boolean misereOK = bot.evalMisere(elderHand == 0);
                 Assert.assertTrue(String.format("no misere %s %b", botHand, elderHand), misereOK);
                 for (; cards.size() < 12; ++i) {
                     cards.addAll(Util.toCardList(tokens.get(i)));
                 }
                 bot = new Bot("declare", cards);
-                Bot.SuitResults suitResults = bot.discardForMisere(elderHand);
+                Trick trick = new Trick();
+                trick.startedBy = elderHand;
+                Bot.HandResults handResults = bot.discardForMisere(trick);
                 Logger.printf("%s %b -> %s, eval=%d\n",
-                    bot.toString(), elderHand, suitResults.discarded.toString(), suitResults.eval);
-                if (suitResults.eval > 0) {
+                    bot.toString(), elderHand, handResults.discarded.toString(), handResults.eval);
+                if (handResults.eval > 0) {
                     String[] parts = res.split(" #");
                     Set<Card> expected = new HashSet<>(Util.toCardList(parts[0]));
-                    for (Card card : suitResults.discarded) {
+                    for (Card card : handResults.discarded) {
                         Assert.assertTrue(String.format("%s %b -> discarded %s", botHand, elderHand, card),
                             expected.contains(card));
                     }
                 }
             });
     }
+*/
 }

@@ -35,7 +35,6 @@ public class TestLabel {
     }
 
     public TestLabel(String[] args) {
-        Logger.set(System.out);
         mainFrame = new JFrame();
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setBounds(30, 200, 600, 900);
