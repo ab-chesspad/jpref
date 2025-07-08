@@ -28,6 +28,8 @@ import java.util.Map;
 
 public abstract class ScoreCalculator {
     static final Config config = Config.getInstance();
+    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
+
     protected static ScoreCalculator instance;
 
     private static ScoreCalculator getScoreCalculator() {
@@ -67,7 +69,7 @@ public abstract class ScoreCalculator {
     }
 
     public void calculateStatus(Player[] players) {
-        Player.RoundResults[] totals = new Player.RoundResults[GameManager.NUMBER_OF_PLAYERS];
+        Player.RoundResults[] totals = new Player.RoundResults[NUMBER_OF_PLAYERS];
         int sumDump = 0;
         for (int i = 0; i < totals.length; ++i) {
             totals[i] = new Player.RoundResults();
@@ -98,7 +100,7 @@ public abstract class ScoreCalculator {
         }
 
         // calc dump whists keeping total balance == 0
-        int dumpPoints = sumDump * 10 / GameManager.NUMBER_OF_PLAYERS;
+        int dumpPoints = sumDump * 10 / NUMBER_OF_PLAYERS;
         int sum = 0;
         int j = Player.PlayerPoints.dumpPoints.ordinal();
         totals[0].points[j] = dumpPoints - 10 * totals[0].points[j];

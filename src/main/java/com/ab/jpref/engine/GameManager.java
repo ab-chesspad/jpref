@@ -34,19 +34,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class GameManager {
     public static boolean RELEASE = false;
-    public static boolean DEBUG = false;
+    public static boolean DEBUG_LOG = false;
     public static int TRICK_TIMEOUT = 500;
-    public static boolean SKIP_BIDDING = true;
+    public static boolean SKIP_BIDDING = false;
 
     public static final int ROUND_SIZE = 10;   // total tricks == initial hand size
     public static final int NUMBER_OF_PLAYERS = 3;
-    public static final String DEAL_MARK = "deal:";
 
     public enum RoundStage implements Player.Queueable {
 //        resized,
 //        painted,
         bidding,
-        discard,
+        drop,
         declareRound,
         startAllPass,
         roundDeclared,
@@ -68,6 +67,8 @@ public class GameManager {
         newGame,
     }
 
+    public static String testFileName;
+
     static RoundState roundState;
     private static GameManager instance;
 
@@ -81,7 +82,6 @@ public class GameManager {
     private final Trick trick = new Trick();
     private final Trick lastTrick = new Trick();
 
-    public String testFileName;
     private int lineCount = 0;
 
     Config.Bid minBid = Config.Bid.BID_6S;
@@ -100,7 +100,7 @@ public class GameManager {
         for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
             players[i] = playerFactory.getPlayer(i);
         }
-        Logger.printf(DEBUG, "GameManager constructed\n");
+        Logger.printf(DEBUG_LOG, "GameManager constructed\n");
     }
 
     public static GameManager getInstance() {
@@ -123,6 +123,18 @@ public class GameManager {
         return declarer;
     }
 
+    // player does not know declarer's drops
+    public Player getDeclarerFor(int number) {
+        Player player = players[number];
+        Bot fictitiousBot = new Bot(GameManager.getInstance().declarer);
+        if ((trick.declarerNum + 1) % GameManager.NUMBER_OF_PLAYERS == number) {
+            fictitiousBot.mySuits = player.rightSuits;
+        } else {
+            fictitiousBot.mySuits = player.leftSuits;
+        }
+        return fictitiousBot;
+    }
+
     public CardList getTalonCards() {
         return talonCards;
     }
@@ -135,10 +147,10 @@ public class GameManager {
         return minBid;
     }
 
-    public void runGame(String testFileName, int skip) {
+    public void runGame(final String testFileName, int skip) {
         this.testFileName = testFileName;
         gameThread = Thread.currentThread();
-        Logger.printf(DEBUG, "runGame %s\n", gameThread.getName());
+        Logger.printf(DEBUG_LOG, "runGame %s\n", gameThread.getName());
         if (testFileName == null) {
             runGame();
         } else {
@@ -149,7 +161,7 @@ public class GameManager {
                         if (lineCount++ < skip) {
                             return;
                         }
-                        if (!tokens.get(0).startsWith(DEAL_MARK)) {
+                        if (!tokens.get(0).startsWith(Util.DEAL_MARK)) {
                             return;     // ignore
                         }
                         --lineCount;
@@ -162,6 +174,10 @@ public class GameManager {
                             deck.addAll(Util.toCardList(token));
                         }
                         deck.verifyDeck();
+                        if (testFileName.indexOf("misere") >= 0) {
+                            CardList talon = new CardList(deck.subList(30, 32));
+                            MisereBot.debugDrop = (CardList) talon.clone();
+                        }
                         RoundStage next = RoundStage.replay;
                         while (RoundStage.replay.equals(next)) {
                             next = playRound(deck, elderHand);
@@ -221,10 +237,10 @@ public class GameManager {
                     playRoundAllPass();
                 } else {
                     Logger.printf("declarer %s, %s %s\n",
-                        declarer.getName(), declarer.getBid(), declarer);
+                        declarer.getName(), declarer.getBid(), declarer.toColorString());
                     declarer.takeTalon(talonCards);
-                    roundState.set(RoundStage.discard);
-                    Config.Bid bid = declarer.discard();
+                    roundState.set(RoundStage.drop);
+                    Config.Bid bid = declarer.drop();
                     if (!Config.Bid.BID_WITHOUT_THREE.equals(bid)) {
                         roundState.set(RoundStage.roundDeclared);
                         Util.sleep(100);
@@ -339,11 +355,19 @@ public class GameManager {
         }
 
         sb.append(talonCards.toColorString());
-        Logger.printf("%s %s  %d\n", DEAL_MARK, sb, trick.getStartedBy());
+        if (testFileName == null) {
+            // when testing it was displayed already
+            Logger.printf("%s %s  %d\n", Util.DEAL_MARK, sb, trick.getStartedBy());
+        }
     }
 
     void playRoundAllPass() {
         for (int c = 0; c < ROUND_SIZE; ++c) {
+            for (int j = 0; j < players.length; ++j) {
+                Player player = players[j];
+                Logger.printf("%s  ", player.toColorString());
+            }
+            Logger.printf("\n");
             roundState.set(RoundStage.newTrick);
             if (!talonCards.isEmpty()) {
                 Card card = talonCards.get(talonCards.size() - 1);
@@ -363,11 +387,13 @@ public class GameManager {
                 Util.sleep(TRICK_TIMEOUT);
             }
             Logger.printf("%s takes it, total %d\n\n", players[trick.top].getName(), players[trick.top].getTricks());
+/*
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[j];
                 Logger.printf("%s  ", player.toColorString());
             }
             Logger.printf("\n");
+*/
             Card talonCard = null;
             if (!talonCards.isEmpty()) {
                 talonCard = talonCards.remove(talonCards.size() - 1);
@@ -382,7 +408,7 @@ public class GameManager {
             if (eventObserver != null) {
                 Util.sleep(TRICK_TIMEOUT);
             }
-            Logger.printf(DEBUG, "trick taken\n");
+            Logger.printf(DEBUG_LOG, "trick taken\n");
         }
     }
 
@@ -411,12 +437,19 @@ public class GameManager {
     }
 
     void playRoundMisere() {
-        trick.minBid = this.minBid;
-        trick.declarerNum = declarer.number;
+        trick.declarerNum = declarer.getNumber();
         roundState.set(RoundStage.play);
         for (int c = 0; c < ROUND_SIZE; ++c) {
+            for (int j = 0; j < players.length; ++j) {
+                Player player = players[j];
+                Logger.printf("%s  ", player.toColorString());
+            }
+            Logger.printf("\n");
+            trick.minBid = this.minBid;
             roundState.set(RoundStage.play);
-            Logger.printf("trick %d: ", trick.number);
+            StringBuilder sb = new StringBuilder();
+//            Logger.printf("trick %d: ", trick.number);
+            sb.append(String.format("trick %d: ", trick.number));
             String sep = "";
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
@@ -429,20 +462,24 @@ public class GameManager {
                 if (c == 0 && j == 0 && player == declarer) {
                     revealCards(trick);
                 }
-                Logger.printf("%s%s: %s", sep, player.getName(), card.toString());
+//                Logger.printf("%s%s: %s", sep, player.getName(), card.toColorString());
+                sb.append(String.format("%s%s: %s", sep, player.getName(), card.toColorString()));
                 sep = ", ";
             }
+            Logger.println(sb.toString());
             lastTrick.clear();
             players[trick.top].incrementTricks();
             if (eventObserver != null) {
                 Util.sleep(TRICK_TIMEOUT);
             }
-            Logger.printf("\n %s takes it, total %d\n\n", players[trick.top].getName(), players[trick.top].getTricks());
+            Logger.printf("%s takes it, total %d\n\n", players[trick.top].getName(), players[trick.top].getTricks());
+/*
             for (int j = 0; j < players.length; ++j) {
                 Player player = players[j];
-                Logger.printf("%s  ", player.toString());
+                Logger.printf("%s  ", player.toColorString());
             }
             Logger.printf("\n");
+*/
             lastTrick.trickCards = (CardList)trick.trickCards.clone();
             lastTrick.startedBy = trick.startedBy;
             trick.clear();  // not to repaint
@@ -450,7 +487,7 @@ public class GameManager {
             if (eventObserver != null) {
                 Util.sleep(TRICK_TIMEOUT);
             }
-            Logger.printf(DEBUG, "trick taken\n");
+            Logger.printf(DEBUG_LOG, "trick taken\n");
         }
     }
 
@@ -521,7 +558,7 @@ public class GameManager {
 
         public RoundStage set(RoundStage state) {
             RoundStage q = null;
-            Logger.printf(DEBUG, "%s -> %s\n", Thread.currentThread().getName(), state);
+            Logger.printf(DEBUG_LOG, "%s -> %s\n", Thread.currentThread().getName(), state);
             this.roundStage = state;
 
             if (GameManager.instance.eventObserver == null) {
@@ -535,9 +572,9 @@ public class GameManager {
             }
             GameManager.instance.eventObserver.update();
             try {
-                Logger.printf(DEBUG,"GameManager blocked %s\n", state.toString());
+                Logger.printf(DEBUG_LOG,"GameManager blocked %s\n", state.toString());
                 q = GameManager.getQueue().take();
-                Logger.printf(DEBUG,"GameManager unblocked %s\n", q.toString());
+                Logger.printf(DEBUG_LOG,"GameManager unblocked %s\n", q.toString());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

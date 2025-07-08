@@ -94,6 +94,8 @@ public class Trick {
         clear();
         startedBy = elderHand;
         number = 0;
+        MisereBot.delayedMiserData = new MisereBot.DelayedMiserData();
+        Logger.printf("DeclarerDrop %s\n", MisereBot.declarerDrop.name());
     }
 
     public void clear() {
@@ -109,22 +111,22 @@ public class Trick {
         top = -1;
     }
 
-    private void discard(Card card) {
-        int discardingPlayer = -1;
+    private void drop(Card card) {
+        int droppingPlayer = -1;
         if (startingSuit != null && !card.getSuit().equals(startingSuit)) {
-            discardingPlayer = getTurn();
+            droppingPlayer = getTurn();
         }
 
         Player[] players = GameManager.getInstance().players;
-        if (discardingPlayer >= 0) {
+        if (droppingPlayer >= 0) {
             // 0 -> 2:left, 1:right
             // 1 -> 0:left, 2:right
             // 2 -> 1:left, 0:right
-            players[(discardingPlayer + 2) % players.length].leftSuits[startingSuit.getValue()].clear();
-            players[(discardingPlayer + 1) % players.length].rightSuits[startingSuit.getValue()].clear();
+            players[(droppingPlayer + 2) % players.length].leftSuits[startingSuit.getValue()].clear();
+            players[(droppingPlayer + 1) % players.length].rightSuits[startingSuit.getValue()].clear();
         }
         for (Player player : players) {
-            player.discard(card);
+            player.drop(card);
         }
 
         for (int i = 0; i < players.length; ++i) {
@@ -140,7 +142,7 @@ public class Trick {
             startingSuit = card.getSuit();
             startedFromTalon = true;
         }
-        discard(card);
+        drop(card);
     }
 
     public void add(Card card) {
@@ -158,7 +160,7 @@ public class Trick {
                 }
             }
         }
-        discard(card);
+        drop(card);
         trickCards.add(card);
     }
 

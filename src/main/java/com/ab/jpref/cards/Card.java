@@ -25,8 +25,13 @@ import com.ab.jpref.engine.Player;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Player.Queueable {
-    public static String ANSI_RED = "\u001B[31m";
-    public static String ANSI_RESET = "\u001B[0m";
+    public static String ANSI_HEAD = "\u001B";
+    public static String ANSI_TAIL = "m";
+    public static String ANSI_RED = ANSI_HEAD + "[31" + ANSI_TAIL;
+    public static String ANSI_RESET = ANSI_HEAD + "[0" + ANSI_TAIL;
+
+//    public static String ANSI_RED = "\u001B[31m";
+//    public static String ANSI_RESET = "\u001B[0m";
 
     static {
         boolean isDebug = java.lang.management.ManagementFactory.getRuntimeMXBean().
@@ -95,6 +100,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             }
             throw new IllegalArgumentException(String.valueOf(unicode));
         }
+        static public int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
     }
 
     static int j = 5;
@@ -109,7 +115,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
         KING("K", ++j),
         ACE("A", ++j);
 
-        private final String name;
+        public final String name;
         private final int value;
 
         Rank(String name, int value) {

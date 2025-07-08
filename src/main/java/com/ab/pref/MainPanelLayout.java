@@ -35,7 +35,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 class MainPanelLayout {
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG_LOG = false;
+    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
     public static final PConfig pConfig = PConfig.getInstance();
     final MainPanel mainPanel;
 
@@ -94,7 +95,7 @@ class MainPanelLayout {
             Rectangle r = new Rectangle(currentHandVisualData.cardPositions.get(j));
             r.width = (int)metrics.cardW;
             r.height = (int)metrics.cardH;
-            Logger.printf(DEBUG, "checking rect %s, %s\n", currentHandVisualData.allCards.get(j), r);
+            Logger.printf(DEBUG_LOG, "checking rect %s, %s\n", currentHandVisualData.allCards.get(j), r);
             if (r.contains(point)) {
                 card = currentHandVisualData.allCards.get(j);
                 break;
@@ -119,7 +120,7 @@ class MainPanelLayout {
 
         centerPanel(mainPanel.bidPanel);
         centerPanel(mainPanel.declareRoundPanel);
-        centerPanel(mainPanel.discardPanel);
+        centerPanel(mainPanel.dropPanel);
 
         // to southwest
         bounds = mainPanel.buttonPanel.getBounds();
@@ -140,7 +141,7 @@ class MainPanelLayout {
             int newDeckWidth = (int) (metrics.cardW * 13);
             int newDeckHeight = (int) (metrics.cardH * deckAttributes.deckRows);
             scaledDeckImage = Util.scale(sourceDeckImage, newDeckWidth, newDeckHeight);
-            Logger.printf(DEBUG, "scaled Deck %dx%d\n",
+            Logger.printf(DEBUG_LOG, "scaled Deck %dx%d\n",
                     scaledDeckImage.getWidth(), scaledDeckImage.getHeight());
 
             for (int j = 0; j < Card.Suit.values().length - 1; ++j) {
@@ -151,7 +152,7 @@ class MainPanelLayout {
                         col = 0;
                     }
                     int xS = (int) (col * metrics.cardW);
-                    Logger.printf(DEBUG, "%s src %dx%d- %dx%d\n",
+                    Logger.printf(DEBUG_LOG, "%s src %dx%d- %dx%d\n",
                             new Card(Card.Suit.values()[j], Card.Rank.values()[i]).toString(),
                             xS, yS, (int) metrics.cardW, (int) metrics.cardH);
                     cardImages[j][i] = scaledDeckImage.getSubimage(xS, yS, (int) metrics.cardW, (int) metrics.cardH);
@@ -188,7 +189,7 @@ class MainPanelLayout {
                 recalculateSizes();
             }
 
-            Logger.printf(DEBUG, "paintComponent %dx%d - %dx%d, main %dx%d\n",
+            Logger.printf(DEBUG_LOG, "paintComponent %dx%d - %dx%d, main %dx%d\n",
                 metrics.panelWidth, metrics.panelHeight, panelWidth, panelHeight,
                 Main.mainRectangle.width, Main.mainRectangle.height);
 
@@ -239,21 +240,21 @@ class MainPanelLayout {
 
         int panelWidth = g.getClipBounds().width;
         int panelHeight = g.getClipBounds().height;
-        Logger.printf(DEBUG, "trick started %d, %s\n", turn, trickCards);
+        Logger.printf(DEBUG_LOG, "trick started %d, %s\n", turn, trickCards);
         try {
             for (int j = 0; j < trickCards.size(); ++j) {
                 Card card = trickCards.get(j);
                 Image im = getCardImage(card);
                 int i = turn + 1;
-                if (j == 0 && trickCards.size() > GameManager.NUMBER_OF_PLAYERS) {
+                if (j == 0 && trickCards.size() > NUMBER_OF_PLAYERS) {
                     i = 0;
                     --turn;
                 }
                 int x = positions[i].x + panelWidth / 2;
                 int y = positions[i].y + panelHeight / 2;
-                Logger.printf(DEBUG, "trick %s %d\n", card, i);
+                Logger.printf(DEBUG_LOG, "trick %s %d\n", card, i);
                 g.drawImage(im, x, y, null);
-                turn = ++turn % GameManager.NUMBER_OF_PLAYERS;
+                turn = ++turn % NUMBER_OF_PLAYERS;
             }
         } catch (java.util.ConcurrentModificationException e) {
             // todo: fix it!
@@ -311,7 +312,7 @@ class MainPanelLayout {
                     y = metrics.panelHeight - (int) metrics.cardH - metrics.yMargin;
                     labelY = (int)(metrics.panelHeight - metrics.yMargin - (1 + metrics.yLabel) * metrics.cardH / 2);
                 }
-                Logger.printf(DEBUG, "horiz center: %dx%d, panel %dx%d, %s\n",
+                Logger.printf(DEBUG_LOG, "horiz center: %dx%d, panel %dx%d, %s\n",
                         x, y, metrics.panelWidth, metrics.panelHeight, handVisualData.player);
             } else if (handVisualData.alignment.equals(MainPanel.Alignment.East)) {
                 x = metrics.panelWidth - actualW - handVisualData.label.width - 2 * metrics.xMargin;
@@ -405,7 +406,7 @@ class MainPanelLayout {
                         position.y -= (int) (metrics.ySelected * metrics.cardH);
                     }
                 }
-                Logger.printf(DEBUG, "clicked %s\n", card);
+                Logger.printf(DEBUG_LOG, "clicked %s\n", card);
             }
             g.drawImage(im, position.x, position.y, mainPanel);
             handVisualData.cardPositions.add(position);
@@ -417,7 +418,7 @@ class MainPanelLayout {
         if (handVisualData.player != null) {
             name = handVisualData.player.getName();
         }
-        Logger.printf(DEBUG, "%s positions %d:\n%s\n", name,
+        Logger.printf(DEBUG_LOG, "%s positions %d:\n%s\n", name,
                 handVisualData.cardPositions.size(), handVisualData.cardPositions);
     }
 

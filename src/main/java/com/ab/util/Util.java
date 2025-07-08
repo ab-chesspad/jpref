@@ -28,6 +28,8 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Util {
+    public static final String DEAL_MARK = "deal:";
+
     public enum OS {
         linux,
         mac,
@@ -61,8 +63,7 @@ public class Util {
 
     public static void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
-            "\u001B\\[31m" + "->",
-            "\u001B\\[0m" + "->",
+            Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
         };
         getList(filePath, charMap, lineHandler);
     }
@@ -76,9 +77,10 @@ public class Util {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty() || line.startsWith("#")) {
+                if (line.isEmpty() || line.startsWith("#") || !line.startsWith(DEAL_MARK)) {
                     continue;
                 }
+                Logger.println(line);
                 String[] parts = line.split(" -> ");
                 String res = "...";
                 if (parts.length >= 2) {

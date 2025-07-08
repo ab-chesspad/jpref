@@ -27,11 +27,13 @@ import com.ab.util.Logger;
 import java.util.*;
 
 public abstract class Player {
+    public static boolean DEBUG_LOG = false;
+    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
+
     public enum PlayerPoints {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
     protected final String name;
-    protected final int number;
     protected Config.Bid bid;
     protected CardList[] mySuits = new CardList[Card.Suit.values().length - 1];
     protected CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
@@ -59,7 +61,7 @@ public abstract class Player {
 
     // to be implemented in a subclass (human player)
     // returns BID_WITHOUT_THREE or a game
-    public Config.Bid discard() {
+    public Config.Bid drop() {
         return Config.Bid.BID_PASS;
     }
 
@@ -71,7 +73,10 @@ public abstract class Player {
 
     public Player(String name) {
         this.name = name;
-        this.number = 0;
+        init();
+    }
+
+    private void init() {
         for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
             mySuits[i] = new CardList();
             leftSuits[i] = new CardList();
@@ -85,14 +90,18 @@ public abstract class Player {
     }
 
     public Player(Player other) {
-        this(other.name);
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-            mySuits[i] = (CardList) other.mySuits[i].clone();
-            leftSuits[i] = (CardList) other.leftSuits[i].clone();
-            rightSuits[i] = (CardList) other.rightSuits[i].clone();
+        if (other == null) {
+            name = "test";
+        } else {
+            name = other.name;
+            bid = other.bid;
+            for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
+                mySuits[i] = (CardList) other.mySuits[i].clone();
+                leftSuits[i] = (CardList) other.leftSuits[i].clone();
+                rightSuits[i] = (CardList) other.rightSuits[i].clone();
+            }
         }
         tricks = 0;
-        bid = other.bid;
     }
 
     public Set<Card> getHand() {
@@ -114,8 +123,8 @@ public abstract class Player {
         GameManager gameManager = GameManager.getInstance();
         int declarerNum = GameManager.getInstance().declarer.getNumber();
         Set<Card> declarerCards = new HashSet<>(CardList.getDeck());
-        subtract(declarerCards, gameManager.players[(declarerNum + 1) % GameManager.NUMBER_OF_PLAYERS]);
-        subtract(declarerCards, gameManager.players[(declarerNum + 2) % GameManager.NUMBER_OF_PLAYERS]);
+        subtract(declarerCards, gameManager.players[(declarerNum + 1) % NUMBER_OF_PLAYERS]);
+        subtract(declarerCards, gameManager.players[(declarerNum + 2) % NUMBER_OF_PLAYERS]);
         return declarerCards;
     }
 
@@ -248,20 +257,29 @@ public abstract class Player {
         return history;
     }
 
-    public void discard(CardList discard) {
-        StringBuilder sb = new StringBuilder(String.format("player %s discarded ",
+    public Card anyCard() {
+        for (int j = 0; j < Card.Suit.values().length - 1; ++j) {
+            if (!mySuits[j].isEmpty()) {
+                return mySuits[j].last();
+            }
+        }
+        return null;    // should not be here
+    }
+
+    public void drop(CardList drop) {
+        StringBuilder sb = new StringBuilder(String.format("player %s dropped ",
             this.getName()));
         String sep = "";
-        for (Card card : discard) {
+        for (Card card : drop) {
             sb.append(sep).append(card);
             sep = ", ";
-            discard(card);
+            drop(card);
         }
-        Logger.printf(Bot.DEBUG, sb + "\n");
+        Logger.printf(DEBUG_LOG, sb + "\n");
         accept(Config.Bid.BID_6S);
     }
 
-    public void discard(Card card) {
+    public void drop(Card card) {
         int suitNum = card.getSuit().getValue();
         if (mySuits[suitNum].remove(card)) {
             return;     // my own card

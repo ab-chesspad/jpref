@@ -38,7 +38,7 @@ import java.util.List;
  * description in etc/doc/scores.jpg
  */
 public class StatusPopup extends JDialog {
-    static final boolean DEBUG = false;
+    static final boolean DEBUG_LOG = false;
 
     static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
     static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
@@ -82,7 +82,7 @@ public class StatusPopup extends JDialog {
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
                 pConfig.scoresPopupRectangle.set(popupRectangle);
                 scoresPanel.recalc();
@@ -90,7 +90,7 @@ public class StatusPopup extends JDialog {
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
                 pConfig.scoresPopupRectangle.set(popupRectangle);
             }
@@ -134,7 +134,7 @@ public class StatusPopup extends JDialog {
 
         public void recalc() {
             Rectangle scoresRectangle = StatusPopup.instance.getScoresRectangle();
-            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), scoresRectangle);
+            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), scoresRectangle);
 
             // center:
             scoresMetrics.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
@@ -313,7 +313,7 @@ public class StatusPopup extends JDialog {
         }
 
         protected void paintComponent(Graphics g) {
-            Logger.printf(DEBUG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(),
+            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(),
                 StatusPopup.instance.getScoresRectangle());
             Graphics2D g2d = (Graphics2D) g;
             g2d.setColor(Color.white);

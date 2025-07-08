@@ -5,7 +5,6 @@
  */
 package com.ab.jpref.engine;
 
-import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
@@ -15,8 +14,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 public class TestBot {
     static final Config config = Config.getInstance();
@@ -24,8 +21,9 @@ public class TestBot {
 
     @BeforeClass
     public static void initClass() {
+        Logger.set(System.out);
         gameManager = new GameManager(config, null, playerFactory());
-        GameManager.DEBUG = false;  // suppress thread status logginga
+        GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
 
     private static GameManager.PlayerFactory playerFactory() {
@@ -34,7 +32,7 @@ public class TestBot {
 
     @Test
     public void testGetMaxBid() throws IOException {
-        GameManager.DEBUG = false;  // suppress thread status logging
+        GameManager.DEBUG_LOG = false;  // suppress thread status logging
         Util.getList("etc/tests/get-max-bid",
             (res, tokens) -> {
                 CardList cards = new CardList();
@@ -77,14 +75,14 @@ public class TestBot {
             Bot.RoundData roundData =
                     player.declareRound(minBid, turn);
             Assert.assertEquals(expectedBid, roundData.bid);
-            //todo: check discards
+            //todo: check drops
         });
     }
 */
 
 /*
     @Test
-    public void testDiscard4Misere() throws IOException {
+    public void testdrop4Misere() throws IOException {
         GameManager.DEBUG = false;  // suppress thread status logging
         Util.getList("etc/tests/declare-misere",
             (res, tokens) -> {
@@ -104,14 +102,14 @@ public class TestBot {
                 bot = new Bot("declare", cards);
                 Trick trick = new Trick();
                 trick.startedBy = elderHand;
-                Bot.HandResults handResults = bot.discardForMisere(trick);
+                Bot.HandResults handResults = bot.dropForMisere(trick);
                 Logger.printf("%s %b -> %s, eval=%d\n",
-                    bot.toString(), elderHand, handResults.discarded.toString(), handResults.eval);
+                    bot.toString(), elderHand, handResults.dropped.toString(), handResults.eval);
                 if (handResults.eval > 0) {
                     String[] parts = res.split(" #");
                     Set<Card> expected = new HashSet<>(Util.toCardList(parts[0]));
-                    for (Card card : handResults.discarded) {
-                        Assert.assertTrue(String.format("%s %b -> discarded %s", botHand, elderHand, card),
+                    for (Card card : handResults.dropped) {
+                        Assert.assertTrue(String.format("%s %b -> dropped %s", botHand, elderHand, card),
                             expected.contains(card));
                     }
                 }

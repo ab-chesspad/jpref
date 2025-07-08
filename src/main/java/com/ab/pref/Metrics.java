@@ -25,7 +25,7 @@ import com.ab.util.Logger;
 import java.awt.*;
 
 public class Metrics {
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG_LOG = false;
 
     private final int
         MIN_X_MARGIN = 4,
@@ -128,7 +128,7 @@ public class Metrics {
                 horizontalLayout = true;
             }
 
-            Logger.printf(DEBUG, "horiz=%b, card %4.1fx%4.1f\n",
+            Logger.printf(DEBUG_LOG, "horiz=%b, card %4.1fx%4.1f\n",
                     this.horizontalLayout, this.cardW, this.cardH);
             this.panelWidth = panelWidth;
             this.panelHeight = panelHeight;

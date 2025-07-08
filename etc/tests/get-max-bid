@@ -1,7 +1,7 @@
 #getmaxbid hand, turn, left bid, right bid -> max bid
 #♠J ♣7KA ♦Q ♥89JKA  0 -> 6♥ ♣8X ♠J ♦Q -> 9♣
 ♠Q ♣789X ♦79J ♥79  0 -- -- -> Misère # single hole
-♠Q ♣789X ♦79J ♥79  1 -- -- -> Misère # single hole on 2nd hand
+♠Q ♣789X ♦79J ♥79  1 -- -- -> Misère # single hole on 3rd hand
 ♠7 ♣789X ♦79J ♥7X  0 -- -- -> Misère # hole 7-10
 ♠7 ♣789X ♦79J ♥79  0 -- -- -> Misère # clean
 ♠7 ♣789X ♦79 ♥7XJ  0 -- -- -> Pass # good only ♥8 & ♥9

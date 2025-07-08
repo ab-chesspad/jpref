@@ -24,7 +24,6 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
-import com.ab.jpref.engine.Bot;
 import com.ab.util.I18n;
 import com.ab.util.Logger;
 
@@ -34,7 +33,7 @@ import java.awt.event.*;
 import java.util.concurrent.BlockingQueue;
 
 public class MainPanel extends JPanel implements GameManager.EventObserver, HumanPlayer.Clickable {
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG_LOG = false;
 
     public enum Alignment {
         South,
@@ -49,7 +48,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         minBid("Min Bid"),
         misere("Misère"),
         pass("Pass"),
-        discard("Discard"),
+        drop("drop"),
         without3("Without 3"),
         prevSuit("Previous Suit"),
         nextSuit("Next Suit"),
@@ -80,7 +79,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
     Config.Bid currentBid;
     ButtonPanel buttonPanel;
     ButtonPanel bidPanel;
-    ButtonPanel discardPanel;
+    ButtonPanel dropPanel;
     ButtonPanel declareRoundPanel;
     ButtonPanel menuPanel;
     final JPanel trickPanel;
@@ -110,13 +109,13 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                     trickPanel.setVisible(false);
                     update();
                 }
-                if (!isStage(GameManager.RoundStage.discard) &&
+                if (!isStage(GameManager.RoundStage.drop) &&
                         !isStage(GameManager.RoundStage.play) &&
                         !isStage(GameManager.RoundStage.newTrick)
                 ) {
                    return;
                 }
-                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 if (e.getButton() == 1) {
                     menuPanel.setVisible(false);
                     // left button
@@ -140,7 +139,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG, "MainPanel.%s -> %s\n",
+                Logger.printf(DEBUG_LOG, "MainPanel.%s -> %s\n",
                     com.ab.util.Util.currMethodName(), e);
                 update();   // repaint
             }
@@ -203,7 +202,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
             return;
         }
 
-        if (GameManager.getState().getRoundStage().equals(GameManager.RoundStage.discard)) {
+        if (GameManager.getState().getRoundStage().equals(GameManager.RoundStage.drop)) {
             if (selectedCards.contains(card)) {
                 selectedCards.remove(card);
             } else if (selectedCards.size() < 2){
@@ -229,7 +228,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
 
         // unblock human player
         currentPlayer.accept(card);
-        Logger.printf(DEBUG, "unblocked, selected %s\n", card);
+        Logger.printf(DEBUG_LOG, "unblocked, selected %s\n", card);
         selectedCards.clear();
         currentPlayer = null;
     }
@@ -248,7 +247,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         if (q != null) {
             q = queue.remove();
             try {
-                Logger.printf(DEBUG, "paintComponent, %s unblock\n", q.toString());
+                Logger.printf(DEBUG_LOG, "paintComponent, %s unblock\n", q.toString());
                 // put it back, unblock GameManager
                 queue.put(q);
             } catch (InterruptedException e) {
@@ -279,7 +278,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         if (Main.SHOW_ALL) {
             return true;
         } else {
-            Logger.printf(DEBUG, "showCards %s\n", GameManager.getState().getRoundStage().toString());
+            Logger.printf(DEBUG_LOG, "showCards %s\n", GameManager.getState().getRoundStage().toString());
             // depending on the round!
             if (isStage(GameManager.RoundStage.roundDeclared)) {
                 if (GameManager.getInstance().getDeclarer() instanceof HumanPlayer &&
@@ -319,16 +318,16 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 setDeclareRoundPanel(null);
             }
             declareRoundPanel.setVisible(GameManager.RoundStage.declareRound.equals(r.getRoundStage()));
-            discardPanel.setVisible(GameManager.RoundStage.discard.equals(r.getRoundStage()));
-            discardPanel.getButton(Command.discard).setEnabled(selectedCards.size() == 2);
-            discardPanel.getButton(Command.without3)
+            dropPanel.setVisible(GameManager.RoundStage.drop.equals(r.getRoundStage()));
+            dropPanel.getButton(Command.drop).setEnabled(selectedCards.size() == 2);
+            dropPanel.getButton(Command.without3)
                 .setEnabled(!Config.Bid.BID_MISERE.equals(currentPlayer.getBid()));
         }
 
         Main.mainContainer.validate();
         Main.mainContainer.repaint();
         if (GameManager.getState() != null) {
-            Logger.printf(DEBUG, "mainPanel.%s, %s -> invalidate()\n",
+            Logger.printf(DEBUG_LOG, "mainPanel.%s, %s -> invalidate()\n",
                 com.ab.util.Util.currMethodName(),
                 GameManager.getState().getRoundStage());
         }
@@ -348,7 +347,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         int minSuit = currentPlayer.getBid().getValue() % 10;
         int roundValue = currentBid.getValue() / 10;
         int suitValue = currentBid.getValue() % 10;
-        Logger.printf(DEBUG, "setDeclareRoundPanel curr %s, %d, %d\n", currentBid, roundValue, suitValue);
+        Logger.printf(DEBUG_LOG, "setDeclareRoundPanel curr %s, %d, %d\n", currentBid, roundValue, suitValue);
 
         switch (command) {
             case prevSuit:
@@ -366,7 +365,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
         }
 
         currentBid = Config.Bid.fromValue(roundValue * 10 + suitValue);
-        Logger.printf(DEBUG, "setDeclareRoundPanel next %s, %d, %d\n", currentBid, roundValue, suitValue);
+        Logger.printf(DEBUG_LOG, "setDeclareRoundPanel next %s, %d, %d\n", currentBid, roundValue, suitValue);
         declareRoundPanel.getButton(Command.select).setText(currentBid.getName());
 
         if (suitValue <= 1 || roundValue == minRound && suitValue <= minSuit) {
@@ -436,13 +435,13 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
     }
 
     private void createButtonPanels() {
-        discardPanel = new ButtonPanel( 4, 1,
+        dropPanel = new ButtonPanel( 4, 1,
             new ButtonHandler[][] {
-                {new ButtonHandler(Command.discard, command -> currentPlayer.discard(selectedCards))},
+                {new ButtonHandler(Command.drop, command -> currentPlayer.drop(selectedCards))},
                 {new ButtonHandler(Command.without3, command -> returnBid(Config.Bid.BID_WITHOUT_THREE))},
             });
-        discardPanel.setVisible(false);
-        this.add(discardPanel);
+        dropPanel.setVisible(false);
+        this.add(dropPanel);
 
         declareRoundPanel = new ButtonPanel( 1.5, 1.5,
             new ButtonHandler[][] {

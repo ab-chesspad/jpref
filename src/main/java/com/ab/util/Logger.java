@@ -109,8 +109,16 @@ public class Logger {
         printf("\n");
     }
 
+    public static void println(boolean debug) {
+        printf(debug, "\n");
+    }
+
     public static void println(String msg) {
         printf("%s\n", msg);
+    }
+
+    public static void println(boolean debug, String msg) {
+        printf(debug, "%s\n", msg);
     }
 
     public static void printf(boolean debug, String format, Object... args) {

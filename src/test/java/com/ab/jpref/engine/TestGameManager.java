@@ -5,7 +5,6 @@
  */
 package com.ab.jpref.engine;
 
-import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
@@ -17,18 +16,19 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class TestGameManager {
+    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
+
     static final Config config = Config.getInstance();
     GameManager gameManager;
 
     @Before
     public void initClass() {
-//        Card.ANSI_RED = Card.ANSI_RESET = "";
+        Logger.set(System.out);
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/360006477540-Is-there-any-way-that-i-can-change-the-color-of-the-text-output-in-the-console-in-the-program?page=1#community_comment_26995573152274
         gameManager = new GameManager(config, null, playerFactory());
-        GameManager.DEBUG = false;  // suppress thread status logginga
+        GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.sleepBetweenRounds.set(0);
     }
 
@@ -36,16 +36,20 @@ public class TestGameManager {
         return index -> new Bot("test-" + index, index);
     }
 
+    Bot.HandResults handResults = new Bot.HandResults();
+
     @Test
-    @Ignore("not implemented yet")
     public void testMisere() throws IOException {
         final String testFileName = "etc/tests/misereplay";
-//        gameManager.runGame(testFile, 0);
+        GameManager.testFileName = testFileName;
+        final int[] count = {0};
         Util.getList(testFileName,
             (res, tokens) -> {
-                if (!tokens.get(0).startsWith(GameManager.DEAL_MARK)) {
+                if (!tokens.get(0).startsWith(Util.DEAL_MARK)) {
                     return;     // ignore
                 }
+                String[] resParts = res.split(" |#");
+                boolean delayedDrop = "d".equals(resParts[0]);
                 int elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
                 CardList deck = new CardList();
                 for (String token : tokens) {
@@ -55,27 +59,42 @@ public class TestGameManager {
                     deck.addAll(Util.toCardList(token));
                 }
                 deck.verifyDeck();
-                gameManager.getTrick().startedBy = elderHand;
-                int declalerNum = 0;
-                gameManager.declarer = gameManager.players[declalerNum];
-                gameManager.deal(deck);
-                gameManager.declarer.bid = Config.Bid.BID_MISERE;
-                gameManager.minBid = Config.Bid.BID_MISERE;
                 CardList talon = new CardList(deck.subList(30, 32));
-                gameManager.declarer.takeTalon(talon);
-                gameManager.declarer.declareRound(gameManager.minBid, elderHand == declalerNum);
-                Logger.printf("declarer %s, round %s, %s\n",
-                    gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toString());
+                MisereBot.debugDrop = (CardList) talon.clone();
+                int tot = 1;
+                if (delayedDrop) {
+                    tot = 2;
+                }
+                for (int i = 0; i < tot; ++i) {
+                    MisereBot.declarerDrop = MisereBot.DeclarerDrop.values()[i];
+                    gameManager.getTrick().startedBy = elderHand;
+                    int declalerNum = 0;
+                    gameManager.declarer = gameManager.players[declalerNum];
+                    gameManager.deal(deck);
+                    gameManager.declarer.bid = Config.Bid.BID_MISERE;
+                    gameManager.minBid = Config.Bid.BID_MISERE;
+//*
+                    gameManager.declarer.takeTalon(talon);
+                    gameManager.declarer.declareRound(gameManager.minBid, elderHand == declalerNum);
+//*/
+                    gameManager.declarer.bid = gameManager.minBid;
+//*/
+                    Logger.printf("declarer %s, round %s, %s\n",
+                        gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toColorString());
 
-                gameManager.playRoundMisere();
-                Logger.printf("1: %d, 2: %d, 3: %d\n"
-                    , gameManager.players[0].tricks
-                    , gameManager.players[1].tricks
-                    , gameManager.players[2].tricks
-                );
+                    gameManager.getTrick().clear(elderHand);
+                    gameManager.playRoundMisere();
+                    Logger.printf("0: %d, 1: %d, 2: %d\n"
+                        , gameManager.players[0].tricks
+                        , gameManager.players[1].tricks
+                        , gameManager.players[2].tricks
+                    );
+                    Assert.assertTrue("misere is not caught", gameManager.players[0].tricks > 0);
+                }
+                ++count[0];
             });
 
-        System.out.print("done\n");
+        Logger.printf("done %d tests\n", count[0]);
     }
 
     // ♣8 ♥789   ♦78X ♥Q   ♠K ♦K ♥XJ   2
@@ -118,10 +137,11 @@ public class TestGameManager {
     @Test
     public void testAllPass() throws IOException {
         final String testFileName = "etc/tests/allpassplay";
+        GameManager.testFileName = testFileName;
         final int[] count = {0};
         Util.getList(testFileName,
                 (res, tokens) -> {
-                    if (!tokens.get(0).startsWith(GameManager.DEAL_MARK)) {
+                    if (!tokens.get(0).startsWith(Util.DEAL_MARK)) {
                         return;     // ignore
                     }
                     int turn = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
@@ -147,20 +167,25 @@ public class TestGameManager {
         gameManager.getTrick().clear(turn);
         gameManager.deal(deck);
         gameManager.playRoundAllPass();
-        Logger.printf("0: %d, 1: %d, 2: %d\n"
+        Logger.printf("%d, %d, %d\n"
             , gameManager.players[0].tricks
             , gameManager.players[1].tricks
             , gameManager.players[2].tricks
         );
         String[] parts =  res.split("[:|,|#] ");
-        for (int i = 0; i < GameManager.NUMBER_OF_PLAYERS; ++i) {
+        int k = 1;
+        if (parts.length == 6) {
+            k = 2;
+        }
+        for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
             Player p = gameManager.players[i];
             Assert.assertEquals(String.format("%s\n tricks for player-%d", deck.toString(), p.getNumber()),
-                Integer.parseInt(parts[2 * i + 1].trim()), p.getTricks());
+                Integer.parseInt(parts[k * i + k - 1].trim()), p.getTricks());
         }
     }
 
     @Test
+    @Ignore("convert source files to usual notation")
     public void testEtudes() throws IOException {
         // https://www.gambler.ru/forum/index.php?s=3966c74ecd08ea375730d1fc88fe7392&showtopic=503067&st=10
         final String[] sources = {
@@ -238,7 +263,7 @@ public class TestGameManager {
                 Logger.println("all pass");
             } else {
                 gameManager.declarer.takeTalon(gameManager.getTalonCards());
-                Config.Bid bid = gameManager.declarer.discard();
+                Config.Bid bid = gameManager.declarer.drop();
                 gameManager.declarer.declareRound(gameManager.getMinBid(), elderHand[0] == 0);
                 Logger.printf("declarer %s, round %s, %s\n",
                     gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toString());

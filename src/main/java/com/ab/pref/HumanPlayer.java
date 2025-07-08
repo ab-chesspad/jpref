@@ -31,7 +31,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class HumanPlayer extends com.ab.jpref.engine.Player {
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG_LOG = false;
 
     private final BlockingQueue<Queueable> queue = new LinkedBlockingQueue<>();
     private final Clickable clickable;
@@ -99,15 +99,15 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
 
     @Override
     public Config.Bid getBid(Config.Bid minBid, boolean meStart) {
-        Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
+        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         bid = (Config.Bid)takeFromQueue();
-        Logger.printf(DEBUG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
+        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
         return bid;
     }
 
     @Override
-    public Config.Bid discard() {
+    public Config.Bid drop() {
         clickable.setSelectedPlayer(this);
         Queueable q = takeFromQueue();        // block
         if (Config.Bid.BID_WITHOUT_THREE.equals(q)) {
@@ -118,10 +118,10 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
 
     @Override
     public void declareRound(Config.Bid minBid, boolean elderHand) {
-        Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
+        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         bid = (Config.Bid)takeFromQueue();
-        Logger.printf(DEBUG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
+        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
     }
 
     @Override
@@ -131,7 +131,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
 
     @Override
     public Card play(Trick trick) {
-        Logger.printf(DEBUG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
+        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {

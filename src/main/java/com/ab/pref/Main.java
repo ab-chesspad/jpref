@@ -30,9 +30,9 @@ import java.awt.event.*;
 import java.io.PrintStream;
 
 public class Main {
-    static final boolean DEBUG = false;
+    static final boolean DEBUG_LOG = false;
     public static boolean RELEASE = true;
-    public static boolean SHOW_ALL = false;
+    public static boolean SHOW_ALL = true;
     public static boolean ALL_BOTS = false;
     public static boolean ALL_HUMANS = false;
     static {
@@ -70,8 +70,8 @@ public class Main {
             GameManager.SKIP_BIDDING = true;
             Logger.DEBUG = false;
         }
-/* unless IntelliJ adds ansi colors handling to their debugger,
-   output to System.out will be ugly and useless
+//* unless IntelliJ adds ansi colors handling to their debugger,
+//   output to System.out will be ugly and useless
         System.out.println("output to " + out);
         Logger.set(out);
 //*/
@@ -139,7 +139,7 @@ public class Main {
         mainFrame.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG,"main.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG,"main.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 insets = mainFrame.getInsets();
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 mainRectangle.height -= insets.top;
@@ -150,7 +150,7 @@ public class Main {
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                Logger.printf(DEBUG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 pConfig.mainRectangle.set(mainRectangle);
             }
@@ -210,7 +210,7 @@ public class Main {
                     }
                 });
                 gameThread.start();
-                Logger.printf(DEBUG, "gameManager started\n");
+                Logger.printf(DEBUG_LOG, "gameManager started\n");
             }
         }
 
@@ -222,7 +222,7 @@ public class Main {
         int x = 10000;
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         for (GraphicsDevice gd : ge.getScreenDevices()) {
-            Logger.printf(DEBUG, "device:'%s' size=(%dx%d)\n",
+            Logger.printf(DEBUG_LOG, "device:'%s' size=(%dx%d)\n",
                     gd.getIDstring(), gd.getDisplayMode().getWidth(), gd.getDisplayMode().getHeight());
             int thisX = gd.getDefaultConfiguration().getBounds().x;
             if (x > thisX) {
@@ -237,7 +237,7 @@ public class Main {
         }
 
         Insets insets = new Insets(0,0,0,0);
-        Logger.printf(DEBUG, "insets=(%dx%dx%dx%d\n)",
+        Logger.printf(DEBUG_LOG, "insets=(%dx%dx%dx%d\n)",
                 insets.left, insets.right, insets.top, insets.bottom);
         mainRectangle = pConfig.mainRectangle.get();
         if (mainRectangle.width == 0) {

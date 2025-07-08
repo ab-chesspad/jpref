@@ -1,4 +1,4 @@
-#declare-misere hand, elderhand == 0, talon -> discarded
+#declare-misere hand, elderhand == 0, talon -> dropped
 #♠♣♦♥
 #♠89X ♣789X ♦79 ♥7 0 ♠A ♥A -> # no misere
 #♠ — 7, ♣ — 7, 8, Т, ♦ — 7, 9, В, К, ♥ — 7, 10 0 -> # no misere?
