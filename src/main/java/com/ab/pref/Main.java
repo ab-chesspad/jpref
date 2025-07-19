@@ -32,6 +32,7 @@ import java.io.PrintStream;
 public class Main {
     static final boolean DEBUG_LOG = false;
     public static boolean RELEASE = true;
+    public static boolean SKIP_BIDDING = true;     // true to jump to all-pass
     public static boolean SHOW_ALL = true;
     public static boolean ALL_BOTS = false;
     public static boolean ALL_HUMANS = false;
@@ -40,7 +41,9 @@ public class Main {
         if (RELEASE) {
             ALL_HUMANS = false;
             SHOW_ALL = false;
+            SKIP_BIDDING = false;
         }
+        GameManager.SKIP_BIDDING = SKIP_BIDDING;
         if (ALL_BOTS) {
             GameManager.TRICK_TIMEOUT = 0;
         }

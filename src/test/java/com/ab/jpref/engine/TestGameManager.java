@@ -75,7 +75,7 @@ public class TestGameManager {
                     gameManager.minBid = Config.Bid.BID_MISERE;
 //*
                     gameManager.declarer.takeTalon(talon);
-                    gameManager.declarer.declareRound(gameManager.minBid, elderHand == declalerNum);
+                    gameManager.declarer.declareRound(gameManager.minBid, elderHand);
 //*/
                     gameManager.declarer.bid = gameManager.minBid;
 //*/
@@ -189,7 +189,7 @@ public class TestGameManager {
     public void testEtudes() throws IOException {
         // https://www.gambler.ru/forum/index.php?s=3966c74ecd08ea375730d1fc88fe7392&showtopic=503067&st=10
         final String[] sources = {
-// cannot play yet          "3",
+"3",
             "1", "2", "4", "5",
         };
 
@@ -264,7 +264,7 @@ public class TestGameManager {
             } else {
                 gameManager.declarer.takeTalon(gameManager.getTalonCards());
                 Config.Bid bid = gameManager.declarer.drop();
-                gameManager.declarer.declareRound(gameManager.getMinBid(), elderHand[0] == 0);
+                gameManager.declarer.declareRound(gameManager.getMinBid(), elderHand[0]);
                 Logger.printf("declarer %s, round %s, %s\n",
                     gameManager.declarer.getName(), gameManager.declarer.getBid(), gameManager.declarer.toString());
             }

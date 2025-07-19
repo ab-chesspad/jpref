@@ -21,6 +21,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.Hand;
 import com.ab.jpref.config.Config;
 //import com.ab.pref.HumanPlayer; // no dependencies on com.ab.pref!
 import com.ab.util.Logger;
@@ -41,7 +42,7 @@ public class GameManager {
     public static final int ROUND_SIZE = 10;   // total tricks == initial hand size
     public static final int NUMBER_OF_PLAYERS = 3;
 
-    public enum RoundStage implements Player.Queueable {
+    public enum RoundStage implements Config.Queueable {
 //        resized,
 //        painted,
         bidding,
@@ -61,7 +62,7 @@ public class GameManager {
         newGame,
     }
 
-    public enum RestartCommand implements Player.Queueable {
+    public enum RestartCommand implements Config.Queueable {
         goon,
         replay,
         newGame,
@@ -79,6 +80,7 @@ public class GameManager {
 
     final Player[] players = new Player[NUMBER_OF_PLAYERS];
     private final CardList talonCards = new CardList();
+    private final CardList talonCardsCopy = new CardList();
     private final Trick trick = new Trick();
     private final Trick lastTrick = new Trick();
 
@@ -128,9 +130,9 @@ public class GameManager {
         Player player = players[number];
         Bot fictitiousBot = new Bot(GameManager.getInstance().declarer);
         if ((trick.declarerNum + 1) % GameManager.NUMBER_OF_PLAYERS == number) {
-            fictitiousBot.mySuits = player.rightSuits;
+            fictitiousBot.myHand = player.rightHand;
         } else {
-            fictitiousBot.mySuits = player.leftSuits;
+            fictitiousBot.myHand = player.leftHand;
         }
         return fictitiousBot;
     }
@@ -249,14 +251,16 @@ public class GameManager {
                             playRoundMisere();
                         } else {
                             roundState.set(RoundStage.declareRound);
-                            boolean _elderHand = false;
+/*
+                            int _elderHand = -1;
                             for (int i = 0; i < players.length; ++i) {
                                 Player player = players[i];
                                 if (player == declarer) {
-                                    _elderHand = elderHand == i;
+                                    _elderHand = elderHand;
                                 }
                             }
-                            declarer.declareRound(minBid, _elderHand);
+*/
+                            declarer.declareRound(minBid, elderHand);
                             // todo: whist/pass and play round for tricks
                             playRoundAllPass(); // just a placeholder
                         }
@@ -307,7 +311,7 @@ public class GameManager {
                         !(misereDeclared && Config.Bid.BID_9S.equals(minBid))) {
                     minBid = minBid.prev();
                 }
-                Config.Bid bid = currentBidder.getBid(minBid, i == 0);
+                Config.Bid bid = currentBidder.getBid(minBid, elderHand);
                 if (Config.Bid.BID_MISERE.equals(bid)) {
                     misereDeclared = true;
                 }
@@ -346,6 +350,8 @@ public class GameManager {
 
         talonCards.clear();
         talonCards.addAll(deck.subList(30, 32));
+        talonCardsCopy.clear();
+        talonCardsCopy.addAll(deck.subList(30, 32));
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
@@ -416,24 +422,14 @@ public class GameManager {
         int declarerNum = declarer.getNumber();
         Player left = players[(declarerNum + 1) % NUMBER_OF_PLAYERS];
         Player right = players[(declarerNum + 2) % NUMBER_OF_PLAYERS];
-        declarer.leftSuits = CardList.clone(left.mySuits);
-        declarer.rightSuits = CardList.clone(right.mySuits);
+        declarer.leftHand = left.myHand.clone();
+        declarer.rightHand = right.myHand.clone();
 
-        CardList[] declarerCards = CardList.getDeckSuits();
-        left.subtract(declarerCards);
-        right.subtract(declarerCards);
-        if (!trick.trickCards.isEmpty()) {
-            Card firstMoveCard = trick.trickCards.get(0);
-            int suitNum = firstMoveCard.getSuit().getValue();
-            declarerCards[suitNum].remove(firstMoveCard);
-        }
+        Hand declarerHand = declarer.myHand.clone();
+        declarerHand.add(talonCardsCopy);
 
-        left.leftSuits = CardList.clone(right.mySuits);
-        left.rightSuits = CardList.clone(declarerCards);
-
-        right.leftSuits = CardList.clone(declarerCards);
-        right.rightSuits = CardList.clone(left.mySuits);
-
+        left.rightHand = declarerHand.clone();
+        right.leftHand = declarerHand.clone();
     }
 
     void playRoundMisere() {

@@ -77,7 +77,9 @@ public class Util {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty() || line.startsWith("#") || !line.startsWith(DEAL_MARK)) {
+                if (line.isEmpty() || line.startsWith("#")
+//                    || !line.startsWith(DEAL_MARK)
+                ) {
                     continue;
                 }
                 Logger.println(line);

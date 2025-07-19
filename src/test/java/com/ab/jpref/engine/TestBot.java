@@ -46,11 +46,23 @@ public class TestBot {
                 String[] parts = res.split(" ");
                 Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
                 Logger.printf("%s %d -> %s\n", player, turn, expectedBid.getName());
-                Config.Bid bid = player.getMaxBid(turn == 0);
+                Config.Bid bid = player.getMaxBid(turn);
                 Assert.assertEquals(expectedBid, bid);
             });
     }
 
+    @Test
+    public void lastBit () {
+        int[] src = {
+            0, 1, 2, 3, 4, 5, 6, 8,
+        };
+        for (int n : src) {
+//            int pos0 = Integer.numberOfTrailingZeros(n);
+            int pos1 = n & (n - 1);
+            int pos0 = ((n ^ (n - 1)) + 1) >> 1;
+            Logger.printf("%d -> %03x, %03x\n", n, pos1, pos0);
+        }
+    }
 /*
     @Test
     public void testDeclareGame() throws IOException {

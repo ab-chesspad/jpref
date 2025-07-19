@@ -21,6 +21,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.Hand;
 import com.ab.jpref.config.Config;
 
 import java.util.*;
@@ -55,19 +56,18 @@ public class Bot extends Player {
 /*
     public Bot(Bot other) {
         super(other.name);
-        CardList otherHand = new CardList(players[1].rightSuits);
+        CardList otherHand = new CardList(players[1].rightHand);
         Bot probeBot = new Bot("probe misere", hisCards);
 
     }
 */
-
 
     public MisereBot getMisereBot(Player fictitiousBot, Bot realPlayer) {
         return new MisereBot(fictitiousBot, realPlayer);
     }
 
     @Override
-    public void declareRound(Config.Bid minBid, boolean elderHand) {
+    public void declareRound(Config.Bid minBid, int elderHand) {
         HandResults handResults = null;
         if (Config.Bid.BID_MISERE.equals(minBid)) {
             MisereBot misereBot = getMisereBot(this, this);
@@ -78,37 +78,36 @@ public class Bot extends Player {
         drop(handResults.dropped);
     }
 
-    private Card dropAny(Trick trick) {
+    private Card drop4AllPass(Trick trick) {
         CardList.ListData problemList = null;
         CardList.ListData noProblemList = null;
         Card res = null;
 
-/* debug
-        if (number == 0 && trick.number >= 1) {
+//* debug
+        if (trick.number >= 4) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
-
-        for (int i = 0; i < mySuits.length; ++i) {
-            CardList suit = mySuits[i];
-            if (suit.isEmpty()) {
+        for (CardList cardList : myHand) {
+            if (cardList.isEmpty()) {
                 continue;
             }
-            if (theirMin(i) == null) {
+            Card.Suit suit = cardList.first().getSuit();
+            if (theirMin(suit) == null) {
                 continue;
             }
-            CardList.ListData listData = suit.getUnwantedTricks(leftSuits[i], rightSuits[i]);
+            CardList.ListData listData = cardList.getUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
             if (listData.maxMeStart == listData.maxTheyStart) {
                 // ok1stMove, no problem
-                // select the suit with the most unwanted tricks
+                // select the cardList with the most unwanted tricks
                 if (noProblemList == null || noProblemList.maxMeStart < listData.maxMeStart) {
                     noProblemList = listData;
                 } else if (noProblemList.maxMeStart == listData.maxMeStart) {
-                    if (noProblemList.thisSuit.size() > suit.size()) {
-                        // select the shortest suit
+                    if (noProblemList.thisSuit.size() > cardList.size()) {
+                        // select the shortest cardList
                         noProblemList = listData;
-                    } else if (noProblemList.thisSuit.last().getRank().compare(suit.last().getRank()) < 0) {
-                        // select the suit with the card of the highest rank
+                    } else if (noProblemList.thisSuit.last().getRank().compare(cardList.last().getRank()) < 0) {
+                        // select the cardList with the card of the highest rank
                         noProblemList = listData;
                     }
                 }
@@ -132,30 +131,30 @@ public class Bot extends Player {
         if (probe != null && probe.size() == 2) {
             // looking for 'пистолет':
             Card myMin = probe.first();
-            int suitNum = myMin.getSuit().getValue();
+            Card.Suit suit = myMin.getSuit();
 
             boolean found = false;
-            CardList suit = rightSuits[suitNum];
-            if (probe.size() <= suit.size() && probe.last().compareTo(suit.get(probe.size() - 1)) > 0) {
+            CardList cardList = rightHand.list(suit);
+            if (probe.size() <= cardList.size() && probe.last().compareTo(cardList.get(probe.size() - 1)) > 0) {
                 // ok to drop it
-            } else if (!suit.isEmpty()) {
-                if (myMin.compareInTrick(suit.last()) < 0 &&
-                        myMin.compareInTrick(suit.first()) > 0) {
+            } else if (!cardList.isEmpty()) {
+                if (myMin.compareInTrick(cardList.last()) < 0 &&
+                        myMin.compareInTrick(cardList.first()) > 0) {
                     found = true;
                 }
             }
-            suit = leftSuits[suitNum];
-            if (probe.size() <= suit.size() && probe.last().compareTo(suit.get(probe.size() - 1)) > 0) {
+            cardList = leftHand.list(suit);
+            if (probe.size() <= cardList.size() && probe.last().compareTo(cardList.get(probe.size() - 1)) > 0) {
                 // ok to drop it
-            } else if (!suit.isEmpty()) {
-                if (myMin.compareInTrick(suit.last()) < 0 &&
-                        myMin.compareInTrick(suit.first()) > 0) {
+            } else if (!cardList.isEmpty()) {
+                if (myMin.compareInTrick(cardList.last()) < 0 &&
+                        myMin.compareInTrick(cardList.first()) > 0) {
                     found = true;
                 }
             }
             if (found) {
                 // drop any other:
-                for (CardList _suit : mySuits) {
+                for (CardList _suit : myHand) {
                     if (!_suit.isEmpty() && _suit != probe) {
                         res = _suit.last();
                         break;
@@ -166,7 +165,7 @@ public class Bot extends Player {
 
         if (res == null) {
             if (noProblemList != null) {
-                if (noProblemList.thisSuit.last().compareInTrick(theirMin(noProblemList.suitNum)) < 0 &&
+                if (noProblemList.thisSuit.last().compareInTrick(theirMin(noProblemList.suit)) < 0 &&
                         problemList != null && problemList.thisSuit.size() > 2) {
                     res = problemList.thisSuit.last();
                 } else {
@@ -176,9 +175,9 @@ public class Bot extends Player {
                 res = problemList.thisSuit.last();
             } else {
                 // any:
-                for (CardList suit : mySuits) {
-                    if (!suit.isEmpty()) {
-                        res = suit.last();
+                for (CardList cardList : myHand) {
+                    if (!cardList.isEmpty()) {
+                        res = cardList.last();
                         break;
                     }
                 }
@@ -194,7 +193,6 @@ public class Bot extends Player {
             if (Config.Bid.BID_MISERE.equals(this.bid)) {
                 misereBot = getMisereBot(this, this);
             } else {
-                // defenders do not know all decrarer's cards
                 Player fictitiousBot = GameManager.getInstance().getDeclarerFor(this.number);
                 misereBot = getMisereBot(fictitiousBot, this);
             }
@@ -210,131 +208,130 @@ public class Bot extends Player {
         CardList.ListData noProblemSuit = new CardList.ListData(null);
         noProblemSuit.maxMeStart = Integer.MAX_VALUE;
 /* debug
-        if (trick.number >= 6 && number == 2) {
+        if (trick.number >= 6) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
         // ♣8JQK ♦89 ♥79   ♠A ♣79 ♦XJKA ♥8   ♠J ♣XA ♦7 ♥XJQA 1 - must: ♠A, ♦X and ♦XJ?
         // ♠7 ♦9XK   ♣A ♥9JK   ♠9Q ♦8 ♥7
         // todo: test-2 plays ♠Q, but the best move is ♥7
-        for (int i = 0; i < this.mySuits.length; ++i) {
-            CardList suit = this.mySuits[i];
-            if (suit.isEmpty()) {
+        for (CardList cardList : this.myHand) {
+            if (cardList.isEmpty()) {
                 continue;
             }
-            anycard = suit.last();
-            int suitNum = suit.first().getSuit().getValue();
-            if (theirMin(suitNum) == null) {
+            Card.Suit suit = cardList.first().getSuit();
+            anycard = cardList.last();
+            if (theirMin(suit) == null) {
                 continue;       // 'козырять' не надо
             }
 
-            CardList.ListData listData = suit.getUnwantedTricks(leftSuits[i], rightSuits[i]);
+            CardList.ListData listData = cardList.getUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
             boolean ok1stMove = listData.maxMeStart == listData.maxTheyStart;
             if (ok1stMove) {
                 // no problems
-                int _suitNum = -1;
+                Card.Suit _suit = null;
                 int noProblemSuitSize = 0;
-                if (noProblemSuit.suitNum != -1) {
-                    _suitNum = noProblemSuit.suitNum;
-                    noProblemSuitSize = mySuits[_suitNum].size();
+                if (noProblemSuit.suit != null) {
+                    _suit = noProblemSuit.suit;
+                    noProblemSuitSize = myHand.list(_suit).size();
                 }
 
                 if (listData.maxMeStart == 0) {
-                    CardList[] checkLists = null;
-                    if (leftSuits[suitNum].isEmpty()) {
-                        checkLists = rightSuits;
-                    } else if (rightSuits[suitNum].isEmpty()) {
-                        checkLists = leftSuits;
+                    Hand checkHand = null;
+                    if (leftHand.list(suit).isEmpty()) {
+                        checkHand = rightHand;
+                    } else if (rightHand.list(suit).isEmpty()) {
+                        checkHand = leftHand;
                     }
 
-                    if (checkLists == null) {
-                        if (noProblemSuit.suitNum < 0 ||
+                    if (checkHand == null) {
+                        if (noProblemSuit.suit == null ||
                                 noProblemSuit.cardsLeft > listData.cardsLeft) {
                             noProblemSuit = listData;
                         }
                     } else {
                         CardList dummy = new CardList();
-                        for (int j = 0; j < checkLists.length; ++j) {
-                            if (j == suitNum) {
+                        for (Card.Suit checkSuit : Card.Suit.values()) {
+                            if (checkSuit.equals(suit)) {
                                 continue;
                             }
-                            CardList suit1 = this.mySuits[j];
-                            if (suit1.isEmpty()) {
+                            CardList cardList1 = this.myHand.list(checkSuit);
+                            if (cardList1.isEmpty()) {
                                 continue;
                             }
-                            if (suit1.first().compareInTrick(theirMin(j)) < 0) {
-                                continue; // no point to start with this suit, I'll have a chance to do it later
+                            if (cardList1.first().compareInTrick(theirMin(checkSuit)) < 0) {
+                                continue; // no point to start with this cardList, I'll have a chance to do it later
                             }
 
                             CardList.ListData listData1 =
-                                suit1.maxUnwantedTricks(dummy, checkLists[j],2);
+                                cardList1.maxUnwantedTricks(dummy, checkHand.list(checkSuit),2);
                             if (listData1.maxTheyStart > 0) {
-                                //?? I hope I will will shove suit.first() with the next trick
-                                if (suit1.size() > 1 && suit1.first().compareInTrick(theirMin(j)) < 0) {
-                                    return suit1.get(1);
+                                //?? I hope I will shove cardList.first() with the next trick
+                                if (cardList1.size() > 1 && cardList1.first().compareInTrick(theirMin(checkSuit)) < 0) {
+                                    return cardList1.get(1);
                                 }
-                                if (suit1.size() > 1 && suit1.getMaxLessThan(suit1.get(1).getRank()) == 0) {
-                                    return suit1.get(1);
+                                if (cardList1.size() > 1 && cardList1.getMaxLessThan(cardList1.get(1).getRank()) == 0) {
+                                    return cardList1.get(1);
                                 }
-                                return suit1.last();
+                                return cardList1.last();
                             }
                         }
                         // todo: check if she can shove a trick to the 3rd player, and that one can get me
-                        return suit.first();
+                        return cardList.first();
                     }
                 } else if (noProblemSuit.maxMeStart == 0 ||
-                        noProblemSuit.maxMeStart > listData.maxMeStart && noProblemSuitSize < suit.size()) {
+                        noProblemSuit.maxMeStart > listData.maxMeStart && noProblemSuitSize < cardList.size()) {
                     if (!(listData.maxMeStart > 0 && listData.cardsLeft >= 0
-                        && noProblemSuit.suitNum >= 0) || noProblemSuit.maxMeStart == 0) {
+                        && noProblemSuit.suit != null) || noProblemSuit.maxMeStart == 0) {
                         noProblemSuit = listData;
                     }
-                } else if (listData.maxMeStart > 0 && suit.size() >= 4) {
+                } else if (listData.maxMeStart > 0 && cardList.size() >= 4) {
                     noProblemSuit = listData;
                 } else { // if (noProblemSuit.maxMeStart == listData.maxMeStart) {
                     // compare number of smaller cards
-                    int prev = rightSuits[_suitNum].getMaxLessThan(mySuits[_suitNum].first().getRank());
-                    int curr = rightSuits[suitNum].getMaxLessThan(mySuits[suitNum].first().getRank());
+                    int prev = rightHand.list(_suit).getMaxLessThan(myHand.list(_suit).first().getRank());
+                    int curr = rightHand.list(suit).getMaxLessThan(myHand.list(suit).first().getRank());
                     if (curr > prev) {
                         noProblemSuit = listData;
-                    } else if (suit.size() > 1 && suit.first().compareInTrick(theirMin(suitNum)) < 0) {
+                    } else if (cardList.size() > 1 && cardList.first().compareInTrick(theirMin(suit)) < 0) {
                         noProblemSuit = listData;
-                    } if (curr == prev && suit.size() > mySuits[_suitNum].size()) {
+                    } if (curr == prev && cardList.size() > myHand.list(_suit).size()) {
                         noProblemSuit = listData;
                     }
                 }
             } else {
                 // problems
-                Card myMax = absMax(suitNum);
+                Card myMax = absMax(suit);
                 if (myMax != null) {
                     return myMax;
                 }
 
-                if (suit.size() > 1) {
+                if (cardList.size() > 1) {
                     if (!listData.good && listData.maxMeStart > listData.maxTheyStart) {
-                        if (rightSuits[suitNum].size() > 2 &&
-                            rightSuits[suitNum].getMaxLessThan(suit.first().getRank()) == 0) {
+                        if (rightHand.list(suit).size() > 2 &&
+                            rightHand.list(suit).getMaxLessThan(cardList.first().getRank()) == 0) {
                             // there is a sigle card less than my min, so better take this trick
-                            problems = suit.get(1);
+                            problems = cardList.get(1);
                         } else {
-                            problems = suit.first();     // give them a chance to take it
+                            problems = cardList.first();     // give them a chance to take it
                         }
                     } else {
-                        problems = suit.get(1);     // ?? second from bottom
+                        problems = cardList.get(1);     // ?? second from bottom
                     }
                 } else {
-                    problems = suit.first();
+                    problems = cardList.first();
                 }
             }
         }
 
         Card res;
-        if (noProblemSuit.suitNum != -1) {
-            int suitNum = noProblemSuit.suitNum;
-            CardList suit = mySuits[suitNum];
-        if (suit.size() > 1) {
-            res = suit.get(1);  // further check?
+        if (noProblemSuit.suit != null) {
+            Card.Suit suit = noProblemSuit.suit;
+            CardList cardList = myHand.list(suit);
+        if (cardList.size() > 1) {
+            res = cardList.get(1);  // further check?
         } else {
-            res = suit.first();
+            res = cardList.first();
         }
 
         } else if (problems != null) {
@@ -345,42 +342,42 @@ public class Bot extends Player {
         return res;
     }
 
-    Card absMax(int suitNum) {
-        CardList suit = mySuits[suitNum];
+    Card absMax(Card.Suit suit) {
+        CardList cardList = myHand.list(suit);
 
         Card.Rank theirMax = Card.Rank.SIX;
-        if (!rightSuits[suitNum].isEmpty()) {
-            Card.Rank r = rightSuits[suitNum].last().getRank();
+        if (!rightHand.list(suit).isEmpty()) {
+            Card.Rank r = rightHand.list(suit).last().getRank();
             if (theirMax.compare((r)) < 0) {
                 theirMax = r;
             }
         }
-        if (!leftSuits[suitNum].isEmpty()) {
-            Card.Rank r = leftSuits[suitNum].last().getRank();
+        if (!leftHand.list(suit).isEmpty()) {
+            Card.Rank r = leftHand.list(suit).last().getRank();
             if (theirMax.compare((r)) < 0) {
                 theirMax = r;
             }
         }
-        if (suit.first().getRank().compare(theirMax) > 0) {
+        if (cardList.first().getRank().compare(theirMax) > 0) {
             // all my cards are greater than theirs
-            return suit.last();
+            return cardList.last();
         }
         return null;
     }
 
-    Card theirMax(int suitNum) {
+    Card theirMax(Card.Suit suit) {
         Card res = null;
         int theirMax = 0;
-        if (!rightSuits[suitNum].isEmpty()) {
-            Card card = rightSuits[suitNum].last();
+        if (!rightHand.list(suit).isEmpty()) {
+            Card card = rightHand.list(suit).last();
             int r = card.getRank().getValue();
             if (theirMax < r) {
                 theirMax = r;
                 res = card;
             }
         }
-        if (!leftSuits[suitNum].isEmpty()) {
-            Card card = leftSuits[suitNum].last();
+        if (!leftHand.list(suit).isEmpty()) {
+            Card card = leftHand.list(suit).last();
             int r = card.getRank().getValue();
             if (theirMax < r) {
                 theirMax = r;
@@ -390,8 +387,8 @@ public class Bot extends Player {
         return res;
     }
 
-    Card theirMin(int suitNum) {
-        return CardList.getMin(leftSuits[suitNum], rightSuits[suitNum]);
+    Card theirMin(Card.Suit suit) {
+        return CardList.getMin(leftHand.list(suit), rightHand.list(suit));
     }
 
     // https://review-pref.ru/school/147/111/
@@ -402,39 +399,44 @@ public class Bot extends Player {
             return playAllPass1stHand(trick);
         }
 
-        int suitNum = trick.startingSuit.getValue();
-        CardList suit = this.mySuits[suitNum];
-        if (suit.isEmpty()) {
-            return dropAny(trick);
+//        int suitNum = trick.startingSuit.getValue();
+        Card.Suit suit = trick.startingSuit;
+        CardList cardList = this.myHand.list(suit);
+        if (cardList.isEmpty()) {
+            return drop4AllPass(trick);
         }
-
-        Card myMin = suit.first();
-        if (suit.size() == 1) {
+        Card myMin = cardList.first();
+        if (cardList.size() == 1) {
             return myMin;
         }
 
-        Card myMax = suit.last();
+        Card myMax = cardList.last();
         Card topTrickCard = trick.topCard;
+//* debug
+        if (trick.number >= 0 && number == 1) {
+            DEBUG_LOG = DEBUG_LOG;
+        }
+//*/
 
-        Card theirMin = theirMin(suitNum);
+        Card theirMin = theirMin(suit);
         if (topTrickCard != null && topTrickCard.compareInTrick(myMin) > 0 &&
             (totalCards() == 2 || theirMin == null || theirMin.compareInTrick(myMax) > 0)) {
-            return suit.get(suit.getMaxLessThan(topTrickCard.getRank()));
+            return cardList.get(cardList.getMaxLessThan(topTrickCard.getRank()));
         }
-        CardList.ListData listData = suit.maxUnwantedTricks(leftSuits[suitNum], rightSuits[suitNum], 2);
+        CardList.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), 2);
         if (topTrickCard != null && listData.maxTheyStart == 0) {
-            int ind = suit.getMaxLessThan(topTrickCard.getRank());
+            int ind = cardList.getMaxLessThan(topTrickCard.getRank());
             if (ind > 0) {
-                return suit.get(ind);
+                return cardList.get(ind);
             }
             // if i == 0 then only one my card is smaller, so let's keep it
-            if (suit.size() > 1) {
-                if (rightSuits[suitNum].size() > 2 &&
-                        rightSuits[suitNum].getMaxLessThan(myMax.getRank()) == 0) {
+            if (cardList.size() > 1) {
+                if (rightHand.list(suit).size() > 2 &&
+                        rightHand.list(suit).getMaxLessThan(myMax.getRank()) == 0) {
                     // there is a sigle card less than my max, let's risk it
                     return myMin;
                 }
-                return suit.get(1);
+                return cardList.get(1);
             }
             return myMax;     // all my cards are greater than theirs in the trick
         }
@@ -455,27 +457,27 @@ public class Bot extends Player {
         }
 
         // 2nd  and 3rd hand
-        if (suit.size() == 2) {
-            if (!rightSuits[suitNum].isEmpty()) {
+        if (cardList.size() == 2) {
+            if (!rightHand.list(suit).isEmpty()) {
                 // XK - Q -> X, XK - A -> X
                 //                       me:
                 // ♦7X ♥7X   ♠JQ ♦9 ♥9   ♦8A ♥8A
                 //                  ^
-                if (rightSuits[suitNum].size() == 1 ||
-                        myMin.compareInTrick(theirMin(suitNum)) > 0 && myMax.compareInTrick(topTrickCard) > 0) {
+                if (rightHand.list(suit).size() == 1 ||
+                        myMin.compareInTrick(theirMin(suit)) > 0 && myMax.compareInTrick(topTrickCard) > 0) {
 
-                    if (rightSuits[suitNum].size() > 2 &&
-                            rightSuits[suitNum].getMaxLessThan(myMin.getRank()) == 0) {
+                    if (rightHand.list(suit).size() > 2 &&
+                            rightHand.list(suit).getMaxLessThan(myMin.getRank()) == 0) {
                             // there is a sigle card less than my min, better take this trick
-                        return suit.get(1);
+                        return cardList.get(1);
                     }
                     return myMin;
                 }
                 return myMax;
             }
-            if (!leftSuits[suitNum].isEmpty()) {
+            if (!leftHand.list(suit).isEmpty()) {
                 // XK - Q -> X, XK - A -> X
-                if (leftSuits[suitNum].size() == 1) {
+                if (leftHand.list(suit).size() == 1) {
                     return myMin;
                 }
                 // XQ - JA -> Q, XQ - JKA -> Q, XQ - JK -> Q
@@ -484,33 +486,37 @@ public class Bot extends Player {
 
         }
 
+        // todo
         // 2nd  and 3rd hand
         if (myMin.compareInTrick(topTrickCard) > 0) {
             if (myMin.compareTo(theirMin) < 0) {
                 res = myMin;
             } else {
-                Card theirMax = theirMax(suitNum);
-                int optimIndex = suit.getMaxLessThan(theirMax.getRank());
+                Card theirMax = theirMax(suit);
+                if (theirMax == null) {
+                    return myHand.list(suit).first();   // they do not have this suit
+                }
+                int optimIndex = cardList.getMaxLessThan(theirMax.getRank());
                 if (optimIndex == -1) {
                     res = myMax;
                 } else {
-                    res = suit.get(optimIndex);
+                    res = cardList.get(optimIndex);
                 }
             }
         } else {
-            int left = leftSuits[suitNum].getMaxLessThan(myMin.getRank());
-            if (suit.size() == 2 && left <= 2 && !rightSuits[suitNum].isEmpty()) {
+            int left = leftHand.list(suit).getMaxLessThan(myMin.getRank());
+            if (cardList.size() == 2 && left <= 2 && !rightHand.list(suit).isEmpty()) {
                 res = myMax;
             } else {
-                if (suit.size() > 1) {
-                    if (rightSuits[suitNum].size() > 2 &&
-                            rightSuits[suitNum].getMaxLessThan(myMin.getRank()) == 0) {
+                if (cardList.size() > 1) {
+                    if (rightHand.list(suit).size() > 2 &&
+                            rightHand.list(suit).getMaxLessThan(myMin.getRank()) == 0) {
                         // there is a sigle card less than my min
                         if (trick.number == 0) {
-                            res = suit.first();
+                            res = cardList.first();
                         } else {
                             // better take this trick
-                            res = suit.get(1);
+                            res = cardList.get(1);
                         }
                     }
                 }
@@ -518,7 +524,7 @@ public class Bot extends Player {
                     // ♣8JKA ♥J   ♠J ♣7Q ♦79   ♣9X ♥789   -> ♣Q ♣X, should take it, play ♠J and ♣8
                     // instead she plays ♣J, then ♣7 ♣9 ♣8 and gets 4 tricks
                     // on the other hand, for ♣8JKA ♥J   ♠J ♣9Q ♦79   ♣7X ♥789 it does not work
-                    res = suit.get(suit.getMaxLessThan(topTrickCard.getRank()));
+                    res = cardList.get(cardList.getMaxLessThan(topTrickCard.getRank()));
                 }
             }
         }
@@ -526,9 +532,21 @@ public class Bot extends Player {
         return res;
     }
 
+/*
+    public Card playMisere(Trick trick) {
+        if (Config.Bid.BID_MISERE.equals(this.bid)) {
+            MisereBot misereBot = new MisereBot(this, this);
+            return misereBot.declarerPlayMisere(trick);
+        }
+        Player fictitiousBot = GameManager.getInstance().getDeclarerFor(this.number);
+        MisereBot misereBot = new MisereBot(fictitiousBot, this);
+        return misereBot.defenderPlayMisere(trick);
+    }
+*/
+
     @Override
-    public Config.Bid getBid(Config.Bid minBid, boolean meStart) {
-        Config.Bid bid = getMaxBid(meStart);
+    public Config.Bid getBid(Config.Bid minBid, int elderHand) {
+        Config.Bid bid = getMaxBid(elderHand);
         if (bid.compareTo(minBid) >= 0) {
             if (!Config.Bid.BID_MISERE.equals(bid)) {
                 bid = minBid;
@@ -540,25 +558,27 @@ public class Bot extends Player {
         return bid;
     }
 
-    protected Config.Bid getMaxBid(boolean meStart) {
-        Card.Suit longestSuit = Card.Suit.NO_SUIT;    // no trump
+    protected Config.Bid getMaxBid(int elderHand) {
+//        boolean _meStart = true;     // game declarer mostly starts tricks
+        Card.Suit longestSuit = null;    // no trump
         int maxLen = 0;
         int totalTricks = 0;
-        for (CardList suit : mySuits) {
-            if (suit.isEmpty()) {
+        for (CardList cardList : myHand) {
+            if (cardList.isEmpty()) {
                 continue;
             }
-            int suitNum = suit.first().getSuit().getValue();
-            CardList.ListData listData = suit.minWantedTricks(leftSuits[suitNum], rightSuits[suitNum], meStart);
+            Card.Suit suit = cardList.first().getSuit();
+//            int suitNum = cardList.first().getSuit().getValue();
+            CardList.ListData listData = cardList.minWantedTricks(leftHand.list(suit), rightHand.list(suit), elderHand);
             totalTricks += listData.minMeStart + listData.minTheyStart;
-            if (suit.size() > 3 && maxLen < suit.size()) {
-                maxLen = suit.size();
-                longestSuit = suit.first().getSuit();
+            if (cardList.size() > 3 && maxLen < cardList.size()) {
+                maxLen = cardList.size();
+                longestSuit = cardList.first().getSuit();
             }
         }
         Config.Bid bid = null;
         if (totalTricks < 10) {
-            if (evalMisere(meStart)) {
+            if (evalMisere(elderHand)) {
                 bid = Config.Bid.BID_MISERE;
             } else if (totalTricks < 6) {
                 // todo: compare all-pass loss vs minimal bid
@@ -567,20 +587,25 @@ public class Bot extends Player {
         }
         if (bid == null) {
             // convert totalTricks and longestSuit to bid
+            char code = Config.NO_TRUMP;
+            if (longestSuit != null) {
+                code = longestSuit.getCode();
+            }
+            bid = Config.Bid.fromName("" + totalTricks + code);
             bid = Config.Bid.fromName("" + totalTricks + longestSuit.getCode());
         }
         return bid;
     }
 
-    boolean evalMisere(boolean meStart) {
+    boolean evalMisere(int elderHand) {
         MisereBot misereBot = getMisereBot(this, this);
-        return misereBot.evalMisere(meStart);
+        return misereBot.evalMisere(elderHand);
     }
 
     static class HandResults {
         CardList dropped = new CardList();
         int totalTricks = 0;    // the best
         int expect = Integer.MAX_VALUE;
-        CardList.ListData[] allListData = new CardList.ListData[Card.Suit.values().length - 1];
+        CardList.ListData[] allListData = new CardList.ListData[Card.TOTAL_SUITS];
     }
 }

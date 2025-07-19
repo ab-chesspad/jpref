@@ -33,7 +33,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class HumanPlayer extends com.ab.jpref.engine.Player {
     public static final boolean DEBUG_LOG = false;
 
-    private final BlockingQueue<Queueable> queue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
     private final Clickable clickable;
 
     GameManager.RestartCommand restartCommand;
@@ -70,7 +70,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public void accept(Queueable q) {
+    public void accept(Config.Queueable q) {
         try {
             queue.put(q);
         } catch (InterruptedException e) {
@@ -78,14 +78,14 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
         }
     }
 
-    private Queueable takeFromQueue() throws Player.PrefExceptionRerun {
+    private Config.Queueable takeFromQueue() throws Player.PrefExceptionRerun {
         try {
             if (restartCommand != null) {
                 GameManager.RestartCommand _restartCommand = restartCommand;
                 restartCommand = null;
                 throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
             }
-            Queueable q = queue.take();
+            Config.Queueable q = queue.take();
             if (restartCommand != null) {
                 GameManager.RestartCommand _restartCommand = restartCommand;
                 restartCommand = null;
@@ -98,7 +98,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public Config.Bid getBid(Config.Bid minBid, boolean meStart) {
+    public Config.Bid getBid(Config.Bid minBid, int elderHand) {
         Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         bid = (Config.Bid)takeFromQueue();
@@ -109,7 +109,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     @Override
     public Config.Bid drop() {
         clickable.setSelectedPlayer(this);
-        Queueable q = takeFromQueue();        // block
+        Config.Queueable q = takeFromQueue();        // block
         if (Config.Bid.BID_WITHOUT_THREE.equals(q)) {
             bid = (Config.Bid)q;
         }
@@ -117,7 +117,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public void declareRound(Config.Bid minBid, boolean elderHand) {
+    public void declareRound(Config.Bid minBid, int elderHand) {
         Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         bid = (Config.Bid)takeFromQueue();
@@ -133,7 +133,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     public Card play(Trick trick) {
         Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
-        Queueable q = takeFromQueue();
+        Config.Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {
             Logger.println(q.toString());
             return new Card("♦7");  // dummy
@@ -152,7 +152,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
         if (card.getSuit().equals(trick.getTrumpSuit())) {
             return true;
         }
-        return mySuits[trick.getStartingSuit().getValue()].isEmpty();
+        return myHand.list(trick.getStartingSuit()).isEmpty();
     }
 
     public interface Clickable {

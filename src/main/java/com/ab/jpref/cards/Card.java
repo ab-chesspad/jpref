@@ -20,11 +20,11 @@
 
 package com.ab.jpref.cards;
 
-import com.ab.jpref.engine.Player;
+import com.ab.jpref.config.Config;
 
 import java.util.Objects;
 
-public class Card implements Comparable<Card>, Player.Queueable {
+public class Card implements Comparable<Card>, Config.Queueable {
     public static String ANSI_HEAD = "\u001B";
     public static String ANSI_TAIL = "m";
     public static String ANSI_RED = ANSI_HEAD + "[31" + ANSI_TAIL;
@@ -41,13 +41,13 @@ public class Card implements Comparable<Card>, Player.Queueable {
         }
     }
 
-    static int i = -1;
+    public static final int TOTAL_SUITS = Suit.values().length;
+
     public enum Suit {
-        SPADE('♠', ++i),
-        CLUB('♣', ++i),
-        DIAMOND('♦', ++i),
-        HEART('♥', ++i),
-        NO_SUIT('-', ++i);
+        SPADE('♠', 0),
+        CLUB('♣', 1),
+        DIAMOND('♦', 2),
+        HEART('♥', 3);
 
         public char getCode() {
             return code;
@@ -83,7 +83,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             return String.valueOf(code);
         }
 
-        static public Suit fromCode(char code) {
+        public static Suit fromCode(char code) {
             for (Suit r : values()) {
                 if (r.code == code) {
                     return r;
@@ -92,7 +92,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
         }
 
-        static public Suit code(char unicode) {
+        public static Suit code(char unicode) {
             for (Suit r : values()) {
                 if (r.code == unicode) {
                     return r;
@@ -100,20 +100,20 @@ public class Card implements Comparable<Card>, Player.Queueable {
             }
             throw new IllegalArgumentException(String.valueOf(unicode));
         }
-        static public int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
+        public static int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
     }
 
-    static int j = 5;
+    public static final int TOTAL_RANKS = Rank.values().length;
     public enum Rank {
-        SIX("6", ++j),      // fictitious card to start all-pass
-        SEVEN("7", ++j),
-        EIGHT("8", ++j),
-        NINE("9", ++j),
-        TEN("X", ++j),
-        JACK("J", ++j),
-        QUEEN("Q", ++j),
-        KING("K", ++j),
-        ACE("A", ++j);
+        SIX("6", 6),      // fictitious card to start all-pass
+        SEVEN("7", 7),
+        EIGHT("8", 8),
+        NINE("9", 9),
+        TEN("X", 10),
+        JACK("J", 11),
+        QUEEN("Q", 12),
+        KING("K", 13),
+        ACE("A", 14);
 
         public final String name;
         private final int value;
@@ -132,7 +132,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             return name;
         }
 
-        static public Rank fromName(char name) {
+        public static Rank fromName(char name) {
             for (Rank r : values()) {
                 if (r.name.equalsIgnoreCase("" + name)) {
                     return r;
@@ -141,7 +141,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             throw new IllegalArgumentException("" + name);
         }
 
-        static public Rank fromName(String name) {
+        public static Rank fromName(String name) {
             for (Rank r : values()) {
                 if (r.name.equalsIgnoreCase(name)) {
                     return r;
@@ -150,7 +150,7 @@ public class Card implements Comparable<Card>, Player.Queueable {
             throw new IllegalArgumentException(name);
         }
 
-        static public Rank fromValue(int value) {
+        public static Rank fromValue(int value) {
             return values()[value - SIX.value];
         }
 

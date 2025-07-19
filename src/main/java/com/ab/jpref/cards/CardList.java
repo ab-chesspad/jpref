@@ -20,8 +20,6 @@
 
 package com.ab.jpref.cards;
 
-import com.ab.jpref.cards.Card.Suit;
-
 import java.util.*;
 
 public class CardList extends ArrayList<Card> {
@@ -68,10 +66,7 @@ public class CardList extends ArrayList<Card> {
 
     public static CardList getDeck() {
         CardList cardList = new CardList();
-        for (Suit suit : Suit.values()) {
-            if (suit == Suit.NO_SUIT) {
-                continue;
-            }
+        for (Card.Suit suit : Card.Suit.values()) {
             for (Card.Rank rank : Card.Rank.values()) {
                 if (rank.equals(Card.Rank.SIX)) {
                     continue;
@@ -82,61 +77,18 @@ public class CardList extends ArrayList<Card> {
         return cardList;
     }
 
-    public static CardList[] getDeckSuits() {
-        CardList[] cardLists = new CardList[Card.Suit.values().length - 1];
-        for (int i = 0; i < cardLists.length; ++i) {
-            cardLists[i] = new CardList();
-            Suit suit = Suit.values()[i];
-            for (Card.Rank rank : Card.Rank.values()) {
-                if (rank.equals(Card.Rank.SIX)) {
-                    continue;
-                }
-                cardLists[i].add(new Card(suit, rank));
-            }
-        }
-        return cardLists;
-    }
-
-    public static boolean equals(CardList[] one, CardList[] two) {
-        if (one.length != two.length) {
-            return false;
-        }
-        for (int i = 0; i < one.length; ++i) {
-            if (!one[i].equals(two[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public CardList() {
         super();
     }
 
     public CardList(CardList[] cardLists) {
-        for (CardList suit : cardLists) {
-            addAll(suit);
+        for (CardList cardList : cardLists) {
+            addAll(cardList);
         }
     }
 
     public CardList(Collection<Card> cards) {
         addAll(cards);
-    }
-
-    public static CardList[] clone(CardList[] them) {
-        CardList[] newOne = new CardList[them.length];
-        for (int i = 0; i < them.length; ++i) {
-            newOne[i] = (CardList) them[i].clone();
-        }
-        return newOne;
-    }
-
-    public static int totalCards(CardList[] cardLists) {
-        int total = 0;
-        for (CardList cardList : cardLists) {
-            total += cardList.size();
-        }
-        return total;
     }
 
     public String toRankString() {
@@ -158,14 +110,14 @@ public class CardList extends ArrayList<Card> {
 
     public String toColorString(boolean color) {
         StringBuilder sb = new StringBuilder();
-        Suit suit = null;
+        Card.Suit suit = null;
         String sep = "";
         for (Card c : this) {
-            Suit s = c.getSuit();
+            Card.Suit s = c.getSuit();
             if (!s.equals(suit)) {
                 suit = s;
                 if (color) {
-                    if (s.equals(Suit.DIAMOND) || s.equals(Suit.HEART)) {
+                    if (s.equals(Card.Suit.DIAMOND) || s.equals(Card.Suit.HEART)) {
                         sb.append(Card.ANSI_RED);
                     } else {
                         sb.append(Card.ANSI_RESET);
@@ -362,16 +314,16 @@ public class CardList extends ArrayList<Card> {
         if (this.isEmpty()) {
             return listData;
         }
-        listData.suitNum = this.get(0).getSuit().getValue();
+        listData.suit = this.first().getSuit();
 
         CardList[] cardLists = simplifyHands(leftSuit, rightSuit);
         listData.good = true;
-        Card.Rank myMinRank = this.get(0).getRank();
+        Card.Rank myMinRank = this.first().getRank();
         if (listData.good && !leftSuit.isEmpty()) {
-            listData.good = myMinRank.compare(leftSuit.get(0).getRank()) < 0;
+            listData.good = myMinRank.compare(leftSuit.first().getRank()) < 0;
         }
         if (listData.good && !rightSuit.isEmpty()) {
-            listData.good = myMinRank.compare(rightSuit.get(0).getRank()) < 0;
+            listData.good = myMinRank.compare(rightSuit.first().getRank()) < 0;
         }
 
         int n = elderHand;
@@ -380,8 +332,7 @@ mainLoop:
             int k = (n + 1) % cardLists.length;
             int r = (n + 2) % cardLists.length;
             int j0 = cardLists[n].getOptimalStart(cardLists[k], cardLists[r]);
-            Card topCard = cardLists[n].get(j0);
-            cardLists[n].remove(j0);
+            Card topCard = cardLists[n].remove(j0);
             int top = n;
             int empty = 0;
             for (int i = 1; i < cardLists.length; ++i) {
@@ -489,16 +440,16 @@ mainLoop:
         if (this.isEmpty()) {
             return listData;
         }
-        listData.suitNum = this.get(0).getSuit().getValue();
+        listData.suit = this.first().getSuit();
 
         CardList[] cardLists = simplifyHands(leftSuit, rightSuit);
         listData.good = true;
-        Card.Rank myMin = this.get(0).getRank();
+        Card.Rank myMin = this.first().getRank();
         if (listData.good && !leftSuit.isEmpty()) {
-            listData.good = myMin.compare(leftSuit.get(0).getRank()) < 0;
+            listData.good = myMin.compare(leftSuit.first().getRank()) < 0;
         }
         if (listData.good && !rightSuit.isEmpty()) {
-            listData.good = myMin.compare(rightSuit.get(0).getRank()) < 0;
+            listData.good = myMin.compare(rightSuit.first().getRank()) < 0;
         }
 
         boolean keepDoing = true;
@@ -542,7 +493,7 @@ mainLoop:
                         j = cardLists[k].size() - 1;
                     }
                 } else {
-                    if (cardLists[k].get(0).getRank().compare(firstCard) < 0) {
+                    if (cardLists[k].first().getRank().compare(firstCard) < 0) {
                         if (k == 0) {
                             myTrick = false;
                         }
@@ -578,14 +529,6 @@ mainLoop:
         return listData;
     }
 
-    public ListData minWantedTricks(CardList leftSuit, CardList rightSuit, boolean meStart) {
-        ListData listData = new ListData(this);
-        if (this.isEmpty()) {
-            return listData;
-        }
-        return listData;
-    }
-
     public ListData getUnwantedTricks(CardList leftSuit, CardList rightSuit) {
         ListData listData = maxUnwantedTricks(leftSuit, rightSuit, 0);
         ListData listData1 = maxUnwantedTricks(leftSuit, rightSuit, 2);
@@ -594,6 +537,154 @@ mainLoop:
         return listData;
     }
 
+    public ListData minWantedTricks(CardList leftSuit, CardList rightSuit, int elderHand) {
+        ListData listData = new ListData(this);
+        if (this.isEmpty()) {
+            return listData;
+        }
+/*
+//        listData.suit = this.get(0).getSuit();
+        listData.suitNum = this.get(0).getSuit().getValue();
+        simplifyHands(listData, leftSuit, rightSuit);
+        int[] order;
+        if (meStart) {
+            order = new int[] {0,1,2};
+        } else {
+            order = new int[] {2,1,0};
+        }
+
+        CardList[] cardLists = new CardList[3];
+        cardLists[0] = listData.thisSuit;
+        cardLists[1] = listData.leftSuit;
+        cardLists[2] = listData.rightSuit;
+
+        int n = order[0];
+        while (cardLists[n].size() > 0) {
+            int j = cardLists[n].size() - 1;
+            Card.Rank firstCard = cardLists[n].get(j).getRank();
+            cardLists[n].remove(j);
+            boolean myTrick = true;
+            for (int i = 1; i < cardLists.length; ++i) {
+                int k = order[i];
+                if (cardLists[k].size() == 0) {
+                    if (k == 0) {
+                        myTrick = false;
+                    }
+                    continue;
+                }
+
+                int m = cardLists[k].size() - 1;
+                if (meStart) {
+                    if (cardLists[k].get(m).getRank().compare(firstCard) < 0) {
+                        j = 0;
+                    } else {
+                        j = cardLists[k].getMinGreaterThan(firstCard);
+                        firstCard = cardLists[k].get(j).getRank();
+                        myTrick = false;
+                    }
+                } else {
+                    if (cardLists[k].get(m).getRank().compare(firstCard) < 0) {
+                        if (k == 0) {
+                            myTrick = false;
+                        }
+                        j = 0;
+                    } else {
+                        j = cardLists[k].getMinGreaterThan(firstCard);
+                        firstCard = cardLists[k].get(j).getRank();
+                    }
+                }
+                cardLists[k].remove(j);
+            }
+
+            if (meStart) {
+                if (myTrick) {
+                    ++listData.minMeStart;
+                }
+            } else {
+                if (myTrick) {
+                    ++listData.minTheyStart;
+                }
+            }
+        }
+*/
+        return listData;
+    }
+
+/*
+    public void misereTricks(ListData listData, CardList leftSuit, CardList rightSuit, boolean meStart) {
+        int[] order;
+        if (meStart) {
+            order = new int[] {0,1,2};
+        } else {
+            order = new int[] {2,1,0};
+        }
+
+        CardList[] cardLists = new CardList[3];
+        cardLists[0] = listData.thisSuit;
+        cardLists[1] = listData.leftSuit;
+        cardLists[2] = listData.rightSuit;
+
+        boolean first = true;
+        int n = order[0];
+        while (cardLists[n].size() > 0) {
+            int j = 0;
+            if (meStart) {
+                j = getOptimalStart(listData);      // 8JQK should start with JQK
+            }
+
+            Card.Rank firstCard = cardLists[n].get(j).getRank();
+            cardLists[n].remove(j);
+            boolean myTrick = true;
+            for (int i = 1; i < cardLists.length; ++i) {
+                int k = order[i];
+                if (cardLists[k].size() == 0) {
+                    if (k == 0) {
+                        myTrick = false;
+                    }
+                    continue;
+                }
+
+                if (meStart) {
+                    if (cardLists[k].get(0).getRank().compare(firstCard) < 0) {
+                        j = cardLists[k].getMaxLessThan(firstCard);
+                    } else {
+                        myTrick = false;
+                        j = cardLists[k].size() - 1;
+                    }
+                } else {
+                    if (cardLists[k].get(0).getRank().compare(firstCard) < 0) {
+                        if (k == 0) {
+                            myTrick = false;
+                        }
+                        j = cardLists[k].getMaxLessThan(firstCard);
+                    } else {
+                        j = cardLists[k].size() - 1;
+                        firstCard = cardLists[k].get(j).getRank();
+                    }
+                }
+                cardLists[k].remove(j);
+            }
+
+            if (meStart) {
+                if (myTrick) {
+                    ++listData.maxMeStart;
+                } else if (first) {
+                    listData.good = true;
+                }
+            } else {
+                if (myTrick) {
+                    ++listData.maxTheyStart;
+                }
+            }
+            first = false;
+        }
+        listData.ok1stMove = listData.maxMeStart == listData.maxTheyStart;
+        if (listData.maxTheyStart > 0 || listData.maxMeStart > 0) {
+            listData.misereEval = getEval4Misere();
+        }
+    }
+*/
+
     private int getEval4Misere() {
         StringBuilder sb = new StringBuilder();
         for (Card card : this) {
@@ -601,16 +692,18 @@ mainLoop:
         }
         Integer res = misereTable.get(sb.toString());
         if (res == null) {
-            return MAX_EVAL + this.get(0).getRank().getValue() - Card.Rank.ACE.getValue();
+            return MAX_EVAL + this.first().getRank().getValue() - Card.Rank.ACE.getValue();
         }
         return res;
     }
 
     public static class ListData {
-        public int suitNum = -1;
+        public Card.Suit suit;
         public CardList thisSuit;
         public int maxTheyStart;    // unwanted tricks
         public int maxMeStart;      // unwanted tricks
+        public int maxRightStart;    // misere, unwanted tricks
+        public int maxLeftStart;      // misere, unwanted tricks
         public int cardsLeft = -1;  // when I always start
         public boolean good;        // for all-pass, includes smallest rank
         public int misereEval = 0;

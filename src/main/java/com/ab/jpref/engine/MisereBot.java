@@ -25,6 +25,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.Hand;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -37,8 +38,7 @@ public class MisereBot extends Bot {
     public static boolean DEBUG_LOG = false;
     public static CardList debugDrop = null;
 
-    static DelayedMiserData delayedMiserData;
-
+    static CommonDelayedDropData commonDelayedDropData;
     Bot realPlayer;
     Trick trick;
     List<CardList.ListData> holes = new LinkedList<>();
@@ -56,7 +56,7 @@ public class MisereBot extends Bot {
             return;
         }
         this.realPlayer = realPlayer;
-        elderhand = CardList.equals(leftSuits, realPlayer.mySuits) ? 1 : 2;
+        elderhand = leftHand.equals(realPlayer.myHand) ? 1 : 2;
         if (fictitiousBot != realPlayer) {
             HandResults handResults = this.dropForMisere();
             this.drop(handResults.dropped);
@@ -69,22 +69,27 @@ public class MisereBot extends Bot {
     }
 */
 
-    boolean evalMisere(boolean meStart) {
+    boolean evalMisere(int elderHand) {
         CardList badSuit = null;
-        for (CardList suit : mySuits) {
-            if (suit.isEmpty()) {
+        for (CardList cardList : myHand) {
+            if (cardList.isEmpty()) {
                 continue;
             }
-            int suitNum = suit.first().getSuit().getValue();
-            CardList.ListData listData;
-            listData = suit.maxUnwantedTricks(leftSuits[suitNum], rightSuits[suitNum], meStart);
+            Card.Suit suit = cardList.first().getSuit();
+            // todo: analyse elderHand
+            boolean meStart = false;
+            CardList.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), meStart);
+/*
+            boolean meStart = elderHand == this.number;
+            CardList.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), meStart);
             if (meStart && listData.maxMeStart == 0) {
                 meStart = false;
-                listData = suit.maxUnwantedTricks(leftSuits[suitNum], rightSuits[suitNum], meStart);
+                listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), meStart);
             }
+*/
             int maxTricks = listData.maxMeStart + listData.maxTheyStart;
             if (maxTricks > 0) {
-                badSuit = suit;
+                badSuit = cardList;
             }
         }
 
@@ -96,28 +101,27 @@ public class MisereBot extends Bot {
         // applying 'the rule of 7 cards'
         // https://gambiter.ru/pref/mizer-preferans.html
         // brute force
-        Set<Card> myHand = new HashSet<>();
+        Set<Card> mySet = new HashSet<>();
         Set<Card> talonCandidates = new HashSet<>(CardList.getDeck());
-        for (CardList suit : mySuits) {
-            myHand.addAll(suit);
-            for (Card card : suit) {
-                talonCandidates.remove(card);
-            }
+        for (CardList cardList : myHand) {
+            mySet.addAll(cardList);
+            talonCandidates.removeAll(cardList);
         }
 
         Logger.printf(DEBUG_LOG,"good from talon:\n");
         int goodCards = 0;
         for (Card card : talonCandidates) {
-            Set<Card> probeHand = new HashSet<>(myHand);
+            Set<Card> probeHand = new HashSet<>(mySet);
             probeHand.add(card);
-            for (Card c : myHand) {
+            for (Card c : mySet) {
                 probeHand.remove(c);
                 Bot bot = new Bot("test", probeHand);
                 MisereBot probeBot = new MisereBot(bot, bot);
-                HandResults handResults = probeBot.misereTricks(meStart);
+                HandResults handResults = probeBot.misereTricks(elderHand);
+                Logger.printf(DEBUG_LOG, "probe %s -> %d tricks\n", bot.toColorString(), handResults.totalTricks);
                 if (handResults.totalTricks == 0) {
                     ++goodCards;
-                    Logger.printf("talon %s, drop %s\n", card, c);
+                    Logger.printf(DEBUG_LOG, "talon %s, drop %s\n", card, c);
                     if (goodCards >= 7) {
                         return true;
                     }
@@ -138,19 +142,19 @@ public class MisereBot extends Bot {
             return  handResults;
         }
         // optimistically we assume that there will be a way to turn elderHand to false
-        boolean _elderHand = false;
-        CardList myHand = new CardList();
-        for (CardList suit : mySuits) {
-            myHand.addAll(suit);
+        int _elderHand = 2;
+        CardList myList = new CardList();
+        for (CardList cardList : myHand) {
+            myList.addAll(cardList);
         }
-        CardList probeSet1 = new CardList(myHand);
-        Collections.sort(myHand);
+        CardList cardList = new CardList(myList);
+        Collections.sort(myList);
 probes:
-        for (Card card1 : myHand) {
-            probeSet1.remove(card1);
-            Collections.sort(probeSet1);
-            for (Card card2 : probeSet1) {
-                Set<Card> probeHand = new HashSet<>(myHand);
+        for (Card card1 : myList) {
+            cardList.remove(card1);
+            Collections.sort(cardList);
+            for (Card card2 : cardList) {
+                Set<Card> probeHand = new HashSet<>(myList);
                 probeHand.remove(card1);
                 probeHand.remove(card2);
                 Bot _bot = new Bot("test" + card1 + card2, probeHand);
@@ -172,17 +176,20 @@ probes:
         return handResults;
     }
 
-    HandResults misereTricks(boolean meStart) {
+    HandResults misereTricks(int elderHand) {
         HandResults handResults = new HandResults();
         handResults.expect = 0;
-        for (CardList suit : mySuits) {
-            if (suit.isEmpty()) {
+        for (CardList cardList : myHand) {
+            if (cardList.isEmpty()) {
                 continue;
             }
-            int suitNum = suit.first().getSuit().getValue();
-            CardList.ListData listData = suit.maxUnwantedTricks(leftSuits[suitNum], rightSuits[suitNum], meStart);
-            handResults.allListData[suitNum] = listData;
-            int tricks = listData.maxMeStart + listData.maxTheyStart;   // only one can be > 0
+            Card.Suit suit = cardList.first().getSuit();
+//            boolean meStart = elderHand == number;
+            boolean meStart = false;
+            CardList.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), meStart);
+            handResults.allListData[suit.getValue()] = listData;
+//            int tricks = listData.maxMeStart + listData.maxTheyStart;   // only one can be > 0
+            int tricks = listData.maxTheyStart;   // only one can be > 0
             handResults.expect += tricks * listData.misereEval;
             handResults.totalTricks += tricks;
         }
@@ -197,13 +204,13 @@ probes:
         // c. 8 - 7; etc.
 
         // find suits that can be caught at all
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
+        for (Card.Suit suit : Card.Suit.values()) {
 /* debug
             if (trick.number >= 5) {
                 DEBUG_LOG = DEBUG_LOG;
             }
 //*/
-            CardList.ListData listData = maxUnwantedTricks(mySuits[i], leftSuits[i], rightSuits[i]);
+            CardList.ListData listData = maxUnwantedTricks(myHand.list(suit), leftHand.list(suit), rightHand.list(suit));
             if (listData.maxTheyStart > 0) {
                 holes.add(listData);
                 if (trick.startingSuit == null) {
@@ -213,8 +220,8 @@ probes:
             }
         }
 
-        if (delayedMiserData.initHoles < 0) {
-            delayedMiserData.initHoles = holes.size();
+        if (commonDelayedDropData.initHoles < 0) {
+            commonDelayedDropData.initHoles = holes.size();
         }
 
 //        Logger.printf(DEBUG_LOG, "holes %d\n", holes.size());
@@ -242,54 +249,65 @@ probes:
         return listData;
     }
 
-    Card passElderhand(int elderhand, int holeSuitNum, CardList[] leftSuits, CardList[] rightSuits) {
+    Card passElderhand(int elderhand, Card.Suit holeSuit, Hand leftHand, Hand rightHand) {
         // find suit to pass elderhand
-        for (int j = 0; j < Card.Suit.values().length - 1; ++j) {
-            if (j == holeSuitNum ||
-                rightSuits[j].isEmpty() || leftSuits[j].isEmpty()) {
+        for (Card.Suit j : Card.Suit.values()) {
+            if (j.equals(holeSuit) ||
+                rightHand.list(j).isEmpty() || leftHand.list(j).isEmpty()) {
                 continue;
             }
-            if (elderhand == 2 && rightSuits[j].first().compareTo(leftSuits[j].last()) < 0) {
-                return rightSuits[j].first();
+/*
+            if (myHand.list(j].isEmpty() && myHand[holeSuitNum).size() > 1) {
+                // check if they can tolerate my drop in myHand.list(holeSuitNum)
+                CardList myHoleSuit = (CardList) myHand.list(holeSuitNum).clone();
+                myHoleSuit.removeLast();
+                CardList.ListData listData = maxUnwantedTricks(myHoleSuit, leftHand.list(holeSuitNum], rightHand[holeSuitNum));
+                if (listData.maxTheyStart == 0) {
+                    return null;
+                }
             }
-            if (elderhand == 1 && leftSuits[j].first().compareTo(rightSuits[j].last()) < 0) {
-                return leftSuits[j].first();
+*/
+            if (elderhand == 2 && rightHand.list(j).first().compareTo(leftHand.list(j).last()) < 0) {
+                return rightHand.list(j).first();
+            }
+            if (elderhand == 1 && leftHand.list(j).first().compareTo(rightHand.list(j).last()) < 0) {
+                return leftHand.list(j).first();
             }
         }
         return null;
     }
 
     MisereData defenderEvalDrop(CardList.ListData hole, boolean harmlessHoleMove,
-                                CardList[] _leftSuits, CardList[] _rightSuits) {
-        MisereData misereData = new MisereData(hole, mySuits, _leftSuits, _rightSuits);
-        int suitNum = hole.suitNum;
-        if (this.mySuits[suitNum].isEmpty()) {
+                                Hand _leftHand, Hand _rightHand) {
+        MisereData misereData = new MisereData(hole, myHand, _leftHand, _rightHand);
+        Card.Suit suit = hole.suit;
+        if (this.myHand.list(suit).isEmpty()) {
             return misereData;
         }
-        CardList[] leftSuits = CardList.clone(_leftSuits);
-        CardList[] rightSuits = CardList.clone(_rightSuits);
-        CardList[] mySuits = CardList.clone(this.mySuits);
+        Hand leftHand = _leftHand.clone();
+        Hand rightHand = _rightHand.clone();
+        Hand myHand = this.myHand.clone();
 
-        Card myMin = mySuits[suitNum].first();
-        if (myMin.compareTo(rightSuits[suitNum].first()) > 0 &&
-                rightSuits[suitNum].size() > leftSuits[suitNum].size()) {
+        Card myMin = myHand.list(suit).first();
+        if (myMin.compareTo(rightHand.list(suit).first()) > 0 &&
+                rightHand.list(suit).size() > leftHand.list(suit).size()) {
             // e.g. 9XJK  Q  78A
             misereData.needToDrop = 0;
-            misereData.moveSuitNum = suitNum;
+            misereData.moveSuit = suit;
             return misereData;
         }
 
-        Card.Rank myMax = mySuits[suitNum].last().getRank();
-        int rightDrop = rightSuits[suitNum].getMinGreaterThan(myMax);
-        if (rightDrop < 0 || rightDrop >= mySuits[suitNum].size()) {
+        Card.Rank myMax = myHand.list(suit).last().getRank();
+        int rightDrop = rightHand.list(suit).getMinGreaterThan(myMax);
+        if (rightDrop < 0 || rightDrop >= myHand.list(suit).size()) {
             misereData.needToDrop = 0;
-            misereData.moveSuitNum = suitNum;
+            misereData.moveSuit = suit;
         } else {
-            misereData.needToDrop = rightSuits[suitNum].size() - rightDrop;
+            misereData.needToDrop = rightHand.list(suit).size() - rightDrop;
         }
 
-        Card rightCard;
-        CardList rightHoleSuit = (CardList) rightSuits[suitNum].clone();
+        Card rightCard = null;
+        CardList rightHoleSuit = (CardList) rightHand.list(suit).clone();
         int extraMove = 0;
         if (harmlessHoleMove) {
             ++extraMove;
@@ -298,26 +316,26 @@ probes:
 
         if (misereData.needToDrop - extraMove == 0) {
             misereData.needToDrop = 0;
-            misereData.moveSuitNum = suitNum;
+            misereData.moveSuit = suit;
             return misereData;
         }
 
-        CardList myHoleSuit = (CardList) mySuits[suitNum].clone();
+        CardList myHoleSuit = (CardList) myHand.list(suit).clone();
         for (int i = 0; i < misereData.needToDrop; ++i) {
             rightHoleSuit.removeLast();
         }
         int elderhand = rightHoleSuit.isEmpty() ? 1 : 2;
-        CardList.ListData _listData = myHoleSuit.maxUnwantedTricks(leftSuits[suitNum], rightHoleSuit, elderhand);
+        CardList.ListData _listData = myHoleSuit.maxUnwantedTricks(leftHand.list(suit), rightHoleSuit, elderhand);
         if (_listData.maxTheyStart == 0) {
             // dropping from right hand will not help anyway
             return misereData;
         }
         int elderhandPass = 0;
-        int dropSuitNum = -1;
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-            if (!rightSuits[i].isEmpty() &&
-                    rightSuits[i].first().compareInTrick(leftSuits[i].last()) < 0) {
-                if (!mySuits[i].isEmpty()) {
+        Card.Suit dropSuit = null;
+        for (Card.Suit i : Card.Suit.values()) {
+            if (!rightHand.list(i).isEmpty() &&
+                    rightHand.list(i).first().compareInTrick(leftHand.list(i).last()) < 0) {
+                if (!myHand.list(i).isEmpty()) {
                     ++elderhandPass;
                 } else if (harmlessHoleMove) {
                     // we can pass elderhand using hole suit
@@ -325,41 +343,37 @@ probes:
                     harmlessHoleMove = false;
                 }
             }
-            if (i != suitNum && leftSuits[i].size() - rightSuits[i].size() > 0) {
-                if (dropSuitNum == -1) {
-                    dropSuitNum = i;
+            if (!i.equals(suit) && leftHand.list(i).size() - rightHand.list(i).size() > 0) {
+                if (dropSuit == null) {
+                    dropSuit = i;
                 }
             }
         }
         if (this.elderhand == 2 && elderhandPass == 0) {
             // even if we drop cards from right there is no way to pass elderhand back to left
-            misereData.dropSuitNum = dropSuitNum;
+            misereData.dropSuit = dropSuit;
             return misereData;
         }
 
-/* debug
-        if (trick.number >= 0 && suitNum == 3) {
-            DEBUG_LOG = DEBUG_LOG;
-        }
-//*/
-        myHoleSuit = mySuits[suitNum];
-        rightHoleSuit = rightSuits[suitNum];
+        myHoleSuit = myHand.list(suit);
+        rightHoleSuit = rightHand.list(suit);
         if (harmlessHoleMove) {
             myHoleSuit.removeLast();
-            rightHoleSuit.removeLast();
-            leftSuits[suitNum].removeLast();
+            rightCard = rightHoleSuit.removeLast();
+            leftHand.list(suit).removeLast();
             --misereData.needToDrop;
         }
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-            if (i == suitNum || leftSuits[i].size() - rightSuits[i].size() <= 0) {
+        for (Card.Suit i : Card.Suit.values()) {
+            if (i.equals(suit) || leftHand.list(i).size() - rightHand.list(i).size() <= 0) {
                 continue;
             }
-            CardList mySuit = mySuits[i];
-            CardList leftSuit = leftSuits[i];
-            CardList rightSuit = rightSuits[i];
+            CardList mySuit = myHand.list(i);
+            CardList leftSuit = leftHand.list(i);
+            CardList rightSuit = rightHand.list(i);
             rightDrop = 0;
             while (!leftSuit.isEmpty()) {
                 Card leftCard = leftSuit.removeLast();
+                rightCard = null;
                 boolean doCheck = false;
                 if (mySuit.isEmpty()) {
                     myHoleSuit.removeLast();
@@ -375,7 +389,7 @@ probes:
                     rightCard = rightSuit.removeLast();
                 }
 
-                CardList.ListData listData = maxUnwantedTricks(myHoleSuit, leftSuits[suitNum], rightHoleSuit);
+                CardList.ListData listData = maxUnwantedTricks(myHoleSuit, leftHand.list(suit), rightHoleSuit);
                 if (doCheck && listData.maxTheyStart == 0 ||
                         leftCard.compareInTrick(rightCard) < 0 && rightSuit.isEmpty() && elderhandPass == 0) {
                     --misereData.meDrop;
@@ -384,20 +398,20 @@ probes:
                 }
             }
             if (rightDrop > 0) {
-                misereData.dropSuitNum = i;
-                if (misereData.moveSuitNum == -1) {
-                    misereData.moveSuitNum = i;
+                misereData.dropSuit = i;
+                if (misereData.moveSuit == null) {
+                    misereData.moveSuit = i;
                 }
                 misereData.rightDrop += rightDrop;
                 misereData.canDrop += rightDrop;
             }
         }
         if (misereData.canDrop < misereData.needToDrop) {
-            misereData.moveSuitNum = -1;
+            misereData.moveSuit = null;
         } else if (this.elderhand == 2 && misereData.harmlessHoleMove &&
-                leftSuits[suitNum].last().compareInTrick(rightSuits[suitNum].first()) < 0) {
+                leftHand.list(suit).last().compareInTrick(rightHand.list(suit).first()) < 0) {
             // all right hole cards are greater than left anyway
-            misereData.moveSuitNum = suitNum;
+            misereData.moveSuit = suit;
         }
         return misereData;
     }
@@ -413,81 +427,83 @@ probes:
         Card leftCard = null;
         Card rightCard = null;
 
-/* debug
+//* debug
         if (trick.number >= 2) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
         DelayedDropData delayedDropData = getDelayedDropData(allMisereData);
-        if (delayedDropData == null || delayedDropData.dropSuitNum == -1) {
+        if (delayedDropData == null || delayedDropData.dropSuit == null) {
             return null;
         }
         MisereData misereData = delayedDropData.misereData;
-        int harmlessHoleSuit = delayedDropData.harmlessHoleSuit;
-        int dropSuitNum = delayedDropData.dropSuitNum;
-        int neutralSuitNum = delayedDropData.neutralSuitNum;
+        Card.Suit harmlessHoleSuit = delayedDropData.harmlessHoleSuit;
+        Card.Suit dropSuit = delayedDropData.dropSuit;
+        Card.Suit neutralSuit = delayedDropData.neutralSuit;
 
-        int firstHole = delayedDropData.firstHole;
-        int secondHole = delayedDropData.secondHole;
-        CardList[] leftSuits = delayedDropData.leftSuits;
-        CardList[] rightSuits = delayedDropData.rightSuits;
-        CardList[] mySuits = delayedDropData.mySuits;
+        Card.Suit firstHole = delayedDropData.firstHole;
+        Card.Suit secondHole = delayedDropData.secondHole;
+        Hand leftHand = delayedDropData.leftHand;
+        Hand rightHand = delayedDropData.rightHand;
+        Hand myHand = delayedDropData.myHand;
 
-        if (harmlessHoleSuit >= 0 &&
-                rightSuits[harmlessHoleSuit].first().compareInTrick(leftSuits[harmlessHoleSuit].last()) > 0) {
-            mySuits[harmlessHoleSuit].removeLast();
-            leftCard = leftSuits[harmlessHoleSuit].removeLast();
-            rightCard = rightSuits[harmlessHoleSuit].removeLast();
-            misereData.moveSuitNum = harmlessHoleSuit;
+        if (harmlessHoleSuit != null &&
+                rightHand.list(harmlessHoleSuit).first().compareInTrick(leftHand.list(harmlessHoleSuit).last()) > 0) {
+            myHand.list(harmlessHoleSuit).removeLast();
+            leftCard = leftHand.list(harmlessHoleSuit).removeLast();
+            rightCard = rightHand.list(harmlessHoleSuit).removeLast();
+            misereData.moveSuit = harmlessHoleSuit;
         }
 
         int elderhand = this.elderhand;
         if (delayedDropData.reversed) {
             elderhand = 3 - elderhand;
         }
-        int passElderhandSuit = -1;
-        if (elderhand == 2 && rightSuits[dropSuitNum].isEmpty() ||
-                !leftSuits[dropSuitNum].isEmpty() &&
-                leftSuits[dropSuitNum].last().compareInTrick(rightSuits[dropSuitNum].first()) < 0) {
+        Card.Suit passElderhandSuit = null;
+        if (elderhand == 2 && rightHand.list(dropSuit).isEmpty() ||
+                !leftHand.list(dropSuit).isEmpty() &&
+                leftHand.list(dropSuit).last().compareInTrick(rightHand.list(dropSuit).first()) < 0) {
             // need to pass elderhand after depleting right cards
-            if (secondHole >= 0 && leftSuits[secondHole].last().compareInTrick(rightSuits[secondHole].first()) >= 0) {
+            if (secondHole != null && leftHand.list(secondHole).last().compareInTrick(rightHand.list(secondHole).first()) >= 0) {
                 passElderhandSuit = secondHole;
             } else if (misereData.harmlessHoleMove &&
-                rightSuits[harmlessHoleSuit].first().compareInTrick(leftSuits[harmlessHoleSuit].last()) < 0) {
+                rightHand.list(harmlessHoleSuit).first().compareInTrick(leftHand.list(harmlessHoleSuit).last()) < 0) {
                 passElderhandSuit = harmlessHoleSuit;
             } else {
                 return null;    // cannot do it
             }
-        } else if (!realPlayer.mySuits[dropSuitNum].isEmpty()) {
-//            return  realPlayer.mySuits[dropSuitNum].last();
-            passElderhandSuit = dropSuitNum;
+        } else if (!realPlayer.myHand.list(dropSuit).isEmpty()) {
+//            return  realPlayer.myHand.list(dropSuit).last();
+            passElderhandSuit = dropSuit;
         } else {    // if (neutralSuitNum >= 0) {
-            return  realPlayer.mySuits[neutralSuitNum].last();
+//            passElderhandSuit = neutralSuitNum;
+            return  realPlayer.myHand.list(neutralSuit).last();
         }
 
-        if (elderhand == 2 && rightSuits[dropSuitNum].isEmpty()) {
-            return rightSuits[passElderhandSuit].first();
+        if (elderhand == 2 && rightHand.list(dropSuit).isEmpty()) {
+//            misereData.moveSuitNum = passElderhandSuit;
+            return rightHand.list(passElderhandSuit).first();
         }
-        while (!leftSuits[dropSuitNum].isEmpty()) {
-            Card _leftCard = leftSuits[dropSuitNum].removeFirst();
-            if (misereData.moveSuitNum == -1) {
-                misereData.moveSuitNum = dropSuitNum;
+        while (!leftHand.list(dropSuit).isEmpty()) {
+            Card _leftCard = leftHand.list(dropSuit).removeFirst();
+            if (misereData.moveSuit == null) {
+                misereData.moveSuit = dropSuit;
             }
-            if (mySuits[dropSuitNum].isEmpty()) {
-                if (mySuits[firstHole].isEmpty() && secondHole >= 0) {
-                    mySuits[secondHole].removeLast();
+            if (myHand.list(dropSuit).isEmpty()) {
+                if (myHand.list(firstHole).isEmpty() && secondHole != null) {
+                    myHand.list(secondHole).removeLast();
                 } else {
-                    mySuits[firstHole].removeLast();
+                    myHand.list(firstHole).removeLast();
                 }
             } else {
-                mySuits[dropSuitNum].removeLast();
+                myHand.list(dropSuit).removeLast();
             }
 
             Card _rightCard = null;
-            if (rightSuits[dropSuitNum].isEmpty()) {
-                rightSuits[neutralSuitNum].removeLast();
+            if (rightHand.list(dropSuit).isEmpty()) {
+                rightHand.list(neutralSuit).removeLast();
             } else {
-                _rightCard = rightSuits[dropSuitNum].removeLast();
+                _rightCard = rightHand.list(dropSuit).removeLast();
             }
             if (leftCard == null) {
                 leftCard = _leftCard;
@@ -497,13 +513,13 @@ probes:
             }
         }
 
-/* debug
+//* debug
         if (trick.number >= 2) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
 
-        if (misereData.moveSuitNum >= 0) {
+        if (misereData.moveSuit != null) {
             if (elderhand == 1) {
                 misereData.card = leftCard;
             } else {
@@ -515,30 +531,30 @@ probes:
     }
 
     MisereData defenderPlay1stHand(CardList.ListData hole) {
-        CardList[] leftSuits = this.leftSuits.clone();
-        CardList[] rightSuits = this.rightSuits.clone();
-        CardList[] mySuits = this.mySuits.clone();
+        Hand leftHand = this.leftHand.clone();
+        Hand rightHand = this.rightHand.clone();
+        Hand myHand = this.myHand.clone();
         boolean reversed = false;
 
-        int suitNum = hole.suitNum;
+        Card.Suit suit = hole.suit;
         int elderhand = this.elderhand;
-        if (this.mySuits[suitNum].last().compareInTrick(this.leftSuits[suitNum].first()) < 0) {
+        if (this.myHand.list(suit).last().compareInTrick(this.leftHand.list(suit).first()) < 0) {
             // reversed order
             reversed = true;
             elderhand = NUMBER_OF_PLAYERS - elderhand;
-            leftSuits = this.rightSuits.clone();
-            rightSuits = this.leftSuits.clone();
+            leftHand = this.rightHand.clone();
+            rightHand = this.leftHand.clone();
         }
 
-        int moveSuitNum = -1;
+        Card.Suit moveSuit = null;
 
         // 1. take tricks without losing holes
-        CardList mySuit = (CardList) mySuits[suitNum].clone();
-        CardList leftSuit = (CardList) leftSuits[suitNum].clone();
-        CardList rightSuit = (CardList) rightSuits[suitNum].clone();
+        CardList mySuit = (CardList) myHand.list(suit).clone();
+        CardList leftSuit = (CardList) leftHand.list(suit).clone();
+        CardList rightSuit = (CardList) rightHand.list(suit).clone();
         int maxUnwantedTricks = hole.maxTheyStart;
         int size = mySuit.size();
-        Card theirMin = theirMin(suitNum);
+        Card theirMin = theirMin(suit);
         boolean theyHaveMin = theirMin.compareInTrick(mySuit.first()) < 0;
         while (maxUnwantedTricks > 0) {
             mySuit.removeLast();
@@ -557,69 +573,69 @@ probes:
         if (size != mySuit.size() + 1) {
             harmlessSuitMove = true;
         }
-
-/* debug
+//* debug
         if (trick.number >= 2) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
-        MisereData misereData = defenderEvalDrop(hole, harmlessSuitMove, leftSuits, rightSuits);
+        MisereData misereData = defenderEvalDrop(hole, harmlessSuitMove, leftHand, rightHand);
         misereData.reversed = reversed;
         if (misereData.needToDrop > misereData.canDrop) {
             return misereData;
         }
-        if (moveSuitNum >= 0) {
-            misereData.moveSuitNum = moveSuitNum;
+        if (moveSuit != null) {
+            misereData.moveSuit = moveSuit;
         } else {
-            moveSuitNum = misereData.moveSuitNum;
+            moveSuit = misereData.moveSuit;
         }
 
-/* debug
-        if (trick.number >= 5) {
+//* debug
+        if (trick.number >= 3) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
 
-        if (moveSuitNum == suitNum) {
+        if (suit.equals(moveSuit)) {
             if (elderhand == 1) {
-                if (leftSuits[moveSuitNum].isEmpty() ||
-                        !rightSuits[moveSuitNum].isEmpty() &&
-                        mySuits[suitNum].first().compareInTrick(theirMin) < 0) {
-                    misereData.card = passElderhand(elderhand, suitNum, leftSuits, rightSuits);
+                if (leftHand.list(moveSuit).isEmpty() ||
+                        !rightHand.list(moveSuit).isEmpty() &&
+                        myHand.list(suit).first().compareInTrick(theirMin) < 0) {
+                    misereData.card = passElderhand(elderhand, suit, leftHand, rightHand);
                 } else {
-                    Card myMin = mySuits[moveSuitNum].first();
-                    if (leftSuits[moveSuitNum].size() == 1 ||
-                            myMin.compareInTrick(leftSuits[moveSuitNum].first()) > 0 &&
-                            myMin.compareInTrick(rightSuits[moveSuitNum].first()) > 0) {
-                        misereData.card = leftSuits[moveSuitNum].first();
+                    Card myMin = myHand.list(moveSuit).first();
+                    if (leftHand.list(moveSuit).size() == 1 ||
+                            myMin.compareInTrick(leftHand.list(moveSuit).first()) > 0 &&
+                            myMin.compareInTrick(rightHand.list(moveSuit).first()) > 0) {
+                        misereData.card = leftHand.list(moveSuit).first();
                     } else {
-                        misereData.card = leftSuits[moveSuitNum].get(1);
+                        misereData.card = leftHand.list(moveSuit).get(1);
+//                        misereData.card = leftHand.list(moveSuit).last();
                     }
                 }
             } else {
-                misereData.card = rightSuits[moveSuitNum].first();
+                misereData.card = rightHand.list(moveSuit).first();
             }
-        } else if (moveSuitNum >= 0) {
-            if (elderhand == 1 && (leftSuits[moveSuitNum].isEmpty() || misereData.needToDrop == 0) ||
-                    elderhand == 2 && rightSuits[moveSuitNum].isEmpty()) {
-                int _suitNum = suitNum;
+        } else if (moveSuit != null) {
+            if (elderhand == 1 && (leftHand.list(moveSuit).isEmpty() || misereData.needToDrop == 0) ||
+                    elderhand == 2 && rightHand.list(moveSuit).isEmpty()) {
+                Card.Suit _suit = suit;
                 if (harmlessSuitMove) {
-                    _suitNum = -1;
+                    _suit = null;
                 }
-                misereData.card = passElderhand(elderhand, _suitNum, leftSuits, rightSuits);
+                misereData.card = passElderhand(elderhand, _suit, leftHand, rightHand);
             } else if (elderhand == 1) {
-                if (rightSuits[moveSuitNum].size() == 1) {
-                    misereData.card = leftSuits[moveSuitNum].last();  // need to keep elderhand
+                if (rightHand.list(moveSuit).size() == 1) {
+                    misereData.card = leftHand.list(moveSuit).last();  // need to keep elderhand
                 } else {
-                    misereData.card = leftSuits[moveSuitNum].first();
+                    misereData.card = leftHand.list(moveSuit).first();
                 }
             } else {
                 // elderhand == 2
-                if (leftSuits[moveSuitNum].size() == 1 ||
-                    rightSuits[moveSuitNum].size() > 1) {
-                    misereData.card = rightSuits[moveSuitNum].last();  // need to keep elderhand
+                if (leftHand.list(moveSuit).size() == 1 ||
+                    rightHand.list(moveSuit).size() > 1) {
+                    misereData.card = rightHand.list(moveSuit).last();  // need to keep elderhand
                 } else {
-                    misereData.card = rightSuits[moveSuitNum].first();
+                    misereData.card = rightHand.list(moveSuit).first();
                 }
             }
         }
@@ -627,83 +643,104 @@ probes:
     }
 
     Card defenderPlayMisere23Hand(List<CardList.ListData> holes) {
-        int trickSuitNum = trick.topCard.getSuit().getValue();
-        CardList playerSuit = realPlayer.mySuits[trickSuitNum];
+        Card.Suit trickSuit = trick.topCard.getSuit();
+        CardList playerCardList = realPlayer.myHand.list(trickSuit);
 
-        if (playerSuit.isEmpty()) {
+//* debug
+        if (trick.number >= 3) {
+            DEBUG_LOG = DEBUG_LOG;
+        }
+//*/
+
+        if (playerCardList.isEmpty()) {
             // drop
             if (holes.isEmpty() ||
-                    delayedMiserData.initHoles == 2 && delayedMiserData.dropSuitNum == -1) {
+                commonDelayedDropData.initHoles == 2 && commonDelayedDropData.dropSuit == null) {
                 return realPlayer.anyCard();
             }
-            int holeSuitNum = holes.get(0).suitNum;
+            Card.Suit holeSuit = holes.get(0).suit;
             if (holes.size() == 1) {
-                if (delayedMiserData.neutralSuitNum >= 0 &&
-                        !realPlayer.mySuits[delayedMiserData.neutralSuitNum].isEmpty()) {
-                    return  realPlayer.mySuits[delayedMiserData.neutralSuitNum].last();
+                if (commonDelayedDropData.neutralSuit != null &&
+                        !realPlayer.myHand.list(commonDelayedDropData.neutralSuit).isEmpty()) {
+                    return  realPlayer.myHand.list(commonDelayedDropData.neutralSuit).last();
                 }
-                return realPlayer.mySuits[holeSuitNum].last();
+                return realPlayer.myHand.list(holeSuit).last();
             }
             // 2 holes
             List<MisereData> allMisereHoles = new LinkedList<>();
-            for (CardList.ListData hole : holes) {
-                // todo: check harmlessSuitMove
-                MisereData misereData = defenderEvalDrop(hole, false, leftSuits, rightSuits);
-                allMisereHoles.add(misereData);
-            }
-/* debug
-            if (trick.number >= 1) {
+//* debug
+            if (trick.number >= 3) {
                 DEBUG_LOG = DEBUG_LOG;
             }
 //*/
+            for (CardList.ListData hole : holes) {
+                Card myMin = myHand.list(holeSuit).first();
+                CardList otherList = realPlayer.myHand.list(holeSuit);
+                Card otherMin = otherList.first();
+                if (otherList.size() == 1 &&
+                        theirMin(holeSuit).compareInTrick(myMin) < 0 &&
+                        otherMin.compareInTrick(myMin) > 0) {
+                    return otherMin;
+                }
+
+                // todo: check harmlessSuitMove
+                MisereData misereData = defenderEvalDrop(hole, false, leftHand, rightHand);
+                allMisereHoles.add(misereData);
+            }
             DelayedDropData delayedDropData = getDelayedDropData(allMisereHoles);
-            if (delayedDropData.neutralSuitNum == -1 || realPlayer.mySuits[delayedDropData.neutralSuitNum].isEmpty()) {
+            if (delayedDropData.neutralSuit == null || realPlayer.myHand.list(delayedDropData.neutralSuit).isEmpty()) {
                 return realPlayer.anyCard();
             }
-            return realPlayer.mySuits[delayedDropData.neutralSuitNum].last();
+            return realPlayer.myHand.list(delayedDropData.neutralSuit).last();
         }
         int declarerCardNum = (trick.declarerNum - trick.startedBy + NUMBER_OF_PLAYERS) % NUMBER_OF_PLAYERS;
         if (declarerCardNum <= trick.trickCards.size()) {
             // declarer played already
             Card declarerCard = trick.trickCards.get(declarerCardNum);
+            if (trick.trickCards.size() == 1) {
+                if (declarerCard.compareInTrick(leftHand.list(trick.startingSuit).first()) < 0 ||
+                        declarerCard.compareInTrick(rightHand.list(trick.startingSuit).first()) < 0) {
+                    return playerCardList.last();
+                }
+            }
             if (trick.topCard.compareInTrick(declarerCard) > 0) {
                 // todo: more elaborate analysis
                 // declarer passed this trick anyway
-                return realPlayer.mySuits[trickSuitNum].last();
+                return realPlayer.myHand.list(trickSuit).last();
             }
             // declarer's card higher than topCard
-            if (trick.topCard.compareInTrick(playerSuit.first()) < 0) {
+            if (trick.topCard.compareInTrick(playerCardList.first()) < 0) {
                 // player's cards are all larger anyway
-                return playerSuit.last();
+                return playerCardList.last();
             }
             // play with lesser than trick.topCard
-            int passNum = playerSuit.getMaxLessThan(trick.topCard.getRank());
-            return playerSuit.get(passNum);
+            int passNum = playerCardList.getMaxLessThan(trick.topCard.getRank());
+            return playerCardList.get(passNum);
         } else {
             // declarer has not played yet
-            Card myMin = mySuits[trickSuitNum].first();
-            if (playerSuit.first().compareInTrick(myMin) > 0 ||
+            Card myMin = myHand.list(trickSuit).first();
+            if (playerCardList.first().compareInTrick(myMin) > 0 ||
                     myMin.compareInTrick(trick.topCard) < 0 &&
-                    myMin.compareInTrick(leftSuits[trickSuitNum].first()) < 0) {
+                    myMin.compareInTrick(leftHand.list(trickSuit).first()) < 0) {
                 // either player's or the other defender's cards are all larger
-                return playerSuit.last();
+                return playerCardList.last();
             } else {
                 // play with lesser than declalerMin
-                int passNum = playerSuit.getMaxLessThan(trick.topCard.getRank());
+                int passNum = playerCardList.getMaxLessThan(trick.topCard.getRank());
                 if (passNum < 0) {
                     boolean holeMove = false;
                     for (CardList.ListData hole : holes) {
-                        if (trick.topCard.getSuit().getValue() == hole.suitNum) {
+                        if (trick.topCard.getSuit().equals(hole.suit)) {
                             holeMove = true;
                             break;
                         }
                     }
                     if (holeMove) {
-                        return playerSuit.first();
+                        return playerCardList.first();
                     }
-                    return playerSuit.last();
+                    return playerCardList.last();
                 }
-                return playerSuit.get(passNum);
+                return playerCardList.get(passNum);
             }
         }
     }
@@ -713,7 +750,7 @@ probes:
 
         if (trick.startingSuit == null) {
             // playing elderhand
-/* debug
+//* debug
             if (trick.number >= 2) {
                 DEBUG_LOG = DEBUG_LOG;
             }
@@ -753,16 +790,20 @@ probes:
     }
 
     Card declarerPlayMisere() {
-        HandResults handResults = misereTricks(trick.startingSuit == null);
+        HandResults handResults = misereTricks(trick.getTurn());
+//* debug
+        if (trick.number >= 8) {
+            DEBUG_LOG = DEBUG_LOG;
+        }
+//*/
         CardList.ListData bestListData = null;
         if (trick.startingSuit == null) {
-            for (int i = 0; i < mySuits.length; ++i) {
-                CardList.ListData listData = handResults.allListData[i];
+            for (CardList.ListData listData : handResults.allListData) {
                 if (listData == null) {
                     continue;
                 }
-                CardList suit = mySuits[i];
-                if (suit.isEmpty()) {
+                CardList cardList = listData.thisSuit;
+                if (cardList.isEmpty()) {
                     continue;
                 }
                 if (bestListData == null || bestListData.maxMeStart > listData.maxMeStart) {
@@ -771,48 +812,44 @@ probes:
             }
             if (bestListData != null) {
                 CardList cleanSuit = bestListData.thisSuit;
-                int i = bestListData.suitNum;
-                int j = cleanSuit.getOptimalStart(leftSuits[i], rightSuits[i]);
+                Card.Suit s = bestListData.suit;
+                int j = cleanSuit.getOptimalStart(leftHand.list(s), rightHand.list(s));
                 return cleanSuit.get(j);
             }
         } else {
-/* debug
-            if (trick.number >= 6) {
-                DEBUG_LOG = DEBUG_LOG;
-            }
-//*/
             Card topCard = trick.topCard;
-            int suitNum = topCard.getSuit().getValue();
-            CardList suit = mySuits[suitNum];
-            Card theirMin = theirMin(suitNum);
-            if (suit.size() == 1) {
-                return suit.first();
-            } else if (suit.isEmpty()) {
+            Card.Suit suit = topCard.getSuit();
+            CardList cardList = myHand.list(suit);
+            Card theirMin = theirMin(suit);
+            if (cardList.size() == 1) {
+                return cardList.first();
+            } else if (cardList.isEmpty()) {
                 return declarerDrop();
             } else if (theirMin == null) {
-                return suit.first();    // the last card might be in trick
+//                return cardList.last();
+                return cardList.first();    // the last card might be in trick
             } else {
-                int index = suit.getMaxLessThan(topCard.getRank());
-                boolean handsOk = suit.last().compareInTrick(rightSuits[suitNum].first()) > 0 &&
-                        suit.last().compareInTrick(leftSuits[suitNum].first()) > 0 &&
-                        leftSuits[suitNum].size() != 1;
+                int index = cardList.getMaxLessThan(topCard.getRank());
+                boolean handsOk = cardList.last().compareInTrick(rightHand.list(suit).first()) > 0 &&
+                        cardList.last().compareInTrick(leftHand.list(suit).first()) > 0 &&
+                        leftHand.list(suit).size() != 1;
                 if (index == 0) {
                     if (trick.trickCards.size() == 1 && handsOk ||
-                        trick.trickCards.size() == 2 && theirMin.compareInTrick(suit.get(1)) < 0) {
-                        return suit.get(1);     // need to keep min card
+                        trick.trickCards.size() == 2 && theirMin.compareInTrick(cardList.get(1)) < 0) {
+                        return cardList.get(1);     // need to keep min card
                     }
                 }
                 if (index >= 0) {
-                    return suit.get(index);
+                    return cardList.get(index);
                 }
-                return suit.last();     // have to take it
+                return cardList.last();     // have to take it
             }
         }
         return null;    // should not be here
     }
 
     Card declarerDrop() {
-/* debug
+//* debug
         if (trick.number >= 4) {
             DEBUG_LOG = DEBUG_LOG;
         }
@@ -829,19 +866,19 @@ probe:
                 for (CardList.ListData hole : holes) {
                     if (card == null) {
                         if (declarerDrop == DeclarerDrop.First) {
-                            card = this.mySuits[hole.suitNum].last();
+                            card = this.myHand.list(hole.suit).last();
                         } else if (Util.nextRandInt(2) == 0 &&
                             (declarerDrop == DeclarerDrop.Random || GameManager.RELEASE)) {
-                            card = this.mySuits[hole.suitNum].last();
+                            card = this.myHand.list(hole.suit).last();
                         }
                     }
-                    for (int i = 0; i < this.leftSuits[hole.suitNum].size(); ++i) {
-                        Card _card = this.leftSuits[hole.suitNum].remove(i);
+                    for (int i = 0; i < this.leftHand.list(hole.suit).size(); ++i) {
+                        Card _card = this.leftHand.list(hole.suit).remove(i);
                         // todo: check harmlessSuitMove
-                        MisereData misereData = defenderEvalDrop(hole, false, leftSuits, rightSuits);
-                        this.leftSuits[hole.suitNum].add(i, _card);
-                        if (misereData.moveSuitNum > 0) {
-                            res = mySuits[hole.suitNum].last();
+                        MisereData misereData = defenderEvalDrop(hole, false, leftHand, rightHand);
+                        this.leftHand.list(hole.suit).add(i, _card);
+                        if (misereData.moveSuit != null) {
+                            res = myHand.list(hole.suit).last();
                             break probe;
                         }
                     }
@@ -850,12 +887,12 @@ probe:
                 int minDrop = Integer.MAX_VALUE;
 probe:
                 for (CardList.ListData hole : holes) {
-                    for (int i = 0; i < this.mySuits[hole.suitNum].size(); ++i) {
-                        card = this.mySuits[hole.suitNum].remove(i);
+                    for (int i = 0; i < this.myHand.list(hole.suit).size(); ++i) {
+                        card = this.myHand.list(hole.suit).remove(i);
                         // todo: check harmlessSuitMove
-                        MisereData misereData = defenderEvalDrop(hole, false, leftSuits, rightSuits);
-                        this.mySuits[hole.suitNum].add(i, card);
-                        if (misereData.moveSuitNum == -1) {
+                        MisereData misereData = defenderEvalDrop(hole, false, leftHand, rightHand);
+                        this.myHand.list(hole.suit).add(i, card);
+                        if (misereData.moveSuit == null) {
                             res = card;
                             if (declarerDrop == DeclarerDrop.First) {
                                 break probe;
@@ -885,12 +922,12 @@ probe:
         DelayedDropData delayedDropData = new DelayedDropData();
         int suitSum = 0;
         int reversedCount = 0;
-        int firstHole = -1;
-        int secondHole = -1;
-        int dropSuitNum = -1;
+        Card.Suit firstHole = null;
+        Card.Suit secondHole = null;
         int neutralSuitNum = -1;
+        Card.Suit dropSuit = null;
         boolean needToDrop = false;
-/* debug
+//* debug
         if (trick.number >= 1) {
             DEBUG_LOG = DEBUG_LOG;
         }
@@ -898,25 +935,25 @@ probe:
 
         for (MisereData _misereData : allMisereData) {
             delayedDropData.misereData = _misereData;
-            delayedDropData.leftSuits = _misereData.leftSuits;
-            delayedDropData.rightSuits = _misereData.rightSuits;
-            delayedDropData.mySuits = CardList.clone(_misereData.mySuits);
-            if (_misereData.dropSuitNum >= 0) {
-                if (firstHole == -1) {
-                    firstHole = _misereData.hole.suitNum;
+            delayedDropData.leftHand = _misereData.leftHand;
+            delayedDropData.rightHand = _misereData.rightHand;
+            delayedDropData.myHand = _misereData.myHand.clone();
+            if (_misereData.dropSuit != null) {
+                if (firstHole == null) {
+                    firstHole = _misereData.hole.suit;
                 } else {
-                    secondHole = _misereData.hole.suitNum;
+                    secondHole = _misereData.hole.suit;
                 }
             } else {
-                secondHole = _misereData.hole.suitNum;
+                secondHole = _misereData.hole.suit;
             }
             if (_misereData.harmlessHoleMove) {
-                delayedDropData.harmlessHoleSuit = _misereData.hole.suitNum;
+                delayedDropData.harmlessHoleSuit = _misereData.hole.suit;
             }
-            suitSum += _misereData.hole.suitNum;
-            if (dropSuitNum == -1 && _misereData.dropSuitNum != -1) {
-                dropSuitNum = _misereData.dropSuitNum;
-                suitSum += dropSuitNum;
+            suitSum += _misereData.hole.suit.getValue();
+            if (dropSuit == null && _misereData.dropSuit != null) {
+                dropSuit = _misereData.dropSuit;
+                suitSum += dropSuit.getValue();
             }
             if (_misereData.reversed) {
                 ++reversedCount;
@@ -926,10 +963,10 @@ probe:
             }
         }
 
-        if (!delayedMiserData.initialized) {
+        if (!commonDelayedDropData.initialized) {
             if (allMisereData.size() == 2) {
                 neutralSuitNum = Card.Suit.SUM - suitSum;
-                if (neutralSuitNum >= Card.Suit.NO_SUIT.getValue()) {
+                if (neutralSuitNum >= Card.TOTAL_SUITS) {
                     neutralSuitNum = -1;
                 }
             }
@@ -939,8 +976,8 @@ probe:
                 delayedDropData.firstHole =
                 delayedDropData.secondHole =
                 delayedDropData.harmlessHoleSuit =
-                delayedDropData.neutralSuitNum =
-                delayedDropData.dropSuitNum = -1;
+                delayedDropData.neutralSuit =
+                delayedDropData.dropSuit = null;
             }
             if (reversedCount == 2) {
                 delayedDropData.reversed = true;
@@ -954,67 +991,69 @@ probe:
                 delayedDropData.firstHole = secondHole;
                 delayedDropData.secondHole = firstHole;
             }
-            delayedMiserData.dropSuitNum = dropSuitNum;
-            delayedMiserData.neutralSuitNum = neutralSuitNum;
-            delayedMiserData.firstHole = firstHole;
-            delayedMiserData.secondHole = secondHole;
-            delayedMiserData.reversed = delayedDropData.reversed;
-            delayedMiserData.initialized = true;
+            commonDelayedDropData.dropSuit = dropSuit;
+            if (neutralSuitNum >= 0) {
+                commonDelayedDropData.neutralSuit = Card.Suit.values()[neutralSuitNum];
+            }
+            commonDelayedDropData.firstHole = firstHole;
+            commonDelayedDropData.secondHole = secondHole;
+            commonDelayedDropData.reversed = delayedDropData.reversed;
+            commonDelayedDropData.initialized = true;
         }
-        delayedDropData.dropSuitNum = delayedMiserData.dropSuitNum;
-        delayedDropData.neutralSuitNum = delayedMiserData.neutralSuitNum;
-        delayedDropData.reversed = delayedMiserData.reversed;
-        delayedDropData.firstHole = delayedMiserData.firstHole;
-        if (secondHole == -1) {
-            delayedMiserData.secondHole = -1;    // eventually declarer drops one hole
+        delayedDropData.dropSuit = commonDelayedDropData.dropSuit;
+        delayedDropData.neutralSuit = commonDelayedDropData.neutralSuit;
+        delayedDropData.reversed = commonDelayedDropData.reversed;
+        delayedDropData.firstHole = commonDelayedDropData.firstHole;
+        if (secondHole == null) {
+            commonDelayedDropData.secondHole = null;    // eventually declarer drops one hole
         }
-        delayedDropData.secondHole = delayedMiserData.secondHole;
+        delayedDropData.secondHole = commonDelayedDropData.secondHole;
         return delayedDropData;
     }
 
     static class DelayedDropData {
         MisereData misereData;
-        int harmlessHoleSuit = -1;
-        int dropSuitNum = -1;
-        int neutralSuitNum = -1;
-        int firstHole = -1;
-        int secondHole = -1;
-        CardList[] mySuits;
-        CardList[] leftSuits = null;
-        CardList[] rightSuits = null;
+        Card.Suit harmlessHoleSuit;
+        Card.Suit dropSuit;
+        Card.Suit neutralSuit;
+        Card.Suit firstHole;
+        Card.Suit secondHole;
+        Hand myHand;
+        Hand leftHand = null;
+        Hand rightHand = null;
         boolean reversed = false;
+    }
+
+    static class CommonDelayedDropData {
+        boolean initialized = false; // to catch misère with delayed drop
+        boolean reversed = false;    // to catch misère with delayed drop
+        int initHoles = -1;          // for misère
+        Card.Suit dropSuit;        // to catch misère with delayed drop
+        Card.Suit neutralSuit;     // to catch misère with delayed drop
+        Card.Suit firstHole;          // to catch misère with delayed drop
+        Card.Suit secondHole;         // to catch misère with delayed drop
     }
 
     static class MisereData {
         final CardList.ListData hole;
-        final CardList[] mySuits;
-        final CardList[] leftSuits;
-        final CardList[] rightSuits;
+        final Hand myHand;
+        final Hand leftHand;
+        final Hand rightHand;
         boolean reversed;
         Card card;      // card to play
-        int moveSuitNum = -1;
+        Card.Suit moveSuit;
         boolean harmlessHoleMove;
         int needToDrop = 0;
         int canDrop;
-        int dropSuitNum = -1;
+        Card.Suit dropSuit;
         int meDrop;
         int rightDrop;
 
-        MisereData(CardList.ListData hole, CardList[] mySuits, CardList[] leftSuits, CardList[] rightSuits) {
+        MisereData(CardList.ListData hole, Hand myHand, Hand leftHand, Hand rightHand) {
             this.hole = hole;
-            this.mySuits = mySuits;
-            this.leftSuits = leftSuits;
-            this.rightSuits = rightSuits;
+            this.myHand = myHand;
+            this.leftHand = leftHand;
+            this.rightHand = rightHand;
         }
-    }
-
-    static class DelayedMiserData {
-        boolean initialized = false; // to catch misère with delayed drop
-        boolean reversed = false;    // to catch misère with delayed drop
-        int initHoles = -1;          // for misère
-        int dropSuitNum = -1;        // to catch misère with delayed drop
-        int neutralSuitNum = -1;     // to catch misère with delayed drop
-        int firstHole = -1;          // to catch misère with delayed drop
-        int secondHole = -1;         // to catch misère with delayed drop
     }
 }

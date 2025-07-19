@@ -94,7 +94,7 @@ public class Trick {
         clear();
         startedBy = elderHand;
         number = 0;
-        MisereBot.delayedMiserData = new MisereBot.DelayedMiserData();
+        MisereBot.commonDelayedDropData = new MisereBot.CommonDelayedDropData();
         Logger.printf("DeclarerDrop %s\n", MisereBot.declarerDrop.name());
     }
 
@@ -122,8 +122,8 @@ public class Trick {
             // 0 -> 2:left, 1:right
             // 1 -> 0:left, 2:right
             // 2 -> 1:left, 0:right
-            players[(droppingPlayer + 2) % players.length].leftSuits[startingSuit.getValue()].clear();
-            players[(droppingPlayer + 1) % players.length].rightSuits[startingSuit.getValue()].clear();
+            players[(droppingPlayer + 2) % players.length].leftHand.list(startingSuit).clear();
+            players[(droppingPlayer + 1) % players.length].rightHand.list(startingSuit).clear();
         }
         for (Player player : players) {
             player.drop(card);

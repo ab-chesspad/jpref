@@ -30,7 +30,6 @@
  */
 package com.ab.jpref.config;
 
-import com.ab.jpref.engine.Player;
 import com.ab.pref.Main;
 import com.ab.util.I18n;
 import com.ab.util.Logger;
@@ -50,8 +49,9 @@ public class Config implements Serializable {
 
     public static final String PROJECT_NAME = "jpref";
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
+    public static final char NO_TRUMP = '-';
 
-    public enum Bid implements Comparable<Bid>, Player.Queueable {
+    public enum Bid implements Comparable<Bid>, Queueable {
         BID_WHIST(40, "Whist"),
         BID_HALF_WHIST(41, "Half"),
         BID_WITHOUT_THREE(42, "Without 3"),
@@ -63,19 +63,19 @@ public class Config implements Serializable {
         BID_6C(62, "6♣"),
         BID_6D(63, "6♦"),
         BID_6H(64, "6♥"),
-        BID_6N(65, "6-"),
-        
+        BID_6N(65, "6" + NO_TRUMP),
+
         BID_7S(71, "7♠"),
         BID_7C(72, "7♣"),
         BID_7D(73, "7♦"),
         BID_7H(74, "7♥"),
-        BID_7N(75, "7-"),
+        BID_7N(75, "7" + NO_TRUMP),
 
         BID_8S(81, "8♠"),
         BID_8C(82, "8♣"),
         BID_8D(83, "8♦"),
         BID_8H(84, "8♥"),
-        BID_8N(85, "8-"),
+        BID_8N(85, "8" + NO_TRUMP),
 
         BID_MISERE(86, "Misère"),
 
@@ -83,13 +83,13 @@ public class Config implements Serializable {
         BID_9C(92, "9♣"),
         BID_9D(93, "9♦"),
         BID_9H(94, "9♥"),
-        BID_9N(95, "9-"),
+        BID_9N(95, "9" + NO_TRUMP),
 
         BID_XS(101, "10♠"),
         BID_XC(102, "10♣"),
         BID_XD(103, "10♦"),
         BID_XH(104, "10♥"),
-        BID_XN(105, "10-"),
+        BID_XN(105, "10" + NO_TRUMP),
         ;
 
         private final int value;
@@ -108,7 +108,7 @@ public class Config implements Serializable {
             return name;
         }
 
-        static public Bid fromName(String name) {
+        public static Bid fromName(String name) {
             for (Bid r : values()) {
                 if (r.name.equals(name)) {
                     return r;
@@ -117,7 +117,7 @@ public class Config implements Serializable {
             return null;
         }
 
-        static public Bid fromValue(int value) {
+        public static Bid fromValue(int value) {
             for (Bid r : values()) {
                 if (r.value == value) {
                     return r;
@@ -200,6 +200,8 @@ public class Config implements Serializable {
             Logger.println(e.getStackTrace().toString());
         }
     }
+
+    public interface Queueable {}
 
     // not sure that I'll need it
     public static class IntTriplet implements Serializable {

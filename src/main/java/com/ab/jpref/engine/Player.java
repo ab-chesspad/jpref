@@ -21,37 +21,47 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.Hand;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
+import com.ab.util.Util;
 
 import java.util.*;
 
 public abstract class Player {
     public static boolean DEBUG_LOG = false;
     public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
+    //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
+    public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
+
+    enum DeclarerDrop {
+        First,
+        Last,
+        Random
+    }
 
     public enum PlayerPoints {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
     protected final String name;
     protected Config.Bid bid;
-    protected CardList[] mySuits = new CardList[Card.Suit.values().length - 1];
-    protected CardList[] leftSuits = new CardList[Card.Suit.values().length - 1];
-    protected CardList[] rightSuits = new CardList[Card.Suit.values().length - 1];
+    protected Hand myHand = new Hand();
+    protected Hand leftHand = new Hand();
+    protected Hand rightHand = new Hand();
 
     private final List<RoundResults> history = new LinkedList<>();
     int tricks;
     protected RoundResults roundResults;
 
-    public abstract Config.Bid getBid(Config.Bid minBid, boolean elderHand);
-    public abstract void declareRound(Config.Bid minBid, boolean elderHand);
+    public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
+    public abstract void declareRound(Config.Bid minBid, int elderHand);
     public abstract Card play(Trick trick);
 
     // number is being declared in subclasses, then it is more visible in debugger
     public abstract int getNumber();
 
     // to be implemented in a subclass (human player)
-    public void accept(Queueable q) {}
+    public void accept(Config.Queueable q) {}
 
     // to be implemented in a subclass (human player)
     public void clearQueue() {}
@@ -73,15 +83,6 @@ public abstract class Player {
 
     public Player(String name) {
         this.name = name;
-        init();
-    }
-
-    private void init() {
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-            mySuits[i] = new CardList();
-            leftSuits[i] = new CardList();
-            rightSuits[i] = new CardList();
-        }
     }
 
     public Player(String name, Collection<Card> cards) {
@@ -95,49 +96,17 @@ public abstract class Player {
         } else {
             name = other.name;
             bid = other.bid;
-            for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-                mySuits[i] = (CardList) other.mySuits[i].clone();
-                leftSuits[i] = (CardList) other.leftSuits[i].clone();
-                rightSuits[i] = (CardList) other.rightSuits[i].clone();
-            }
+            myHand = other.myHand.clone();
+            leftHand = other.leftHand.clone();
+            rightHand = other.rightHand.clone();
         }
         tricks = 0;
-    }
-
-    public Set<Card> getHand() {
-        Set<Card> hand = new HashSet<>();
-        for (int i = 0; i < Card.Suit.values().length - 1; ++i) {
-            hand.addAll(mySuits[i]);
-        }
-        return  hand;
-    }
-
-    public void subtract(CardList[] declarerCards) {
-        for (int i = 0; i < this.mySuits.length; ++i) {
-            declarerCards[i].removeAll(this.mySuits[i]);
-        }
-    }
-
-    // to play with open cards against declarer
-    public static Set<Card> declarerCards() {
-        GameManager gameManager = GameManager.getInstance();
-        int declarerNum = GameManager.getInstance().declarer.getNumber();
-        Set<Card> declarerCards = new HashSet<>(CardList.getDeck());
-        subtract(declarerCards, gameManager.players[(declarerNum + 1) % NUMBER_OF_PLAYERS]);
-        subtract(declarerCards, gameManager.players[(declarerNum + 2) % NUMBER_OF_PLAYERS]);
-        return declarerCards;
-    }
-
-    static void subtract(Set<Card> declarerCards, Player other) {
-        for (CardList suit : other.mySuits) {
-            declarerCards.removeAll(suit);
-        }
     }
 
     // we do not check card list size
     public void setHand(Collection<Card> thisHand) {
         clear();
-        split(thisHand, this.mySuits);
+        this.myHand.add(thisHand);
         Set<Card> hand = new HashSet<>(thisHand);
         CardList deck = CardList.getDeck();
         Collection<Card> others = new ArrayList<>();
@@ -146,41 +115,16 @@ public abstract class Player {
                 others.add(card);
             }
         }
-        split(others, this.leftSuits);
-        split(others, this.rightSuits);
+        this.leftHand.add(others);
+        this.rightHand.add(others);
         bid = Config.Bid.BID_UNDEFINED;
         roundResults = new RoundResults();
     }
 
-    public void setHand(Collection<Card> thisHand, Collection<Card> leftHand, Collection<Card> rightHand) {
-        clear();
-        split(thisHand, this.mySuits);
-        split(leftHand, this.leftSuits);
-        split(rightHand, this.rightSuits);
-        roundResults = new RoundResults();
-    }
-
-    void split(Collection<Card> hand, CardList[] result) {
-        for (Card card : hand) {
-            int suitNum = card.getSuit().getValue();
-            result[suitNum].add(card);
-        }
-
-        for (CardList suit : result) {
-            Collections.sort(suit);
-        }
-    }
-
     public void clear() {
-        for (CardList cardList : mySuits) {
-            cardList.clear();
-        }
-        for (CardList cardList : leftSuits) {
-            cardList.clear();
-        }
-        for (CardList cardList : rightSuits) {
-            cardList.clear();
-        }
+        myHand.clear();
+        leftHand.clear();
+        rightHand.clear();
         this.tricks = 0;
     }
 
@@ -206,20 +150,7 @@ public abstract class Player {
     }
 
     public String toColorString(boolean color) {
-        StringBuilder sb = new StringBuilder();
-        Card.Suit oldSuit = null;
-        for (CardList suit : this.mySuits) {
-            String s;
-            if (color) {
-                s = suit.toColorString();
-            } else {
-                s = suit.toString();
-            }
-            if (!s.isEmpty()) {
-                sb.append(s).append(" ");
-            }
-        }
-        return sb.toString();
+        return this.myHand.toColorString(color);
     }
 
     public RoundResults getRoundResults() {
@@ -239,18 +170,14 @@ public abstract class Player {
     }
 
     public void takeTalon(CardList talon) {
-        for (Card card : talon) {
-            int suitNum = card.getSuit().getValue();
-            mySuits[suitNum].add(card);
-            Collections.sort(mySuits[suitNum]);
-            leftSuits[suitNum].remove(card);
-            rightSuits[suitNum].remove(card);
-        }
+        this.myHand.add(talon);
+        this.leftHand.remove(talon);
+        this.rightHand.remove(talon);
         talon.clear();
     }
 
-    public CardList[] getMySuits() {
-        return mySuits;
+    public Hand getMySuits() {
+        return myHand;
     }
 
     public List<RoundResults> getHistory() {
@@ -258,12 +185,13 @@ public abstract class Player {
     }
 
     public Card anyCard() {
-        for (int j = 0; j < Card.Suit.values().length - 1; ++j) {
-            if (!mySuits[j].isEmpty()) {
-                return mySuits[j].last();
-            }
+        CardList all = this.myHand.list();
+        if (GameManager.RELEASE || declarerDrop == DeclarerDrop.Random) {
+            return all.get(Util.nextRandInt(all.size()));
+        } else if (declarerDrop == DeclarerDrop.First) {
+            return all.first();
         }
-        return null;    // should not be here
+        return all.last();
     }
 
     public void drop(CardList drop) {
@@ -280,61 +208,32 @@ public abstract class Player {
     }
 
     public void drop(Card card) {
-        int suitNum = card.getSuit().getValue();
-        if (mySuits[suitNum].remove(card)) {
+        if (myHand.remove(card)) {
             return;     // my own card
         }
-        leftSuits[suitNum].remove(card);
-        rightSuits[suitNum].remove(card);
+        leftHand.remove(card);
+        rightHand.remove(card);
     }
 
     public int totalCards() {
-        return CardList.totalCards(mySuits);
+        return myHand.list().size();
     }
 
     public void updateOthers(int totalLeft, int totalRight) {
-        CardList[] allKnown = null;
-        CardList[] third = null;
-        if (totalLeft == CardList.totalCards(leftSuits)) {
-            allKnown = leftSuits;   // I know all cards, no more guessing
-            third = rightSuits;     // thus I know all the cards
-        } else if (totalRight == CardList.totalCards(rightSuits)) {
-            allKnown = rightSuits;  // I know all cards, no more guessing
-            third = leftSuits;      // thus I know all the cards
+        Hand allKnown = null;
+        Hand third = null;
+        if (totalLeft == leftHand.size()) {
+            allKnown = leftHand;   // I know all cards, no more guessing
+            third = rightHand;     // thus I know all the cards
+        } else if (totalRight == rightHand.size()) {
+            allKnown = rightHand;  // I know all cards, no more guessing
+            third = leftHand;      // thus I know all the cards
         }
 
         if (allKnown != null) {
-            for (int i = 0; i < allKnown.length; ++i) {
-                third[i].removeAll(allKnown[i]);
-            }
+            third.remove(allKnown);
         }
     }
-
-    // to play with open cards
-/*
-    public void merge(Player other) {
-        boolean left = this.number < other.number;
-        int suitNum = -1;
-        for (CardList suit : other.mySuits) {
-            ++suitNum;
-            for (Card card : suit) {
-                if (left) {
-                    rightSuits[suitNum].remove(card);
-                } else {
-                    leftSuits[suitNum].remove(card);
-                }
-            }
-            if (left) {
-                leftSuits[suitNum] = (CardList) other.mySuits[suitNum].clone();
-            } else {
-                rightSuits[suitNum] = (CardList) other.mySuits[suitNum].clone();
-            }
-        }
-    }
-*/
-
-
-    public interface Queueable {}
 
     public static class RoundResults {
         final int[] points = new int[PlayerPoints.values().length];

@@ -49,7 +49,7 @@ class MainPanelLayout {
     private final int[] suitOrderInDeck = {3, 2, 1, 0};
 
     final BufferedImage sourceDeckImage, sourceBackImage;
-    final Image[][] cardImages = new Image[Card.Suit.values().length - 1][Card.Rank.values().length];
+    final Image[][] cardImages = new Image[Card.TOTAL_SUITS][Card.TOTAL_RANKS];
     final Metrics metrics = Metrics.getInstance();
     final HandVisualData[] handVisualData = new HandVisualData[4];
     BufferedImage scaledDeckImage, scaledBackImage;
@@ -144,11 +144,11 @@ class MainPanelLayout {
             Logger.printf(DEBUG_LOG, "scaled Deck %dx%d\n",
                     scaledDeckImage.getWidth(), scaledDeckImage.getHeight());
 
-            for (int j = 0; j < Card.Suit.values().length - 1; ++j) {
+            for (int j = 0; j < Card.TOTAL_SUITS; ++j) {
                 int yS = (int) (suitOrderInDeck[j] * metrics.cardH);
-                for (int i = 1; i < Card.Rank.values().length; ++i) {
+                for (int i = 1; i < Card.TOTAL_RANKS; ++i) {
                     int col = Card.Rank.values()[i].getValue() - 1;
-                    if (i == Card.Rank.values().length - 1) {
+                    if (i == Card.TOTAL_RANKS - 1) {
                         col = 0;
                     }
                     int xS = (int) (col * metrics.cardW);
@@ -205,13 +205,13 @@ class MainPanelLayout {
                 handVisualData[i].player = players.get(i);
                 handVisualData[i].allCards.clear();
                 handVisualData[i].totalSuits = 0;
-                for (CardList suit : handVisualData[i].player.getMySuits()) {
-                    int size = suit.size();
+                for (CardList cardList : handVisualData[i].player.getMySuits()) {
+                    int size = cardList.size();
                     if (size == 0) {
                         continue;
                     }
                     ++handVisualData[i].totalSuits;
-                    handVisualData[i].allCards.addAll(suit);
+                    handVisualData[i].allCards.addAll(cardList);
                 }
                 handVisualData[i].showFaces = mainPanel.showCards(i);
                 paintHand(g2d, handVisualData[i]);
