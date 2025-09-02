@@ -1,0 +1,67 @@
+#misèreplay for user #0 ♠ ♣ ♦ ♥
+
+
+deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34
+
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  1 -> 0 # не ловится ♣9 1
+
+#predefined moves
+deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> 1 : ♣XK ♦J ♥K7 ♠QX ♠7 ♦AK97  # ловится xx
+
+#clean - slowest
+deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK ♥QA  ♠KA 1 -> 0 # не ловится 0
+#tree build duration: 3 sec, positions 42058
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  1 -> 0 # не ловится ♣9 1
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> 0 # не ловится ♣9 2
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣8XJ ♦XA ♥XQA  ♠9QKA ♣9Q ♦8QK ♥K  ♣KA  1 -> 0 # не ловится ♠7X 0
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8 ♣9XJQ ♦XA ♥XKA  ♠9JQKA ♣8 ♦8QK ♥Q  ♣KA  1 -> 0 # не ловится 0
+deal: ♠89 ♣789K ♥789X  ♠7J ♣X ♦789Q ♥JQK  ♠KA ♣JQA ♦XJKA ♥A  ♠XQ 0 -> 0 # Скуратов 2 ♠9 не ловится
+deal: ♠789X ♣8 ♦789 ♥89  ♠JK ♣79 ♦XJQK ♥7J  ♠QA ♣XJQ ♦A ♥XQKA   ♣KA 1 -> 0 # reversed Ковалевская, не ловится
+
+#slow
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8JQKA ♦XA ♥XQK  ♠9 ♣89XJQ ♦8QK ♥A  ♣KA  1 -> 1 # ловится ♠7X 3
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣XJ ♦XA ♥XQKA  ♠9QKA ♣89Q ♦8QK   ♣KA  1 -> 1 # ловится ♠7X 4
+
+# delayed drop
+deal: ♠789 ♣89 ♦789X ♥8  ♠Q ♣XQKA ♦JK ♥9JA  ♠XJKA ♣7J ♦QA ♥7Q  ♥XK 1 -> d 1 # Скуратов 1
+deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34
+#[♥QA8, ♥K7J, ♣AXJ, ♦87Q, ♥X ♠K ♣9, ♥9 ♠Q ♦X, ♠J ♣K ♠9, ♠X ♣Q ♠7, ♣7 ♦K ♣8]
+deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> d 1 # Ковалевская
+deal: ♠789X ♣89 ♦789 ♥8  ♠QA ♣XQKA ♦A ♥XJQ   ♠JK ♣7J ♦XJQK ♥79  ♥KA 1 -> d 1 # Ковалевская mod
+deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK  1 -> d 1 # Ласкер, 2 или 3 взятки
+deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣JQKA ♦K ♥QK  ♠7J ♣7X ♦XJQA ♥JA   ♠QK  1 -> d 1 # Ласкер модиф
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> d # preferans.de/004
+deal: ♠89 ♣89 ♦7XJ ♥789  ♠QKA ♣KA ♦9KA ♥QK  ♠7J ♣7XJQ ♦8Q ♥XJ  ♠X ♥A  2 -> d # preferans.de/006, де Голль
+
+###
+deal: ♠7XJ ♣89 ♦89 ♥79J  ♠89Q ♣7XK ♦XQ ♥8X  ♠KA ♣JQ ♦7JK ♥QKA  ♦A ♣A  1 -> 1 #etude 1
+deal: ♠789XJ ♣9 ♦78X ♥7  ♠K ♣8XJQK  ♥8XQK  ♠QA ♣7A ♦9JQK ♥9J  ♦A ♥A  1 -> 1 #etude 2
+deal: ♠79QK ♣8K ♦XQ ♥XK  ♠X ♣79JQ ♦J ♥78JQ  ♠A ♣XA ♦789KA ♥9A  ♠J8  1 -> 1 #etude 3
+deal: ♠7XJQ ♣J ♦8 ♥78XA  ♠KA ♣9XK ♦7Q ♥9JQ  ♠89 ♣78QA ♦XJA ♥K  ♦K9  1 -> 1 #etude 4
+deal: ♠89 ♣789K ♥789X  ♠7J ♣X ♦789Q ♥JQK  ♠KA ♣JQA ♦XJKA ♥A  ♠XQ 1 -> 1 # Скуратов 2
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣7A ♦9JQK ♥9J   ♠K ♣8XJQK  ♥8XQK   ♦A ♥A  0 -> # ловится ♣9 1
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QKA ♣78 ♦9JQK ♥J   ♣XJQKA  ♥89XQK   ♦A ♥A  1 -> # ловится ♣9 3
+deal: ♠7X ♣78 ♦79J ♥79J  ♠JQK ♣9XJQ ♦XK ♥K  ♠89A ♦8QA ♥8XQA  ♣KA  1 -> 1 # ловится ♠7X 1
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8JA ♣XJ ♦XA ♥XKA  ♠9QK ♣89Q ♦8QK ♥Q  ♣KA  1 -> 1 # ловится ♠7X 5
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠QKA ♣9XJ ♦A ♥8XK  ♠89 ♣8Q ♦8XQK ♥QA  ♣KA  1 -> 1 # ловится ♠7XJ 1
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠89A ♣8Q ♦8QA ♥QA  ♠QK ♣9XJ ♦XK ♥8XK  ♣KA  1 -> 1 # ловится ♠7XJ 2
+
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠89 ♣8Q ♦8XQA ♥QA  ♠QKA ♣9XJ ♦K ♥8XK  ♣KA  1 -> 1 # ловится ♠7XJ 3
+deal: ♠79Q ♣79K ♦789 ♥7   ♠8KA ♣XQ ♦XK ♥89A  ♠XJ ♣8JA ♦JQA ♥XJ  ♥QK  1 -> 1 # ловится ♠79Q
+deal: ♠79K ♣79Q ♦789 ♥7   ♠XQ ♣8KA ♦XK ♥89A  ♠8JA ♣XJ ♦JQA ♥XJ  ♥QK  1 -> 1 # ловится ♣79Q
+
+deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> # random position 0, multiple holes
+deal: ♣8JQK ♦89Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79  1 -> # random position 1, multiple holes
+deal: ♠9 ♣8JQK ♦8Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♦9 ♠7  0 -> # random position 2, multiple holes
+deal: ♠Q ♣8J ♦7XJK ♥78Q  ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠8K  2 -> # random position 3, multiple holes
+deal: ♠79QK ♣8K ♦XQ ♥XK   ♠X ♣79JQ ♦J ♥78JQ   ♠A ♣XA ♦789KA ♥9A    ♠J8  1 -> random position 4, multiple holes
+deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> # random position 6, multiple holes
+deal: ♠78Q ♣9J ♦89A ♥8A   ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK     ♥JQ 2  -> # random position 7,  multiple holes
+deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> # random position 8,  multiple holes
+deal: ♠9JQA ♣7K ♦8JQ ♥X   ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♦7X 2 -> # random position 9,  multiple holes
+deal: ♠78KA ♣JQ ♦9XJK   ♠J ♣7KA ♦Q ♥89JKA   ♠9XQ ♣9 ♦78A ♥7XQ     ♣8X 1 -> # random position 10,  multiple holes
+deal: ♠J ♣7KA ♦Q ♥89JKA   ♠9 ♣9JQ ♦78A ♥7XQ   ♠78XQKA ♦9XJK     ♣8X 1 -> # random position 11,  multiple holes
+deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> # random position 12,  multiple holes
+deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> # random position 13,  multiple holes
+deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> # random position 14,  multiple holes
+

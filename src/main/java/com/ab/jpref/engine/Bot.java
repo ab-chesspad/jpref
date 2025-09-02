@@ -57,9 +57,9 @@ public class Bot extends Player {
         return new MisereBot(fictitiousBot, realPlayer);
     }
 
-    public ForTricksBot getForTricksBot(Player fictitiousBot, Bot realPlayer) {
-        return new ForTricksBot(fictitiousBot, realPlayer);
-    }
+//    public ForTricksBot getForTricksBot(Player fictitiousBot, Bot realPlayer) {
+//        return new ForTricksBot(fictitiousBot, realPlayer);
+//    }
 
     @Override
     public void declareRound(Config.Bid minBid, int elderHand) {
