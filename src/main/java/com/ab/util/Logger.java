@@ -35,6 +35,9 @@ public class Logger {
 
     public static void set(PrintStream out) {
         Logger.out = out;
+        if (out == null) {
+            startDate = null;
+        }
     }
 
     public static boolean isToFile() {
@@ -130,5 +133,13 @@ public class Logger {
     public static void printf(String format, Object... args) {
         setOutput();
         out.printf(format, args);
+    }
+
+    public static void println(int msg) {
+        printf("%d\n", msg);
+    }
+
+    public static void println(boolean debug, int msg) {
+        printf(debug, "%d\n", msg);
     }
 }

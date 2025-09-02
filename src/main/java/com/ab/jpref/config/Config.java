@@ -39,6 +39,7 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.*;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 public class Config implements Serializable {
     public final Property<IntTriplet> animDelay = new Property<>("Animation Time", new IntTriplet(100,1,200));
@@ -85,11 +86,11 @@ public class Config implements Serializable {
         BID_9H(94, "9♥"),
         BID_9N(95, "9" + NO_TRUMP),
 
-        BID_XS(101, "10♠"),
-        BID_XC(102, "10♣"),
-        BID_XD(103, "10♦"),
-        BID_XH(104, "10♥"),
-        BID_XN(105, "10" + NO_TRUMP),
+        BID_XS(101, "X♠"),
+        BID_XC(102, "X♣"),
+        BID_XD(103, "X♦"),
+        BID_XH(104, "X♥"),
+        BID_XN(105, "X" + NO_TRUMP),
         ;
 
         private final int value;
@@ -133,6 +134,7 @@ public class Config implements Serializable {
         public Bid prev() {
             return values()[this.ordinal() - 1];
         }
+
     }
 
     public static final int MAX_DISTANCE_TO_TOP = 7;
@@ -197,7 +199,7 @@ public class Config implements Serializable {
              ObjectOutputStream out = new ObjectOutputStream(file)) {
             out.writeObject(this);
         } catch (IOException e) {
-            Logger.println(e.getStackTrace().toString());
+            Logger.println(Arrays.toString(e.getStackTrace()));
         }
     }
 

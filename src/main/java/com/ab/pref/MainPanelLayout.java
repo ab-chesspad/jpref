@@ -21,6 +21,7 @@ package com.ab.pref;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.GameManager;
@@ -33,6 +34,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 
 class MainPanelLayout {
     public static final boolean DEBUG_LOG = false;
@@ -205,13 +207,11 @@ class MainPanelLayout {
                 handVisualData[i].player = players.get(i);
                 handVisualData[i].allCards.clear();
                 handVisualData[i].totalSuits = 0;
-                for (CardList cardList : handVisualData[i].player.getMySuits()) {
-                    int size = cardList.size();
-                    if (size == 0) {
-                        continue;
-                    }
+                Iterator<CardSet> listIterator = handVisualData[i].player.getMyHand().listIterator();
+                while (listIterator.hasNext()) {
+                    CardSet cardList = listIterator.next();
                     ++handVisualData[i].totalSuits;
-                    handVisualData[i].allCards.addAll(cardList);
+                    handVisualData[i].allCards.addAll(cardList.toCardList());
                 }
                 handVisualData[i].showFaces = mainPanel.showCards(i);
                 paintHand(g2d, handVisualData[i]);
@@ -418,8 +418,10 @@ class MainPanelLayout {
         if (handVisualData.player != null) {
             name = handVisualData.player.getName();
         }
-        Logger.printf(DEBUG_LOG, "%s positions %d:\n%s\n", name,
+        if (handVisualData.player == null) {
+            Logger.printf(DEBUG_LOG, "%s positions %d:\n%s\n", name,
                 handVisualData.cardPositions.size(), handVisualData.cardPositions);
+        }
     }
 
     private void centerPanel(JPanel p) {

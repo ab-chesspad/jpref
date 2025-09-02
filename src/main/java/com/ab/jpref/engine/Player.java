@@ -21,10 +21,9 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
-import com.ab.jpref.cards.Hand;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
-import com.ab.util.Util;
 
 import java.util.*;
 
@@ -45,9 +44,9 @@ public abstract class Player {
     }
     protected final String name;
     protected Config.Bid bid;
-    protected Hand myHand = new Hand();
-    protected Hand leftHand = new Hand();
-    protected Hand rightHand = new Hand();
+    protected CardSet myHand = new CardSet();
+    protected CardSet leftHand = new CardSet();
+    protected CardSet rightHand = new CardSet();
 
     private final List<RoundResults> history = new LinkedList<>();
     int tricks;
@@ -103,20 +102,29 @@ public abstract class Player {
         tricks = 0;
     }
 
-    // we do not check card list size
+    public Player(String name, CardSet cards) {
+        this(name);
+        setHand(cards);
+        roundResults = new RoundResults();
+    }
+
+    public void setHand(CardSet cards) {
+        clear();
+        this.myHand.add(cards);
+        CardSet complement = this.myHand.complement();
+        this.leftHand.set(complement);
+        this.rightHand.set(complement);
+        bid = Config.Bid.BID_UNDEFINED;
+        roundResults = new RoundResults();
+    }
+
+    // do not check card list size
     public void setHand(Collection<Card> thisHand) {
         clear();
         this.myHand.add(thisHand);
-        Set<Card> hand = new HashSet<>(thisHand);
-        CardList deck = CardList.getDeck();
-        Collection<Card> others = new ArrayList<>();
-        for (Card card : deck) {
-            if (!hand.contains(card)) {
-                others.add(card);
-            }
-        }
-        this.leftHand.add(others);
-        this.rightHand.add(others);
+        CardSet complement = this.myHand.complement();
+        this.leftHand.set(complement);
+        this.rightHand.set(complement);
         bid = Config.Bid.BID_UNDEFINED;
         roundResults = new RoundResults();
     }
@@ -176,7 +184,7 @@ public abstract class Player {
         talon.clear();
     }
 
-    public Hand getMySuits() {
+    public CardSet getMyHand() {
         return myHand;
     }
 
@@ -185,13 +193,11 @@ public abstract class Player {
     }
 
     public Card anyCard() {
-        CardList all = this.myHand.list();
-        if (GameManager.RELEASE || declarerDrop == DeclarerDrop.Random) {
-            return all.get(Util.nextRandInt(all.size()));
-        } else if (declarerDrop == DeclarerDrop.First) {
-            return all.first();
-        }
-        return all.last();
+        return anyCard(null);
+    }
+
+    public Card anyCard(Card.Suit suit) {
+        return myHand.anyCard(suit);
     }
 
     public void drop(CardList drop) {
@@ -220,8 +226,8 @@ public abstract class Player {
     }
 
     public void updateOthers(int totalLeft, int totalRight) {
-        Hand allKnown = null;
-        Hand third = null;
+        CardSet allKnown = null;
+        CardSet third = null;
         if (totalLeft == leftHand.size()) {
             allKnown = leftHand;   // I know all cards, no more guessing
             third = rightHand;     // thus I know all the cards

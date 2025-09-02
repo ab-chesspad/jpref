@@ -148,7 +148,6 @@ public class Util {
             cards.add(new Card(src.substring(i, i + 2)));
             i += 2;
         }
-//        Collections.sort(cards);
         return cards;
     }
 

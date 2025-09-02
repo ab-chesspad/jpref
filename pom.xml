@@ -42,7 +42,7 @@
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
-<!---->        <finalName>jpref</finalName>
+       <finalName>jpref</finalName>
 
         <plugins>
             <plugin>
@@ -96,7 +96,7 @@
                     <outjar>jpref.jar</outjar>
                     <options>
                         <option>-allowaccessmodification</option>
-                        <option>-keep public class com.ab.pref.Main { *; }</option>
+                        <option>-keep public class com.ab.pref.MainDoc { *; }</option>
                         <option>-dontnote jdk.internal.**</option>
                         <option>-dontnote module-info</option>
                         <option>-keepclassmembers class * extends java.lang.Enum {
@@ -126,7 +126,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ab.pref.Main</mainClass>
+                            <mainClass>com.ab.pref.MainDoc</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

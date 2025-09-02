@@ -87,7 +87,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ab.pref.Main</mainClass>
+                            <mainClass>com.ab.pref.MainDoc</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

@@ -5,7 +5,7 @@
  */
 package com.ab.jpref.engine;
 
-import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -35,14 +35,14 @@ public class TestBot {
         GameManager.DEBUG_LOG = false;  // suppress thread status logging
         Util.getList("etc/tests/get-max-bid",
             (res, tokens) -> {
-                CardList cards = new CardList();
+                CardSet cards = new CardSet();
                 int i;
                 for (i = 0; cards.size() < 10; ++i) {
-                    cards.addAll(Util.toCardList(tokens.get(i)));
+                    cards.add(Util.toCardList(tokens.get(i)));
                 }
                 int turn = Integer.parseInt(tokens.get(i++));
                 Config.Bid leftBid = Config.Bid.fromName(tokens.get(i++));
-                Bot player = new Bot("test", cards);
+                Bot player = new Bot(cards);
                 String[] parts = res.split(" ");
                 Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
                 Logger.printf("%s %d -> %s\n", player, turn, expectedBid.getName());

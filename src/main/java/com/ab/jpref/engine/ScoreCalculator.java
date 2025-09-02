@@ -55,13 +55,16 @@ public abstract class ScoreCalculator {
     }
 
     abstract void calculateAllPass(Player[] players, int trickCost);
-    abstract void calculateWithout3(Player player);
+    abstract void calculateWithout3(Player declarer);
+    abstract void calculateMisere(Player declarer);
 
     public void calculate(Player declarer, Player[] players, int trickCost) {
         if (declarer == null) {
             instance.calculateAllPass(players, trickCost);
         } else if (Config.Bid.BID_WITHOUT_THREE.equals(declarer.getBid())) {
             instance.calculateWithout3(declarer);
+        } else if (Config.Bid.BID_MISERE.equals(declarer.getBid())) {
+            instance.calculateMisere(declarer);
         }
         // todo: calc declared round
 
@@ -149,6 +152,7 @@ public abstract class ScoreCalculator {
             put(8, 6);
             put(9, 8);
             put(10, 10);
+            put(86, 10);
         }};
 
         @Override
@@ -172,11 +176,22 @@ public abstract class ScoreCalculator {
             }
         }
 
-        void calculateWithout3(Player player) {
+        void calculateWithout3(Player declarer) {
             int dumpPoints = 3 * fines.get(GameManager.getInstance().getMinBid().getValue() / 10);
-            Player.RoundResults roundResults = player.getRoundResults();
+            Player.RoundResults roundResults = declarer.getRoundResults();
             roundResults.setPoints(Player.PlayerPoints.dumpPoints, dumpPoints);
-            player.endRound();
+            declarer.endRound();
+        }
+
+        void calculateMisere(Player declarer) {
+            int value = fines.get(Config.Bid.BID_MISERE.getValue());
+            int dumpPoints = value * declarer.tricks;
+            Player.RoundResults roundResults = declarer.getRoundResults();
+            roundResults.setPoints(Player.PlayerPoints.dumpPoints, dumpPoints);
+            if (declarer.tricks == 0) {
+                roundResults.setPoints(Player.PlayerPoints.poolPoints, value);
+            }
+            declarer.endRound();
         }
     }
 }

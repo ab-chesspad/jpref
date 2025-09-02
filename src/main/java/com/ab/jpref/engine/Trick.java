@@ -21,6 +21,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
@@ -33,9 +34,9 @@ public class Trick {
     boolean startedFromTalon;
     int top = -1;
     Card topCard;
-    CardList trickCards = new CardList();
+    CardList trickCards = new CardList(); // todo: cards are always sorted
     int number = 0;
-    int declarerNum = -1;
+//    int declarerNum = -1;
 
     public int getNumber() {
         return number;
@@ -80,21 +81,16 @@ public class Trick {
         return new String(sb);
     }
 
-/*
-    public Config.Bid getMinBid() {
-        return minBid;
-    }
-*/
-
     public CardList getTrickCards() {
         return trickCards;
     }
 
-    public void clear(int elderHand) {
+    public void clear(int startedBy) {
         clear();
-        startedBy = elderHand;
+        this.startedBy = startedBy;
         number = 0;
-        MisereBot.commonDelayedDropData = new MisereBot.CommonDelayedDropData();
+        MisereBot.trickTree = null;
+        GameManager.getInstance().discarded = new CardSet();
         Logger.printf("DeclarerDrop %s\n", MisereBot.declarerDrop.name());
     }
 
@@ -111,7 +107,7 @@ public class Trick {
         top = -1;
     }
 
-    private void drop(Card card) {
+    protected void drop(Card card) {
         int droppingPlayer = -1;
         if (startingSuit != null && !card.getSuit().equals(startingSuit)) {
             droppingPlayer = getTurn();
@@ -135,6 +131,7 @@ public class Trick {
             Player player = players[i];
             player.updateOthers(totalLeft, totalRight);
         }
+        GameManager.getInstance().discarded.add(card);
     }
 
     public void add(Card card, boolean fromTalon) {
@@ -162,6 +159,11 @@ public class Trick {
         }
         drop(card);
         trickCards.add(card);
+    }
+
+    @Override
+    public String toString() {
+        return trickCards.toString();
     }
 
 }

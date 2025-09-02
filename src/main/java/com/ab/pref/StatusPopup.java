@@ -61,12 +61,12 @@ public class StatusPopup extends JDialog {
         East = MainPanel.Alignment.East.ordinal();
 
     public static final PConfig pConfig = PConfig.getInstance();
-
     static StatusPopup instance;
+
+    final ButtonPanel buttonPanel;
+    final ScoresMetrics scoresMetrics = new ScoresMetrics();
     Rectangle popupRectangle;
     ScoresPanel scoresPanel;
-    ButtonPanel buttonPanel;
-    ScoresMetrics scoresMetrics = new ScoresMetrics();
 
     StatusPopup(JFrame frame, boolean withButtons) {
         super(frame, true);
@@ -263,8 +263,8 @@ public class StatusPopup extends JDialog {
             pLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             // refresh labels
-            for (int i = 0; i < playerAreas.length; ++i) {
-                playerArea = playerAreas[i];
+            for (PlayerArea area : playerAreas) {
+                playerArea = area;
                 for (SLabel sLabel : playerArea.pLabels) {
                     sLabel.refresh();
                 }

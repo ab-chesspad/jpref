@@ -31,15 +31,24 @@ import java.io.PrintStream;
 
 public class Main {
     static final boolean DEBUG_LOG = false;
-    public static boolean RELEASE = true;
-    public static boolean SKIP_BIDDING = true;     // true to jump to all-pass
+    public static boolean RELEASE = false;
+    public static boolean SKIP_BIDDING = false;     // true to jump to all-pass
     public static boolean SHOW_ALL = true;
-    public static boolean ALL_BOTS = false;
-    public static boolean ALL_HUMANS = false;
+    public static final boolean[] BOTS = new boolean[GameManager.NUMBER_OF_PLAYERS];
+    static {
+        BOTS[0] = false;
+        BOTS[1] = true;
+        BOTS[2] = true;
+     }
+
+    public static final boolean ALL_BOTS = BOTS[0] && BOTS[1] && BOTS[2];
+
     static {
         GameManager.RELEASE = RELEASE;
         if (RELEASE) {
-            ALL_HUMANS = false;
+            BOTS[0] = false;
+            BOTS[1] = true;
+            BOTS[2] = true;
             SHOW_ALL = false;
             SKIP_BIDDING = false;
         }
@@ -73,7 +82,7 @@ public class Main {
             GameManager.SKIP_BIDDING = true;
             Logger.DEBUG = false;
         }
-//* unless IntelliJ adds ansi colors handling to their debugger,
+//* until IntelliJ adds ansi colors handling to their debugger,
 //   output to System.out will be ugly and useless
         System.out.println("output to " + out);
         Logger.set(out);
@@ -191,15 +200,10 @@ public class Main {
             final String[] names = param.split(", ");
             gameManager = new GameManager(pConfig, mainPanel,
                     i -> {
-//*
-                        if (GameManager.TRICK_TIMEOUT == 0) {
+                        if (BOTS[i]) {
                             return new Bot(names[i], i);
                         }
-//*/
-                        if (ALL_HUMANS || i == 0) {
-                            return new HumanPlayer(names[i], mainPanel);
-                        }
-                        return new Bot(names[i], i);
+                        return new HumanPlayer(names[i], mainPanel);
                     });
             if (gameThread == null) {
                 gameThread = new Thread(() -> {

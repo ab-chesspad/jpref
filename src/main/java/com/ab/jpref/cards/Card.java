@@ -25,10 +25,10 @@ import com.ab.jpref.config.Config;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Config.Queueable {
-    public static String ANSI_HEAD = "\u001B";
-    public static String ANSI_TAIL = "m";
-    public static String ANSI_RED = ANSI_HEAD + "[31" + ANSI_TAIL;
-    public static String ANSI_RESET = ANSI_HEAD + "[0" + ANSI_TAIL;
+    public static final String ANSI_HEAD = "\u001B";
+    public static final String ANSI_TAIL = "m";
+    public static final String ANSI_RED = ANSI_HEAD + "[31" + ANSI_TAIL;
+    public static final String ANSI_RESET = ANSI_HEAD + "[0" + ANSI_TAIL;
 
 //    public static String ANSI_RED = "\u001B[31m";
 //    public static String ANSI_RESET = "\u001B[0m";
@@ -100,7 +100,8 @@ public class Card implements Comparable<Card>, Config.Queueable {
             }
             throw new IllegalArgumentException(String.valueOf(unicode));
         }
-        public static int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
+        public static final int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
+        public static final int MASK = (Integer.highestOneBit(values().length - 1) << 1) - 1;
     }
 
     public static final int TOTAL_RANKS = Rank.values().length;
@@ -160,6 +161,7 @@ public class Card implements Comparable<Card>, Config.Queueable {
             return this.value - o.value;
         }
 
+        public static final int MASK = (Integer.highestOneBit(values().length - 1) << 1) - 1;
     }
 
     private final Suit suit;

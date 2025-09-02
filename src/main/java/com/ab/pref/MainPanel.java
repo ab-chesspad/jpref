@@ -111,6 +111,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 }
                 if (!isStage(GameManager.RoundStage.drop) &&
                         !isStage(GameManager.RoundStage.play) &&
+                        !isStage(GameManager.RoundStage.trickTaken) &&
                         !isStage(GameManager.RoundStage.newTrick)
                 ) {
                    return;
@@ -250,7 +251,8 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
                 Logger.printf(DEBUG_LOG, "paintComponent, %s unblock\n", q.toString());
                 // put it back, unblock GameManager
                 queue.put(q);
-            } catch (InterruptedException e) {
+                Main.mainFrame.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+    } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -292,6 +294,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
 
     @Override
     public void update() {
+        Main.mainFrame.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         mainPanelLayout.update();
 
         bidPanel.setVisible(false);
