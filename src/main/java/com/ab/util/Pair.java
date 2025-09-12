@@ -5,7 +5,7 @@ package com.ab.util;
 
 import java.util.Objects;
 
-public class Pair<F, S> {
+public class Pair<F, S> implements Cloneable {
     public F first;
     public S second;
 
@@ -49,6 +49,10 @@ public class Pair<F, S> {
     @Override
     public int hashCode() {
         return (first == null ? 0 : first.hashCode()) ^ (second == null ? 0 : second.hashCode());
+    }
+
+    public Pair<F, S> clone() {
+        return new Pair<>(first, second);
     }
 
     /**

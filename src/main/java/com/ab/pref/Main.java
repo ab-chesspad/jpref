@@ -27,11 +27,12 @@ import com.ab.util.Logger;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.io.PrintStream;
 
 public class Main {
     static final boolean DEBUG_LOG = false;
-    public static boolean RELEASE = true;
+    public static boolean RELEASE = false;
     public static boolean SKIP_BIDDING = false;     // true to jump to all-pass
     public static boolean SHOW_ALL = true;
     public static final boolean[] BOTS = new boolean[GameManager.NUMBER_OF_PLAYERS];
@@ -116,6 +117,8 @@ public class Main {
 
         if (args.length > 0) {
             testFileName = args[0];
+            File f = new File(testFileName);
+            Logger.println(f.getAbsolutePath());
         }
 
         GraphicsDevice mainGD = getGraphicsDevice();

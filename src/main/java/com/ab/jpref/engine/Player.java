@@ -42,6 +42,8 @@ public abstract class Player {
     public enum PlayerPoints {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
+    final GameManager gameManager = GameManager.getInstance();
+
     protected final String name;
     protected Config.Bid bid;
     protected CardSet myHand = new CardSet();
@@ -53,7 +55,7 @@ public abstract class Player {
     protected RoundResults roundResults;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
-    public abstract void declareRound(Config.Bid minBid, int elderHand);
+    public abstract PlayerBid declareRound(Config.Bid minBid, int elderHand);
     public abstract Card play(Trick trick);
 
     // number is being declared in subclasses, then it is more visible in debugger
@@ -267,5 +269,32 @@ public abstract class Player {
         public PrefExceptionRerun(String msg) {
             super(msg);
         }
+    }
+
+    public static class PlayerBid {
+        CardList drops = new CardList();
+        int value;
+
+        public PlayerBid() {}
+
+        public PlayerBid(Config.Bid bid) {
+            this.value = bid.getValue();
+        }
+
+        public PlayerBid(int value) {
+            this.value = value;
+        }
+
+        public Config.Bid toBid() {
+            if (value <= Config.Bid.BID_PASS.getValue()) {
+                return Config.Bid.BID_PASS;
+            }
+            return Config.Bid.fromValue(value);
+        }
+
+        public void setBid(Config.Bid bid) {
+            this.value = bid.getValue();
+        }
+
     }
 }

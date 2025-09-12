@@ -30,7 +30,7 @@
  */
 package com.ab.jpref.config;
 
-import com.ab.pref.Main;
+import com.ab.jpref.engine.GameManager;
 import com.ab.util.I18n;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -135,6 +135,10 @@ public class Config implements Serializable {
             return values()[this.ordinal() - 1];
         }
 
+        @Override
+        public String toString() {
+            return getName();
+        }
     }
 
     public static final int MAX_DISTANCE_TO_TOP = 7;
@@ -169,7 +173,7 @@ public class Config implements Serializable {
             parent = f.getAbsolutePath();
         } else {
             try {
-                parent = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
+                parent = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }

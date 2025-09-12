@@ -211,6 +211,28 @@ public class TestGameManager {
         }
     }
 
+    @Test
+//    @Ignore("later")
+    public void testGetMaxBid() throws IOException {
+        GameManager.DEBUG_LOG = false;  // suppress thread status logging
+        Util.getList("etc/tests/get-max-bid",
+            (res, tokens) -> {
+                CardSet cards = new CardSet();
+                int i;
+                for (i = 0; cards.size() < 10; ++i) {
+                    cards.add(Util.toCardList(tokens.get(i)));
+                }
+                int turn = Integer.parseInt(tokens.get(i++));
+                Config.Bid minBid = Config.Bid.fromName(tokens.get(i++));
+                Bot player = new Bot(cards);
+                String[] parts = res.split(" ");
+                Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
+//                Logger.printf("%s %d -> %s\n", player, turn, expectedBid.getName());
+                Config.Bid bid = player.getMaxBid(minBid, turn);
+                Assert.assertEquals(expectedBid, bid);
+            });
+    }
+
 /*
     @Test
     @Ignore("convert source files to usual notation")

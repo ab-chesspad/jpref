@@ -46,6 +46,25 @@
 
         <plugins>
             <plugin>
+                <artifactId>maven-invoker-plugin</artifactId>
+                <version>3.9.1</version>
+                <configuration>
+                    <debug>true</debug>
+                    <projectsDirectory>src/it</projectsDirectory>
+                    <preBuildHookScript>setup</preBuildHookScript>
+                    <postBuildHookScript>verify</postBuildHookScript>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven.compiler.version}</version>
@@ -96,7 +115,7 @@
                     <outjar>jpref.jar</outjar>
                     <options>
                         <option>-allowaccessmodification</option>
-                        <option>-keep public class com.ab.pref.MainDoc { *; }</option>
+                        <option>-keep public class com.ab.pref.com.ab.jpref.engine.MainDoc { *; }</option>
                         <option>-dontnote jdk.internal.**</option>
                         <option>-dontnote module-info</option>
                         <option>-keepclassmembers class * extends java.lang.Enum {

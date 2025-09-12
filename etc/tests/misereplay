@@ -1,14 +1,14 @@
 #misèreplay for user #0 ♠ ♣ ♦ ♥
 
+deal: ♠9 ♣8JQK ♦8Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♦9 ♠7  0 -> # random position 2, multiple holes
 
-deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34
-
-deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  1 -> 0 # не ловится ♣9 1
+deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK ♥QA  ♠KA 1 -> 0 # не ловится 0
 
 #predefined moves
 deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> 1 : ♣XK ♦J ♥K7 ♠QX ♠7 ♦AK97  # ловится xx
 
 #clean - slowest
+deal: ♠78XQ ♣8 ♦8 ♥7XQA  ♠9JK ♣7JA ♦9K ♥JK   ♠A ♣9XQK ♦7XJ ♥89  ♦QA 2 -> 0 # не ловится 1
 deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK ♥QA  ♠KA 1 -> 0 # не ловится 0
 #tree build duration: 3 sec, positions 42058
 deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  1 -> 0 # не ловится ♣9 1
@@ -24,7 +24,7 @@ deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣XJ ♦XA ♥XQKA  ♠9QKA ♣89Q ♦8Q
 
 # delayed drop
 deal: ♠789 ♣89 ♦789X ♥8  ♠Q ♣XQKA ♦JK ♥9JA  ♠XJKA ♣7J ♦QA ♥7Q  ♥XK 1 -> d 1 # Скуратов 1
-deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34
+deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34, incorrect drop
 #[♥QA8, ♥K7J, ♣AXJ, ♦87Q, ♥X ♠K ♣9, ♥9 ♠Q ♦X, ♠J ♣K ♠9, ♠X ♣Q ♠7, ♣7 ♦K ♣8]
 deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> d 1 # Ковалевская
 deal: ♠789X ♣89 ♦789 ♥8  ♠QA ♣XQKA ♦A ♥XJQ   ♠JK ♣7J ♦XJQK ♥79  ♥KA 1 -> d 1 # Ковалевская mod

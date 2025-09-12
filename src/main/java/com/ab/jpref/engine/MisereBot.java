@@ -25,6 +25,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
+import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 
@@ -39,8 +40,12 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
 
     static final int MAX_EVAL = 1000;   // in ‰
     // https://summoning.ru/games/miser.shtml
-    // probabilities to get a trick on misère:
+    // probabilities to get a trick in misère:
     private static final String[] misereTableSources = {
+/*
+        "78X 0",
+        "78J 0",
+*/
         "789A 86",
         "78XA 86",
         "78JA 86",
@@ -70,6 +75,7 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
         "9 627",
         "X 700",
     };
+
     static final Map<String, Integer> misereTable = new HashMap<>();
     static {
         for (String source : misereTableSources) {
@@ -103,17 +109,18 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
         this.number = 0;
         this.realPlayer = realPlayer;
         if (fictitiousBot != realPlayer) {
-            HandResults handResults = this.dropForMisere();
-            this.drop(handResults.dropped);
+            int initElderHand = (gameManager.initElderHand + realPlayer.number + NUMBER_OF_PLAYERS) % NUMBER_OF_PLAYERS;
+            PlayerBid playerBid = this.dropForMisere(initElderHand);
+            this.drop(playerBid.drops);
         }
     }
 
     // eval possible talon out of 22 remaining cards
     boolean evalMisere(int elderHand) {
         CardSet badSuit = null;
-        Iterator<CardSet> listIterator = myHand.listIterator();
-        while (listIterator.hasNext()) {
-            CardSet cardSet = listIterator.next();
+        Iterator<CardSet> suitIterator = myHand.suitIterator();
+        while (suitIterator.hasNext()) {
+            CardSet cardSet = suitIterator.next();
             Card.Suit suit = cardSet.first().getSuit();
             // todo: analyse elderHand
             boolean meStart = false;
@@ -165,6 +172,56 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
         return false;
     }
 
+    PlayerBid dropForMisere(int elderHand) {
+        PlayerBid playerBid = new PlayerBid(Config.Bid.BID_MISERE);
+        playerBid.value = Integer.MAX_VALUE;    // will be used as probabllity
+//*
+        if (debugDrop != null) {
+            playerBid.drops = debugDrop;
+            return playerBid;
+        }
+//*/
+//        List<HandResults> allHandResults = new ArrayList<>();
+        int _elderHand = elderHand;
+        CardSet myHand = gameManager.declarerHand.clone();
+//        CardSet myHand = gameManager.initialDeclarerHand.clone();
+
+    probes:
+        for (Card card0 : myHand) {
+            myHand.remove(card0);
+            for (Card card1 : myHand) {
+                if (card1.equals(card0)) {
+                    continue;
+                }
+                myHand.remove(card1);
+                Bot _bot = new Bot(myHand);
+                MisereBot bot = new MisereBot(_bot, _bot);
+                HandResults _handResults = bot.misereTricks(_elderHand);
+                Logger.printf(DEBUG_LOG, "probe drop %s, %s, %s, tricks %d, eval=%d\n",
+                    card0, card1, bot.toColorString(), _handResults.totalTricks, _handResults.expect);
+                _handResults.dropped.add(card0);
+                _handResults.dropped.add(card1);
+//*
+                //  ♠8KA ♣79Q ♦79J ♥79J: drop ♠A ♣Q -> 1 trick (994), ♠8KA -> 2 tricks (577)
+                if (playerBid.value > _handResults.expect) {
+                    playerBid.value = _handResults.expect;
+                    playerBid.drops.clear();
+                    playerBid.drops.add(card0);
+                    playerBid.drops.add(card1);
+                    if (playerBid.value == 0) {
+                        break probes;
+                    }
+                }
+/*/
+                allHandResults.add(_handResults);
+//*/
+                myHand.add(card1);
+            }
+            myHand.add(card0);
+        }
+        return playerBid;
+    }
+
     void getHoles(int declarerNum) {
         holes.clear();
         CardSet myHand = this.myHand.clone();
@@ -183,9 +240,9 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
                 rightHand.add(trick.topCard);
             }
         }
-        Iterator<CardSet> cardListIterator = myHand.listIterator();
-        while(cardListIterator.hasNext()) {
-            CardSet cardList = cardListIterator.next();
+        Iterator<CardSet> suitIterator = myHand.suitIterator();
+        while(suitIterator.hasNext()) {
+            CardSet cardList = suitIterator.next();
             Card.Suit suit = cardList.first().getSuit();
             CardSet.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
             if (listData.maxTheyStart > 0) {
@@ -232,50 +289,12 @@ public class MisereBot extends Bot implements TrickTree.Declarer {
         return declarerPlayMisere();
     }
 
-    HandResults dropForMisere() {
-        HandResults handResults = new HandResults();
-        handResults.expect = Integer.MAX_VALUE;
-        if (debugDrop != null) {
-            handResults.dropped = debugDrop;
-            return handResults;
-        }
-        // optimistically assume that there will be a way to pass turn to another palyer
-        int _elderHand = 2;
-        CardSet dropCandidates = gameManager.declarerHand.clone();
-        CardSet myHand = gameManager.initialDeclarerHand.clone();
-
-probes:
-        for (Card card0 : dropCandidates) {
-            dropCandidates.remove(card0);
-            for (Card card1 : dropCandidates) {
-                CardSet mySet = myHand.clone(); //??
-                mySet.remove(card0);
-                mySet.remove(card1);
-                Bot _bot = new Bot(mySet);
-                MisereBot bot = new MisereBot(_bot, _bot);
-                HandResults _handResults = bot.misereTricks(_elderHand);
-                Logger.printf(DEBUG_LOG, "probe drop %s, %s, %s, tricks %d, eval=%d\n",
-                    card0, card1, bot.toColorString(), _handResults.totalTricks, _handResults.expect);
-                if (handResults.expect > _handResults.expect) {
-                    handResults = _handResults;
-                    handResults.dropped.clear();
-                    handResults.dropped.add(card0);
-                    handResults.dropped.add(card1);
-                    if (handResults.totalTricks == 0) {
-                        break probes;
-                    }
-                }
-            }
-        }
-        return handResults;
-    }
-
     HandResults misereTricks(int elderHand) {
         HandResults handResults = new HandResults();
         handResults.expect = 0;
-        Iterator<CardSet> listIterator = myHand.listIterator();
-        while (listIterator.hasNext()) {
-            CardSet cardList = listIterator.next();
+        Iterator<CardSet> suitIterator = myHand.suitIterator();
+        while (suitIterator.hasNext()) {
+            CardSet cardList = suitIterator.next();
             Card.Suit suit = cardList.first().getSuit();
 //            boolean meStart = elderHand == number;
             boolean meStart = false;
@@ -295,7 +314,8 @@ probes:
     private Card declarerPlayMisere() {
         HandResults handResults = misereTricks(trick.getTurn());
 /* debug
-        if ("♠789 ♣8 ♥8 ".equals(this.toString()) && trick.number >= 4) {
+//        if ("♠789 ♣8 ♥8 ".equals(this.toString()) && trick.number >= 4) {
+        if (trick.number >= 3) {
             DEBUG_LOG = DEBUG_LOG;
         }
 //*/
@@ -329,21 +349,34 @@ probes:
             Card.Suit suit = topCard.getSuit();
             CardSet cardList = myHand.list(suit);
             Card theirMin = theirMin(suit);
+            // todo: fix this mess
             if (cardList.size() == 1) {
                 return cardList.first();
             } else if (cardList.isEmpty()) {
                 return declarerDrop();
             } else if (theirMin == null) {
                 return cardList.first();    // the last card might be in trick
+            } else if (trick.trickCards.size() == 1 &&
+                    (leftHand.list(suit).size() == 1 || rightHand.list(suit).isEmpty())) {
+                int index = cardList.getMaxLessThan(leftHand.list(suit).first());
+                int index1 = cardList.getMaxLessThan(topCard);
+                if (index < index1) {
+                    index = index1;
+                }
+                if (index >= 0) {
+                    return cardList.get(index);
+                } else {
+                    return cardList.anyCard(suit);
+                }
             } else {
                 int index = cardList.getMaxLessThan(topCard);
                 Card myMax = cardList.last();
                 boolean handsOk = myMax.compareInTrick(rightHand.list(suit).first()) > 0 &&
                     myMax.compareInTrick(leftHand.list(suit).first()) > 0 &&
-                        leftHand.list(suit).size() != 1;
+                    (leftHand.list(suit).size() != 1 || leftHand.first().compareInTrick(myHand.get(1)) > 0);
                 if (index == 0) {
                     if (trick.trickCards.size() == 1 && handsOk ||
-                        trick.trickCards.size() == 2 && theirMin.compareInTrick(cardList.get(1)) < 0) {
+                            trick.trickCards.size() == 2 && theirMin.compareInTrick(cardList.get(1)) < 0) {
                         return cardList.get(1);     // need to keep min card
                     }
                 }
@@ -437,8 +470,9 @@ probes:
             ++rightSize;
         }
         if (misereBot.myHand.size() > rightSize) {
-            HandResults handResults = misereBot.dropForMisere();
-            misereBot.drop(handResults.dropped);
+            int initElderHand = (gameManager.initElderHand + realPlayer.number + NUMBER_OF_PLAYERS) % NUMBER_OF_PLAYERS;
+            PlayerBid playerBid = misereBot.dropForMisere(initElderHand);
+            misereBot.drop(playerBid.drops);
         }
 
 /*
@@ -479,8 +513,9 @@ probes:
     public CardSet refineDrop(CardSet hand) {
         MisereBot _misereBot = new MisereBot();
         _misereBot.myHand = hand.clone();
-        Bot.HandResults handResults = _misereBot.dropForMisere();
-        _misereBot.myHand.remove(handResults.dropped);
+        int initElderHand = (gameManager.initElderHand + realPlayer.number + NUMBER_OF_PLAYERS) % NUMBER_OF_PLAYERS;
+        PlayerBid playerBid = _misereBot.dropForMisere(initElderHand);
+        _misereBot.myHand.remove(playerBid.drops);
         return _misereBot.myHand;
     }
 

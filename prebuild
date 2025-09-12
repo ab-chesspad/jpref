@@ -1,0 +1,5 @@
+#!/bin/bash
+pushd etc/jdoc
+mvn package
+java -jar target/jdoc.jar
+popd

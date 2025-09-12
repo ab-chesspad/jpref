@@ -207,9 +207,9 @@ class MainPanelLayout {
                 handVisualData[i].player = players.get(i);
                 handVisualData[i].allCards.clear();
                 handVisualData[i].totalSuits = 0;
-                Iterator<CardSet> listIterator = handVisualData[i].player.getMyHand().listIterator();
-                while (listIterator.hasNext()) {
-                    CardSet cardList = listIterator.next();
+                Iterator<CardSet> suitIterator = handVisualData[i].player.getMyHand().suitIterator();
+                while (suitIterator.hasNext()) {
+                    CardSet cardList = suitIterator.next();
                     ++handVisualData[i].totalSuits;
                     handVisualData[i].allCards.addAll(cardList.toCardList());
                 }

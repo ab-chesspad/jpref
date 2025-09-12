@@ -1,5 +1,7 @@
 #all-pass play, commented acceptable outcomes
 
+deal: ♠7A ♣89A ♦89 ♥8XJ ♠8XJ ♣7XJQ ♦7Q ♥K ♠9QK ♣K ♦XJ ♥79QA ♦KA  0
+
 #deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♣X ♠X  0 -> 6, 0, 4  # 13
 deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> 6, 0, 4  # 13
 

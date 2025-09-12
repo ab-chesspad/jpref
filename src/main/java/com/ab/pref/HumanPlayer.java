@@ -117,11 +117,13 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public void declareRound(Config.Bid minBid, int elderHand) {
+    public PlayerBid declareRound(Config.Bid minBid, int elderHand) {
+        PlayerBid playerBid = new PlayerBid();
         Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
-        bid = (Config.Bid)takeFromQueue();
-        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
+        playerBid.setBid((Config.Bid)takeFromQueue());
+        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), playerBid.toBid().getName());
+        return playerBid;
     }
 
     @Override

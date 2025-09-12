@@ -234,9 +234,7 @@ public class TrickTree {
             int num = this.getTurn();
             if (num == 0) {
 /*
-                if (this.getPath().toString().startsWith("[♥QA8, ♥K7J, ♦87Q, ♥X ♠K ♣X, ♥9 ♠Q ♣9, ♠J ♦K ♠9")
-                        && this.toString().startsWith("♠X")
-                        ) {
+                if (getPath().toString().startsWith("[♣89A, ♣X")) {
                     Logger.println(CardSet.toString(hands));
                 }
 //*/
@@ -315,6 +313,11 @@ public class TrickTree {
                         alert(card0);
                     }
                 }
+/*
+                if (trickNode.getPath().toString().startsWith("[♦J8K, ♦9X ♣8, ♦7 ♥AK")) {
+                    Logger.println(CardSet.toString(hands));
+                }
+//*/
                 CardSet list1 = trickNode.getList();
                 Iterator<Card> it1 = list1.trickTreeIterator();
                 while (it1.hasNext()) {
@@ -326,11 +329,6 @@ public class TrickTree {
                             alert(card1);
                         }
                     }
-/*
-                    if (trickNode.getPath().toString().startsWith("[♥JK7, ♥Q ♣9 ♥9")) {
-                        Logger.println(CardSet.toString(hands));
-                    }
-*/
                     CardSet list2 = trickNode.getList();
                     Iterator<Card> it2 = list2.trickTreeIterator();
                     while (it2.hasNext()) {

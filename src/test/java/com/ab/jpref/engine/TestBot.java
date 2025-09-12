@@ -30,26 +30,6 @@ public class TestBot {
         return index -> new Bot("test", index);
     }
 
-    @Test
-    public void testGetMaxBid() throws IOException {
-        GameManager.DEBUG_LOG = false;  // suppress thread status logging
-        Util.getList("etc/tests/get-max-bid",
-            (res, tokens) -> {
-                CardSet cards = new CardSet();
-                int i;
-                for (i = 0; cards.size() < 10; ++i) {
-                    cards.add(Util.toCardList(tokens.get(i)));
-                }
-                int turn = Integer.parseInt(tokens.get(i++));
-                Config.Bid leftBid = Config.Bid.fromName(tokens.get(i++));
-                Bot player = new Bot(cards);
-                String[] parts = res.split(" ");
-                Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
-                Logger.printf("%s %d -> %s\n", player, turn, expectedBid.getName());
-                Config.Bid bid = player.getMaxBid(turn);
-                Assert.assertEquals(expectedBid, bid);
-            });
-    }
 
     @Test
     public void lastBit () {

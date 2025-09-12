@@ -1,13 +1,40 @@
-#declare-game
-#♠89X ♣789X ♦79 ♥7 ♠A ♥A 1 -> pass, ♠A, ♥A
+#declare-game hand, turn -> drop0, drop1, max bid
+# 10 cards
 #♠ ♣ ♦ ♥
-♠J ♣78KA ♦XQ ♥89JKA 1 -> 7♥, ♦X, ♠j
-♠9 ♣89JQ ♦78XA ♥7XQ 1 -> pass, ♥7, ♠9
-♠78XQKA ♣8X ♦9XJK 1 -> 8♠, ♣X, ♣8
-♠78K ♣QA ♦7X ♥89QKA 2 -> 6♥, ♦7, ♦X
 
-♠7A ♣789XA ♦79J ♥79 1 -> misere, ♠A, ♥9 # clean
-♠7A ♣789X ♦79J ♥79A 1 -> misere, ♠A, ♥A # clean
-♠QA ♣789X ♦79J ♥79 ♣A 1 -> misere, ♠A, ♣A # singleton
-♠Q ♣789X ♦79J ♥79 ♠A ♣A 2 -> pass, ♠A, ♣A # singleton on 2nd hand
+♠78K ♣QA ♦7X ♥89QKA 2 -> ♦7, ♦X, 6♥
+
+#37.ТКххх  ТКВ  Тх  хх	любая	 	2 червы	7 пик
+♠AKX97 ♣AKJ ♦AQ ♥9X 0 6♠ -> ♥X, ♥9, 7♠
+#38.ТКххх  ТКх  Тх  хх	любая	 	2 червы	7 пик
+♠AKX97 ♣AK9 ♦AQ ♥9X 0 6♠ -> ♥X, ♥9, 7♠
+
+
+# by Utyatsky
+#41.Тхххх  ТКВ  ТК  хх	1  2, 3	 	2 червы	8 пик  7 пик
+♠AQX97 ♣AKJ ♦AK ♥9X 0 6♠ -> ♥X, ♥9, 8♠
+♠AQX97 ♣AKJ ♦AK ♥9X 1 6♠ -> ♥X, ♥9, 7♠
+
+#Тхххх  ТКx  ТК  хх	1  2, 3	 	2 червы	8 пик  7 пик
+♠AJX97 ♣AK9 ♦AK ♥9X 0 6♠ -> ♥X, ♥9, 8♠
+♠AJX97 ♣AK9 ♦AK ♥9X 1 6♠ -> ♥X, ♥9, 7♠
+
+#26.ТДВхх  ТВххх  хх	любая	-  +	2 бубны	7 треф  7 треф
+♠AQJ97 ♣AJX87 ♦89 1 6♠ -> ♦8, ♦9, 7♣
+
+♠AJX97 ♣AK87 ♦AX ♥A 1 6♠ -> ♦X, ♠7, 8♣
+♠AJX97 ♣AK87 ♦AX ♥9 1 6♠ -> ♥9, ♦X, 7♠
+
+♠8JA ♣AX ♦AK987 ♥A9 1 -> ♣X, ♥9, 7♦
+#♠78QKA ♦7X ♥89QKA 7♣ 2 -> ♦7, ♦X, 9♥
+♠78QKA ♦7X ♥89QKA 7♣ 2 -> ♦7, ♦X, 9♠
+♠78K ♣QA ♦7X ♥89QKA 2 -> ♦7, ♦X, 6♥
+♠J ♣78KA ♦XQ ♥89JKA 1 -> ♦X, ♠J, 7♥
+♠9 ♣89JQ ♦78XA ♥7XQ 1 -> ♥7, ♠9, Pass
+♠78XQKA ♣8X ♦9XJK 1 -> ♣X, ♣8, 8♠
+
+#♠7A ♣789XA ♦79J ♥79 1 -> ♠A, ♥9, Misère # clean
+#♠7A ♣789X ♦79J ♥79A 1 -> ♠A, ♥A, Misère # clean
+#♠QA ♣789X ♦79J ♥79 ♣A 1 -> ♠A, ♣A, Misère # singleton
+#♠Q ♣789X ♦79J ♥79 ♠A ♣A 2 -> ♠A, ♣A, Pass # singleton on 2nd hand
 

@@ -824,11 +824,11 @@ mainLoop:
         return new String(sb);
     }
 
-    public Iterator<CardSet> listIterator() {
-        return listIterator(null);
+    public Iterator<CardSet> suitIterator() {
+        return suitIterator(null);
     }
 
-    public Iterator<CardSet> listIterator(final Card.Suit exclude) {
+    public Iterator<CardSet> suitIterator(final Card.Suit exclude) {
         return new Iterator<CardSet>() {
             int index = nextSuitNum(-1);
 
@@ -889,6 +889,37 @@ mainLoop:
                 bitmap = bitmap & (bitmap - 1);
                 if (index < cards.length) {
                     return cards[index];
+                }
+                return null;
+            }
+
+            @Override
+            public void remove() {
+                int mask = 1 << index;
+                CardSet.this.bitmap &= ~ mask;
+            }
+        };
+    }
+
+    public Iterator<Card> reverseIterator() {
+        return new Iterator<Card>() {
+            int bitmap = CardSet.this.bitmap;
+            int index = TOTAL_BITS - 1;
+
+            @Override
+            public boolean hasNext() {
+                return bitmap != 0;
+            }
+
+            @Override
+            public Card next() {
+                while ((bitmap & MSB) == 0) {
+                    bitmap <<= 1;
+                    --index;
+                }
+                bitmap <<= 1;
+                if (index >= 0) {
+                    return cards[index--];
                 }
                 return null;
             }

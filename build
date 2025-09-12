@@ -1,0 +1,4 @@
+#!/bin/bash
+./prebuild
+
+mvn $1 package

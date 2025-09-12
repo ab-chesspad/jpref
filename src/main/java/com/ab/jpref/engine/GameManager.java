@@ -90,6 +90,7 @@ public class GameManager {
     Config.Bid minBid = Config.Bid.BID_6S;
     Player declarer;
     CardSet declarerHand, initialDeclarerHand;   // with talon
+    int initElderHand;
     int elderHand;
     CardSet discarded;
 
@@ -226,6 +227,7 @@ public class GameManager {
             deal(deck);
             declarer = null;
 
+            initElderHand = elderHand;
             if (testFileName != null && testFileName.contains("misere") && declarer instanceof Bot) {
                 declarer = players[DECLARER_NUM];
 //                    trick.startedBy = elderHand;
