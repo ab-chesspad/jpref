@@ -17,7 +17,7 @@
  *
  * Created: 1/25/2025
  */
-package com.ab.util;
+package com.ab.jpref.config;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

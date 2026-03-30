@@ -23,6 +23,7 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
+import com.ab.util.BidData;
 
 import java.util.*;
 

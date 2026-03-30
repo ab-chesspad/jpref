@@ -25,6 +25,7 @@ import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 //import com.ab.pref.HumanPlayer; // no dependencies on com.ab.pref!
 import com.ab.util.Logger;
+import com.ab.util.ScoreCalculator;
 import com.ab.util.Util;
 
 import java.io.File;

@@ -31,7 +31,6 @@
 package com.ab.jpref.config;
 
 import com.ab.jpref.engine.GameManager;
-import com.ab.util.I18n;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 

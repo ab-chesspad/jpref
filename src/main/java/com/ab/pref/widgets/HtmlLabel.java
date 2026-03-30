@@ -21,7 +21,7 @@
  *
  */
 
-package com.ab.pref;
+package com.ab.pref.widgets;
 
 import javax.swing.*;
 import java.awt.*;

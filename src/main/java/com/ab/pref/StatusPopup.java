@@ -22,7 +22,11 @@ package com.ab.pref;
 
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
-import com.ab.util.I18n;
+import com.ab.jpref.config.I18n;
+import com.ab.pref.config.Metrics;
+import com.ab.pref.config.PConfig;
+import com.ab.pref.widgets.ButtonPanel;
+import com.ab.pref.widgets.PLabel;
 import com.ab.util.Logger;
 import com.ab.util.Point;
 

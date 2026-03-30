@@ -19,7 +19,8 @@
  */
 package com.ab.pref;
 
-import com.ab.util.I18n;
+import com.ab.jpref.config.I18n;
+import com.ab.pref.config.Metrics;
 import com.ab.util.Logger;
 
 import javax.swing.*;

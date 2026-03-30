@@ -23,6 +23,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
+import com.ab.util.BidData;
 
 public class ForTricksBot extends Bot implements TrickTree.Declarer {
     final GameManager gameManager = GameManager.getInstance();

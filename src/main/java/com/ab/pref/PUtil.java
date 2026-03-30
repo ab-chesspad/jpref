@@ -19,6 +19,8 @@
  */
 package com.ab.pref;
 
+import com.ab.pref.config.PConfig;
+
 import javax.imageio.ImageIO;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
@@ -29,7 +31,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class Util {
+public class PUtil {
     public static boolean DEBUG = true;
 
     public static BufferedImage loadImage(String path) {

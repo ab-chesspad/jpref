@@ -48,7 +48,7 @@ public class TestBot {
     public void testDeclareGame() throws IOException {
 //        File f = new File("x");
 //        System.out.printf("%s\n", f.getAbsolutePath());
-        Util.getList("etc/tests/declare-game",
+        PUtil.getList("etc/tests/declare-game",
                     (res, tokens) -> {
             String[] parts = res.split(", ");
             Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
@@ -59,7 +59,7 @@ public class TestBot {
             CardList cards = new CardList();
             int i;
             for (i = 0; cards.size() < 12; ++i) {   // including talon
-                cards.addAll(Util.toCardList(tokens.get(i)));
+                cards.addAll(PUtil.toCardList(tokens.get(i)));
             }
             int turn = Integer.parseInt(tokens.get(i++));
             Logger.printf("%s %d -> %s\n", cards.toString(), turn, res);
@@ -76,12 +76,12 @@ public class TestBot {
     @Test
     public void testdrop4Misere() throws IOException {
         GameManager.DEBUG = false;  // suppress thread status logging
-        Util.getList("etc/tests/declare-misere",
+        PUtil.getList("etc/tests/declare-misere",
             (res, tokens) -> {
                 CardList cards = new CardList();
                 int i;
                 for (i = 0; cards.size() < 10; ++i) {
-                    cards.addAll(Util.toCardList(tokens.get(i)));
+                    cards.addAll(PUtil.toCardList(tokens.get(i)));
                 }
                 int elderHand = Integer.parseInt(tokens.get(i++));
                 Bot bot = new Bot("bid", cards);
@@ -89,7 +89,7 @@ public class TestBot {
                 boolean misereOK = bot.evalMisere(elderHand == 0);
                 Assert.assertTrue(String.format("no misere %s %b", botHand, elderHand), misereOK);
                 for (; cards.size() < 12; ++i) {
-                    cards.addAll(Util.toCardList(tokens.get(i)));
+                    cards.addAll(PUtil.toCardList(tokens.get(i)));
                 }
                 bot = new Bot("declare", cards);
                 Trick trick = new Trick();
@@ -99,7 +99,7 @@ public class TestBot {
                     bot.toString(), elderHand, handResults.dropped.toString(), handResults.eval);
                 if (handResults.eval > 0) {
                     String[] parts = res.split(" #");
-                    Set<Card> expected = new HashSet<>(Util.toCardList(parts[0]));
+                    Set<Card> expected = new HashSet<>(PUtil.toCardList(parts[0]));
                     for (Card card : handResults.dropped) {
                         Assert.assertTrue(String.format("%s %b -> dropped %s", botHand, elderHand, card),
                             expected.contains(card));

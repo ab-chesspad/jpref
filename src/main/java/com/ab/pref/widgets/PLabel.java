@@ -17,7 +17,9 @@
  *
  * Created: 2/11/2025
  */
-package com.ab.pref;
+package com.ab.pref.widgets;
+
+import com.ab.pref.config.Metrics;
 
 import javax.swing.*;
 import java.awt.*;

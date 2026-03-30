@@ -1,4 +1,4 @@
-package com.ab.jpref.engine;
+package com.ab.util;
 /*  This file is part of JPref.
  *
  *     This program is free software: you can redistribute it and/or modify
@@ -22,8 +22,8 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.util.Logger;
-import com.ab.util.Pair;
+import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.engine.Player;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

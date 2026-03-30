@@ -17,9 +17,10 @@
  *
  * Created: 1/12/2025
  */
-package com.ab.pref;
+package com.ab.pref.config;
 
 import com.ab.jpref.config.Config;
+import com.ab.pref.Main;
 
 import java.awt.*;
 

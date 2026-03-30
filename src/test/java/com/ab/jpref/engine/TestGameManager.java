@@ -125,14 +125,14 @@ public class TestGameManager {
     @Test
     public void testBidding() throws IOException {
         final String testFileName = "etc/tests/fixedplay";
-        Util.getList(testFileName, (res, tokens) -> {
+        PUtil.getList(testFileName, (res, tokens) -> {
             int turn = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
             CardList deck = new CardList();
             for (String token : tokens) {
                 if (token.endsWith(":")) {
                     continue;
                 }
-                deck.addAll(Util.toCardList(token));
+                deck.addAll(PUtil.toCardList(token));
             }
 //                Logger.println(deck.toString());
             gameManager.deal(deck);
@@ -264,7 +264,7 @@ public class TestGameManager {
             final int[] elderHand = {-1};
             List<CardList> cardLists = new LinkedList<>();
             cardLists.add(new CardList());
-            Util.getList(testFileName, charMap,
+            PUtil.getList(testFileName, charMap,
                 (res, tokens) -> {
                     for (String token : tokens) {
                         if (token.length() == 1) {
@@ -285,7 +285,7 @@ public class TestGameManager {
                             cardList = new CardList();
                             cardLists.add(cardList);
                         }
-                        cardList.addAll(Util.toCardList(token));
+                        cardList.addAll(PUtil.toCardList(token));
                     }
 
 //                int elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based

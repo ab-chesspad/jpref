@@ -24,7 +24,11 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
-import com.ab.util.I18n;
+import com.ab.jpref.config.I18n;
+import com.ab.pref.config.Metrics;
+import com.ab.pref.widgets.ButtonPanel;
+import com.ab.pref.widgets.HtmlLabel;
+import com.ab.pref.widgets.PButton;
 import com.ab.util.Logger;
 
 import javax.swing.*;
@@ -97,7 +101,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
             public void mouseDragged(MouseEvent e) {
                 // for the future, play by dragging
                 super.mouseDragged(e);
-//                System.out.printf("%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+//                System.out.printf("%s -> %s\n", com.ab.util.PUtil.currMethodName(), e);
             }
 
         });
@@ -410,7 +414,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver, Huma
     }
 
     private void submitLog() {
-        String res = Util.submitLog(Logger.getLogFileName());
+        String res = PUtil.submitLog(Logger.getLogFileName());
         String text = String.format(I18n.m("The file %s has been uploaded"), res);
         mainPanelLayout.showMessage(text);
     }

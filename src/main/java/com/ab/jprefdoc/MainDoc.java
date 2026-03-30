@@ -1,6 +1,6 @@
-package com.ab.jpref.engine;
+package com.ab.jprefdoc;
 
-//import com.ab.util.com.ab.jpref.engine.BidData;
+//import com.ab.util.com.ab.util.BidData;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 

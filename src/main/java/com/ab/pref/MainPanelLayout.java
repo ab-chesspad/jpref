@@ -26,7 +26,9 @@ import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Trick;
-import com.ab.util.I18n;
+import com.ab.jpref.config.I18n;
+import com.ab.pref.config.Metrics;
+import com.ab.pref.config.PConfig;
 import com.ab.util.Logger;
 
 import javax.swing.*;
@@ -74,7 +76,7 @@ class MainPanelLayout {
     }
 
     private BufferedImage loadImageCrop(String name) {
-        BufferedImage image = Util.loadImage("cards/" + name);
+        BufferedImage image = PUtil.loadImage("cards/" + name);
         int w = image.getWidth();
         int h = image.getHeight();
         image = image.getSubimage(5, deckAttributes.yMargin, w - 10, h - 2 * deckAttributes.yMargin);
@@ -142,7 +144,7 @@ class MainPanelLayout {
             metrics.recalculateSizes();
             int newDeckWidth = (int) (metrics.cardW * 13);
             int newDeckHeight = (int) (metrics.cardH * deckAttributes.deckRows);
-            scaledDeckImage = Util.scale(sourceDeckImage, newDeckWidth, newDeckHeight);
+            scaledDeckImage = PUtil.scale(sourceDeckImage, newDeckWidth, newDeckHeight);
             Logger.printf(DEBUG_LOG, "scaled Deck %dx%d\n",
                     scaledDeckImage.getWidth(), scaledDeckImage.getHeight());
 
@@ -161,7 +163,7 @@ class MainPanelLayout {
                 }
             }
 
-            scaledBackImage = Util.scale(sourceBackImage, (int) metrics.cardW, (int) metrics.cardH);
+            scaledBackImage = PUtil.scale(sourceBackImage, (int) metrics.cardW, (int) metrics.cardH);
 
             if (metrics.horizontalLayout) {
                 handVisualData[0] = new HandVisualData(metrics.xVisible, 0, MainPanel.Alignment.South);

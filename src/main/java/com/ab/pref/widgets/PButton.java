@@ -18,9 +18,12 @@
  * Created: 2/16/2025
  */
 
-package com.ab.pref;
+package com.ab.pref.widgets;
 
-import com.ab.util.I18n;
+import com.ab.jpref.config.I18n;
+import com.ab.pref.MainPanel;
+import com.ab.pref.PUtil;
+import com.ab.pref.config.Metrics;
 
 import javax.swing.*;
 import java.awt.*;
@@ -47,7 +50,7 @@ public class PButton extends JButton {
                 command.buttonListener.onClick(command.command);
             }
         });
-        image = Util.loadImage(String.format("buttons/%s.png", command.command.toString()));
+        image = PUtil.loadImage(String.format("buttons/%s.png", command.command.toString()));
         if (image == null) {
             this.setText(I18n.m(command.command.name));
         }
@@ -65,7 +68,7 @@ public class PButton extends JButton {
             this.width = width;
             this.height = height;
             if (image != null) {
-                BufferedImage scaledImage = Util.scale(image, width, height);
+                BufferedImage scaledImage = PUtil.scale(image, width, height);
                 this.setIcon(new ImageIcon(scaledImage));
             }
             Font f = this.getFont();

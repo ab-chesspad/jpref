@@ -1,9 +1,7 @@
-package com.ab.jpref.engine;
+package com.ab.jprefdoc;
 
 import java.io.*;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /*
 Утяцкий проделал большую работу, но представил ее в совершенно ужасном виде.
@@ -243,7 +241,7 @@ public class Utyatsky {
                         int bid1 = Integer.parseInt(bid);
                         BidData.OneBid oneBid = new BidData.OneBid(bid1, drop1, drop2);
 //                        int pack = oneBid.pack();
-//                        com.ab.jpref.engine.BidData.OneBid unpacked = new com.ab.jpref.engine.BidData.OneBid(pack);
+//                        com.ab.util.BidData.OneBid unpacked = new com.ab.util.BidData.OneBid(pack);
 
                         BidData bidData = map.get(key);
                         if (bidData == null) {

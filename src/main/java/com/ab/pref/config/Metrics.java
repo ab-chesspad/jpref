@@ -17,8 +17,9 @@
  *
  * Created: 2/9/2025
  */
-package com.ab.pref;
+package com.ab.pref.config;
 
+import com.ab.pref.Main;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 
