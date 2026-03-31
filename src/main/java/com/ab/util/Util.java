@@ -28,7 +28,12 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Random;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class Util {
     public static final String PROJECT_NAME = Config.PROJECT_NAME;
@@ -122,6 +127,24 @@ public class Util {
         return file;
     }
 
+    public long buildDate() {
+        try {
+            File file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            if (file.getAbsolutePath().endsWith(".jar")) {
+                try {
+                    ZipInputStream zis = new ZipInputStream(new FileInputStream(file.getAbsolutePath()));
+                    ZipEntry entry = zis.getNextEntry();
+                    return entry.getTime();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return file.lastModified();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
             Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
@@ -138,9 +161,7 @@ public class Util {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty() || line.startsWith("#")
-//                    || !line.startsWith(DEAL_MARK)
-                ) {
+                if (line.isEmpty() || line.startsWith("#")) {
                     continue;
                 }
                 Logger.println(line);

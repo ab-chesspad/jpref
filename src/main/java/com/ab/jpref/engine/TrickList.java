@@ -75,7 +75,7 @@ public class TrickList {
     }
 
     public int getEstimate() {
-        return bestNodes[0].getFutureTricks();
+        return bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
     }
 
     public Card getCard(Trick trick, CardSet... hands) {
@@ -399,15 +399,14 @@ String test = null;
                 sep = ", ";
                 next = next.next;
             }
-
+            bestNodes[0].setFutureTricks(this.getFutureTricks() + targetBot.getTricks());
             long dur = System.currentTimeMillis() - start;
             printf("list build duration: %d sec, positions %d, similar %,d\n",
                 (dur + 500) / 1000, positions.size(), similar);
             if (PRINT_BEST_PATH) {
                 sb.append("]");
                 println(sb.toString());
-                printf("declarer: %d tricks\n",
-                    targetBot.getTricks() + this.getPastTricks() + this.getFutureTricks());
+                printf("declarer: %d tricks\n", getEstimate());
             }
 
             positions.clear();

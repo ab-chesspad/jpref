@@ -1,5 +1,8 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+[♠AX7, ♠9JQ, ♠K ♥K7, ♣8K7, ♣AXJ, ♣9 ♥J ♣Q, ♦X8 ♥8, ♥AQ ♦9, ♥9 ♦QJ, ♥X ♦KA]
+deal: ♠8J ♣9KA ♦7 ♥789A  ♠7QK ♣7X ♦XQK ♥JQ  ♠9A ♣8JQ ♦89JA ♥K  ♥X ♠X  2 -> 6♥ 6
+
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится
 
 deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится

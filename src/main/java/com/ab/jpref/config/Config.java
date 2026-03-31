@@ -99,7 +99,7 @@ public class Config implements Serializable {
 
     static final Util util = Util.getInstance();
     public static final String VERSION = "0.0.5, built " +
-        new SimpleDateFormat("yyyy-MM-dd").format(util.getDataFile().lastModified());
+        new SimpleDateFormat("yyyy-MM-dd").format(util.buildDate());
 
     protected static Config instance;
 

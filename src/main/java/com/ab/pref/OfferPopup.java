@@ -54,7 +54,6 @@ public class OfferPopup extends JDialog {
 
     final JList<String> jList;
 
-
     public OfferPopup(Host host) {
         super(host.mainFrame(), false);
         this.host = host;
@@ -72,9 +71,6 @@ public class OfferPopup extends JDialog {
                 if (Bot.targetBot instanceof MisereBot) {
                     ((MisereBot)Bot.targetBot).getHoles(gameManager.declarerNumber);
                     tricksEstimate -= ((MisereBot)Bot.targetBot).holes.size();
-//                    if (((MisereBot)Bot.targetBot).holes.isEmpty()) {
-//                        tricksEstimate = 0;
-//                    }
                 }
             } else {
                 tricksEstimate = 0;
@@ -112,7 +108,7 @@ public class OfferPopup extends JDialog {
             if (ROUND_SIZE - theirTricks < tricksEstimate) {
                 maxTricks = ROUND_SIZE - theirTricks;
             } else {
-                maxTricks = tricksEstimate + player0.getTricks();
+                maxTricks = tricksEstimate;
             }
         }
 

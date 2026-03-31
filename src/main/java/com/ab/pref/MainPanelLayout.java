@@ -439,7 +439,7 @@ class MainPanelLayout {
                 try {
                     im = scaledBackImage.getSubimage(0, 0, (int) metrics.cardW, (int) metrics.cardH);
                 } catch (RasterFormatException e) {
-                    System.out.printf("scaledBackImage %dx%d, subimage %dx%d\n",
+                    Logger.printf(DEBUG_LOG, "scaledBackImage %dx%d, subimage %dx%d\n",
                         scaledBackImage.getWidth(), scaledDeckImage.getHeight(), (int) metrics.cardW, (int) metrics.cardH);
                     continue;   // skip it, happens when window is expanding
                 }

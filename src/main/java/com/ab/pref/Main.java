@@ -43,7 +43,7 @@ import java.util.GregorianCalendar;
 public class Main implements Logger.LogHolder, MainPanel.Host {
     static final boolean release = true;
     static boolean DEBUG_LOG = true;
-    public static boolean SHOW_ALL = false;
+    public static boolean SHOW_ALL = true;
     public static final String LOG_EXT = ".log";
     public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
     public static final int NOP = Config.NOP;   // Number of players
