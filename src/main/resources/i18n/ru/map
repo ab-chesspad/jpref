@@ -1,32 +1,46 @@
-Game Type->Вид игры
-Miami->Сочи
-Leningrad->Ленинград
-Rostov->Ростов
-Pass -> пас
-Whist -> вист
-Half->свой
-Misère -> мизер
-Drop->снос
-Without 3->без трех
+Accept->Принять
 All-pass->распас
-Player's Names->Имена игроков
-Ann, Bob, Cat->Аня, Боря, Витя
-Pool Length->Размер пули
-Animation Time->Время анимации
-Table Color->Цвет стола
 After Round Timeout->Задержка после раунда
+Animation Time->Время анимации
+Cancel->Забыть
 Comments->Комментарии
-Record Notes->Запомнить
-Your notes->Ваши замечания
-Not implemented yet->Пока не работает
-New Game->Новая игра
-Scores->Пуля
-Replay->Переиграть
-Submit Log->Послать лог
-The file %s has been uploaded->Файл %s зарегистрирован
 Continue->Продолжить
-Replay->Переиграть
-New game->Новая игра
-What would you like to do?->Что вы хотите делать?
-Please select->Выберите
+Delete logs after, days -> Удалять логи старше, дней
+Drop->снос
+Game Type->Вид игры
+Gentleman->Джентльменский
+Language->Язык
 Last Trick->Последняя взятка
+Lying->Лежа
+Miami->Сочи
+Misère -> мизер
+New Game->Новая игра
+Not implemented yet->Пока не работает
+OK->Сохранить
+Pass -> пас
+Pause between moves, msec -> Пауза между ходами, мсек
+Pause between tricks, msec -> Пауза между взятками, мсек
+Please select->Выберите
+Peter->Питер
+Player's Names->Имена игроков
+Pool Size->Пуля
+Record Notes->Запомнить
+Redneck->Жлобский
+Replay->Переиграть
+Rostov->Ростов
+Scores->Пуля
+Settings->Настройки
+Standing->Стоя
+Submit Log->Послать лог
+Table Color->Цвет стола
+The file %s has been uploaded->Файл %s послан
+What would you like to do?->Что вы хотите делать?
+Whist -> вист
+Whist Type->Вид виста
+Without 3->без трех
+Without Three->без трех
+Your notes->Ваши замечания
+Your Offer->Ваше предложение
+Your Tricks->Ваших взяток
+½ Whist->½ виста
+

@@ -13,13 +13,15 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 8/11/2024
  */
 package com.ab.util;
 
-public class Couple<T> {
+import java.io.Serializable;
+
+public class Couple<T> implements Cloneable, Serializable {
     public T first;
     public T second;
 
@@ -29,4 +31,15 @@ public class Couple<T> {
         this.first = first;
         this.second = second;
     }
+
+    public Couple<T> clone() {
+        return new Couple<>(first, second);
+    }
+
+    // possibly use for config
+    @Override
+    public String toString() {
+        return first.toString();
+    }
+
 }

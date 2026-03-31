@@ -13,9 +13,9 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
- * Created: 1/25/2025
+ * Created: 1/2025/2025
  */
 package com.ab.jpref.engine;
 
@@ -28,8 +28,8 @@ import com.ab.util.Logger;
 import java.util.*;
 
 public abstract class Player {
-    public static boolean DEBUG_LOG = false;
-    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
+    public static final boolean DEBUG_LOG = false;
+    public static final int NOP = Config.NOP;   // Number of players
     //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
     public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
 
@@ -42,24 +42,20 @@ public abstract class Player {
     public enum PlayerPoints {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
     }
-    final GameManager gameManager = GameManager.getInstance();
 
-    protected final String name;
+    protected int number;
     protected Config.Bid bid;
     protected CardSet myHand = new CardSet();
     protected CardSet leftHand = new CardSet();
     protected CardSet rightHand = new CardSet();
 
-    private final List<RoundResults> history = new LinkedList<>();
-    int tricks;
-    protected RoundResults roundResults;
+    private final List<RoundResults> history = new ArrayList<>();
+    protected int tricks;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
-    public abstract PlayerBid declareRound(Config.Bid minBid, int elderHand);
+    public abstract void declareRound(Config.Bid minBid, int elderHand);
+    public abstract void respondOnDeclaration(); // return whist or half-whist or pass
     public abstract Card play(Trick trick);
-
-    // number is being declared in subclasses, then it is more visible in debugger
-    public abstract int getNumber();
 
     // to be implemented in a subclass (human player)
     public void accept(Config.Queueable q) {}
@@ -70,44 +66,42 @@ public abstract class Player {
     // to be implemented in a subclass (human player)
     public void abortThread(GameManager.RestartCommand restartCommand) {}
 
-    // to be implemented in a subclass (human player)
+    // to be implemented in a subclass e.g. human player
     // returns BID_WITHOUT_THREE or a game
     public Config.Bid drop() {
-        return Config.Bid.BID_PASS;
+        return bid;
     }
 
     // to be implemented in a subclass (human player)
-    // whist or half or pass
-    public void respondOnRoundDeclaration(Config.Bid bid, Trick trick) {
+    public boolean playWhistLaying() { return true; }
 
+    public static GameManager gameManager() {
+        return GameManager.getInstance();
     }
 
-    public Player(String name) {
-        this.name = name;
+    public int getNumber() {
+        return number;
     }
 
-    public Player(String name, Collection<Card> cards) {
-        this(name);
+    public Player() {}
+
+    public Player(Collection<Card> cards) {
         setHand(cards);
     }
 
     public Player(Player other) {
-        if (other == null) {
-            name = "test";
-        } else {
-            name = other.name;
+        if (other != null) {
             bid = other.bid;
             myHand = other.myHand.clone();
             leftHand = other.leftHand.clone();
             rightHand = other.rightHand.clone();
         }
         tricks = 0;
+
     }
 
-    public Player(String name, CardSet cards) {
-        this(name);
+    public Player(CardSet cards) {
         setHand(cards);
-        roundResults = new RoundResults();
     }
 
     public void setHand(CardSet cards) {
@@ -117,8 +111,9 @@ public abstract class Player {
         this.leftHand.set(complement);
         this.rightHand.set(complement);
         bid = Config.Bid.BID_UNDEFINED;
-        roundResults = new RoundResults();
+        history.add(new RoundResults());
     }
+
 
     // do not check card list size
     public void setHand(Collection<Card> thisHand) {
@@ -127,19 +122,18 @@ public abstract class Player {
         CardSet complement = this.myHand.complement();
         this.leftHand.set(complement);
         this.rightHand.set(complement);
-        bid = Config.Bid.BID_UNDEFINED;
-        roundResults = new RoundResults();
     }
 
     public void clear() {
         myHand.clear();
         leftHand.clear();
         rightHand.clear();
-        this.tricks = 0;
+        tricks = 0;
+        bid = Config.Bid.BID_UNDEFINED;
     }
 
     public String getName() {
-        return name;
+        return GameManager.getConfig().getPlayerName(this.number);
     }
 
     public void setBid(Config.Bid bid) {
@@ -164,19 +158,19 @@ public abstract class Player {
     }
 
     public RoundResults getRoundResults() {
-        return roundResults;
-    }
-
-    public void endRound() {
-        history.add(roundResults);
+        return history.get(history.size() - 1);
     }
 
     public void incrementTricks() {
-        ++tricks;
+        setTricks(tricks + 1);
     }
 
     public int getTricks() {
         return tricks;
+    }
+
+    public void setTricks(int tricks) {
+        this.tricks = tricks;
     }
 
     public void takeTalon(CardList talon) {
@@ -194,6 +188,14 @@ public abstract class Player {
         return history;
     }
 
+    public void clearHistory() {
+        history.clear();
+    }
+
+    public void removeLastRoundResults() {
+        history.remove(history.size() - 1);
+    }
+
     public Card anyCard() {
         return anyCard(null);
     }
@@ -202,23 +204,37 @@ public abstract class Player {
         return myHand.anyCard(suit);
     }
 
-    public void drop(CardList drop) {
-        StringBuilder sb = new StringBuilder(String.format("player %s dropped ",
-            this.getName()));
-        String sep = "";
-        for (Card card : drop) {
-            sb.append(sep).append(card);
-            sep = ", ";
-            drop(card);
+    protected Card anyCard(Trick trick, boolean grab) {
+        CardSet myHand = gameManager().players[this.number].myHand;
+        CardSet cardSet = new CardSet();
+        if (trick.startingSuit != null) {
+            cardSet = myHand.list(trick.startingSuit);
         }
-        Logger.printf(DEBUG_LOG, sb + "\n");
+        if (cardSet.isEmpty()) {
+            return myHand.anyCard();
+        }
+        // todo: use grab
+        Card card = cardSet.prev(trick.topCard);
+        if (card != null) {
+            return card;
+        }
+        return cardSet.first();
+    }
+
+    public void remove(CardSet drop) {
+        Logger.printf(DEBUG_LOG, "player %s removed %s\n", this.getName(), drop.toColorString());
+        myHand.remove(drop);
+        leftHand.remove(drop);
+        rightHand.remove(drop);
+    }
+
+    public void drop(CardSet drop) {
+        remove(drop);
         accept(Config.Bid.BID_6S);
     }
 
     public void drop(Card card) {
-        if (myHand.remove(card)) {
-            return;     // my own card
-        }
+        myHand.remove(card);
         leftHand.remove(card);
         rightHand.remove(card);
     }
@@ -227,24 +243,8 @@ public abstract class Player {
         return myHand.list().size();
     }
 
-    public void updateOthers(int totalLeft, int totalRight) {
-        CardSet allKnown = null;
-        CardSet third = null;
-        if (totalLeft == leftHand.size()) {
-            allKnown = leftHand;   // I know all cards, no more guessing
-            third = rightHand;     // thus I know all the cards
-        } else if (totalRight == rightHand.size()) {
-            allKnown = rightHand;  // I know all cards, no more guessing
-            third = leftHand;      // thus I know all the cards
-        }
-
-        if (allKnown != null) {
-            third.remove(allKnown);
-        }
-    }
-
     public static class RoundResults {
-        final int[] points = new int[PlayerPoints.values().length];
+        public final int[] points = new int[PlayerPoints.values().length];
 
         public RoundResults() {
         }
@@ -260,8 +260,16 @@ public abstract class Player {
             return points[location.ordinal()];
         }
 
+        public int getPoints(int index) {
+            return points[index];
+        }
+
         public void setPoints(PlayerPoints location, int points) {
             this.points[location.ordinal()] = points;
+        }
+
+        public void setPoints(int index, int points) {
+            this.points[index] = points;
         }
     }
 
@@ -271,30 +279,4 @@ public abstract class Player {
         }
     }
 
-    public static class PlayerBid {
-        CardList drops = new CardList();
-        int value;
-
-        public PlayerBid() {}
-
-        public PlayerBid(Config.Bid bid) {
-            this.value = bid.getValue();
-        }
-
-        public PlayerBid(int value) {
-            this.value = value;
-        }
-
-        public Config.Bid toBid() {
-            if (value <= Config.Bid.BID_PASS.getValue()) {
-                return Config.Bid.BID_PASS;
-            }
-            return Config.Bid.fromValue(value);
-        }
-
-        public void setBid(Config.Bid bid) {
-            this.value = bid.getValue();
-        }
-
-    }
 }

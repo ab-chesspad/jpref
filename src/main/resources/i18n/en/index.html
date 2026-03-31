@@ -1,62 +1,87 @@
-<html>
-<head><meta http-equiv="content-type" content="text/html; charset=utf-8"></head><body>
-<font size="6"><b>JPref V 0.0.0.2</b></font><br/><br/>
-The goal of this project is building a program to play Russian Preferans, two bots agains a human player.
-Honest game, no peeping or cheating.
+<html><head><meta content="text/html; charset=utf-8"></head><body>
+<font size="6"><b>JPref <!-- *** VERSION ***--></b></font><br/><br/>
+This is a program playing Russian Preferans, two bots against a human player.
+Honest game, no peeping or cheating. It is standalone,
+no need for network connection, except when the user decides to send me
+some feedback, as described below.
 <br/>
-This version is far from completion. It's only a graphical ptatform for testing.<br/>
-It can only do bidding and play all-pass.
+This version is far from completion. In spite of my all efforts,
+most probably it still has lots of bugs, so the critical feedback is greatly appreciated.
+<br/>
+The most important limitation is that this version cannot play 'standing',
+so this option is avoided/disabled. As a result, there is no mandatory whist on six of spades
+(Stalingrad). The program will always whist (even when it does not make sense),
+specifically to allow more testing.
 <br/>
 <br/>
+<!--*** REMOTE ***-->
 <font size="5"><b>Installation</b></font><br/>
 The program can run on all OS that support standard Java, like Windows, macOS, Linux.<br/>
 JRE 1.8 or later is needed to run JPref.<br/>
-If you do not have JRE installed, you can find all the necessary instructions here: <a href="https://www.java.com/en/download/help/download_options.html">www.java.com/en/download/help/download_options.html.</a>
-If you do not plan to build this project and just want to play with the program, JRE will be enough, JDK is not necessary.
-In this case you can get the pre-build program <a href="https://github.com/ab-chesspad/jpref/raw/refs/heads/main/target/jpref.jar"> here.</a>
+If you do not have JRE installed, you can find all the necessary instructions here:
+<a href="https://www.java.com/en/download/help/download_options.html">www.java.com/en/download/help/download_options.html.</a>
+If you do not plan to build this project and just want to play with the program, JRE will be enough,
+JDK is not necessary.
+In this case you can get the pre-build program
+<a href="https://github.com/ab-chesspad/jpref/raw/refs/heads/main/target/jpref.jar"> here.</a>
 <br/>
 <br/>
+<!--*** REMOTE ***-->
 <font size="5"><b>Launch</b></font><br/>
 Open Terminal window (cmd.exe on Windows) and type:<br/>
 <b>java -jar &lt;path to jpref.jar&gt; [list of deals]</b><br/>
 If the list of deals is specified, it will be used for playing instead of random deals.
-This allows better program testing.<br/>
-One can use a log that the program generates (see below) as a list of deals.<br/>
-JPref can work in Russian и in English. If you use English OS and want JPref to use Russian, change the launching command to:<br/>
-<b>java -Duser.language=ru -jar &lt;path to jpref.jar&gt; [list of deals]</b>
+This allows better program testing.
 <br/>
-On Windows to use Russian:
-<br/>
-<b>java -Dfile.encoding=UTF8 -Duser.language=ru -jar &lt;path to jpref.jar&gt; [list of deals]</b>
+Log file that the program generates (see below) can be used as a list of deals,
+so the recorded games can be replayed.
 <br/>
 <br/>
 <font size="5"><b>Running the program</b></font><br/>
-JPref can only play all-pass, so this version goes directly there, skipping bidding. Also card selection during play is simplified, it requires
-a single left-button mouse click (in the real game the confirmation will be needed).<br/>
-The program menu is invoked with a right-button mouse click:
+The buttons in the bottom-right corner are:
 <ul>
-    <li>New Game - the current gane will be aborted.</li>
-    <li>Replay - replay the current deal.</li>
-    <li>Scores - show score table.</li>
-    <li>Submit Log - see below.</li>
+    <li>Settings.</li>
+    <li>Log your comments.</li>
+    <li>Help - this file/screen.</li>
 </ul>
-The program has a bunch of settings, but so far only the window location and size can be changed, the rest are not configurable.<br/>
-The important program feature is logging. The program records there all the games. Logs are located in 'logs' directory, either next to jpref.jar
-file (macOS, Linux), or in &lt;your home folder&gt;\jpref (Windows). New log is opened with a new program launch or with e new day.<br/>
-Button Comments (second right in the bottom right corner) invokes a comment window. Important to record program errors, stupid moves, etc.<br/>
+
+Card selection during the play is simplified, it requires
+a single left-button mouse click (later it will be configurable).<br/>
+Right-button mouse click invokes the program menu:
+<ul>
+    <li>Scores - show score table.</li>
+    <li>Last Trick - show the last trick.</li>
+    <li>Your Offer - negotiate the round results.</li>
+    <li>Replay - replay the current deal.</li>
+    <li>Submit Log - see below.</li>
+    <li>New Game - the current game will be aborted.</li>
+</ul>
+In addition to the settings that can be updated explicitly,
+the program window location and size are preserved if the user exits
+via 'x' button at the top of the window,
+so JPref will open on the same spot next time.<br/>
+At the end of the round you'll see the scores. If you dismiss this pop-up window
+with <b>Replay</b> button, the program will replay the last round in the manual mode
+when all moves have to be done manually and all the cards are visible.
+This feature allows the user to verify his/her and the program moves,
+and possibly find the errors in the <b>JPref</b> algorithm.
+<br/><br/>
+The important program feature is logging. The program records there all the games. Logs are located in
+'logs' directory, either next to jpref.jar
+file (macOS, Linux), or in &lt;your home folder&gt;\jpref (Windows).
+New log is opened with a new program launch or with the new day.<br/>
+Button Comments (second right in the bottom right corner) invokes the comment window.
+It is important to record the program errors, stupid moves, etc.<br/>
 The whole comment text will be written into the log that the user can submit to the developer:
 <ul>
-    <li>Through the menu. Limitations - only the current log and once a day.</li>
+    <li>Through the menu. Limitations - only the current log.</li>
     <li>Via github - open an issue.</li>
     <li>Send the log file to <a href="mailto:ab.jpref@gmail.com">ab.jpref@gmail.com</a></li>
 </ul>
 <br/>
-<font size="5"><b>Exit</b></font><br/>
-It is recommended to exit the program via 'x' button at the top of the program window. Then it will remember the window size and location and
-it will open it on the same spot next time.<br/><br/>
 
-Please participate in the development and/or testing.<br/>
-Thank you for reading this whole text.
-
+Thank you for reading this whole text till the end.
+<br/>
+Alexander Bootman.
 </body>
 </html>

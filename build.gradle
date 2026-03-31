@@ -1,0 +1,11 @@
+plugins {
+    id 'java'
+}
+
+group 'com.ab'
+version '0.1'
+dependencies {
+    testImplementation libs.junit.gradle
+    testImplementation 'junit:junit:4.13.2'
+}
+

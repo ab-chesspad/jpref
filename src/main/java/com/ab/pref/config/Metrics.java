@@ -13,13 +13,12 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 2/9/2025
  */
 package com.ab.pref.config;
 
-import com.ab.pref.Main;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 
@@ -39,7 +38,7 @@ public class Metrics {
     public final double ySuitGap = .1;     // between suits
     public final double xHandGap = 1;      // between nands & talon
     public final double xLabel = 3;        // player info
-    public final double yLabel = .75;      // player info
+    public final double yLabel = .6;       // player info
     public final double wHand = 4 + 6 * xVisible + 3 * xSuitGap;
     public final double hHand = 4 + 6 * yVisible + 3 * ySuitGap;
 
@@ -54,7 +53,6 @@ public class Metrics {
     public boolean horizontalLayout;
     public double cardW, cardH;
     public Font font;
-
 
     protected static Object instance;
 
@@ -72,68 +70,60 @@ public class Metrics {
         this.cardAspectRatio = cardAspectRatio;
     }
 
-    // todo: there must be a bug in this algorithm because when switching from
     // vertical to horizontal layout, the card size increases
-    void recalculateSizes() {
-            double w, h;
+    public void recalculateSizes() {
+        double w, h;
+        Rectangle r = PConfig.getInstance().mainRectangle.get();
+        int panelWidth = r.width;
+        int panelHeight = r.height;
+        if (cardAspectRatio == 0 || this.panelWidth == panelWidth && this.panelHeight == panelHeight) {
+            return;
+        }
 
-            int panelWidth = Main.mainRectangle.width;
-            int panelHeight = Main.mainRectangle.height;
-            if (Main.mainPanel != null) {
-                panelWidth = Main.mainPanel.getBounds().width;
-                panelHeight = Main.mainPanel.getBounds().height;
-            }
-            if (cardAspectRatio == 0 || this.panelWidth == panelWidth && this.panelHeight == panelHeight) {
-                return;
-            }
+        // vertical layout:
+        Couple<Double> vMetrics = new Couple<>();
+        // horizontally: bottom hand + 2 * xlabel
+        w = ((double) panelWidth - 4 * MIN_X_MARGIN) / (wHand + 2 * xLabel);
+        // vertically: partially covered cards + 2 * yLabel;
+        h = ((double) panelHeight - 4 * MIN_Y_MARGIN) / (hHand + 2 * yLabel);
+        if (h < w * cardAspectRatio) {
+            vMetrics.first = h / cardAspectRatio;
+            vMetrics.second = h;
+        } else {
+            vMetrics.first = w;
+            vMetrics.second = w * cardAspectRatio;
+        }
 
-            // vertical layout:
-            Couple<Double> vMetrics = new Couple<>();
-            // horizontally: 2 * vertical hand + label + bottom hand
-            w = ((double) panelWidth - 3 * MIN_X_MARGIN) / (wHand + 2 * xLabel);
-            // vertically: partially covered cards + yLabel;
-            h = ((double) panelHeight - 3 * MIN_Y_MARGIN) / (yLabel + hHand);
-            if (h < w * cardAspectRatio) {
-                vMetrics.first = h / cardAspectRatio;
-                vMetrics.second = h;
-            } else {
-                vMetrics.first = w;
-                vMetrics.second = w * cardAspectRatio;
-            }
-            horizontalLayout = false;
+        // vertical layout:
+        Couple<Double> hMetrics = new Couple<>();
+        // horizontally: bottom hand + 2 * xlabel
+        w = ((double) panelWidth - 4 * MIN_X_MARGIN) / (wHand + 2 * xLabel);
+        // vertically: partially covered cards + yLabel;
+        h = ((double) panelHeight - 3 * MIN_Y_MARGIN) / (hHand + yLabel);
+        if (h < w * cardAspectRatio) {
+            hMetrics.first = h / cardAspectRatio;
+            hMetrics.second = h;
+        } else {
+            hMetrics.first = w;
+            hMetrics.second = w * cardAspectRatio;
+        }
 
-            int hV = (int) (vMetrics.second * (hHand + yLabel + 1) + 4 * yMargin);
+        // select layout that provides fitting the largest components
+        if (vMetrics.first >= hMetrics.first) {
             this.cardW = vMetrics.first;
             this.cardH = vMetrics.second;
+            horizontalLayout = false;
+        } else {
+            this.cardW = hMetrics.first;
+            this.cardH = hMetrics.second;
+            horizontalLayout = true;
+        }
 
-            // select layout that provides fitting all the components
-            if (hV > panelHeight) {
-                // horizontal layout:
-                Couple<Double> hMetrics = new Couple<>();
-                // horizontally: 2 * xLabel + 2 * wHand + talon + 2 * x-margins + 2 * xHandGap
-                w = ((double) panelWidth - 2 * MIN_X_MARGIN) /
-                        (2 * xLabel + 2 * wHand + (1 + xVisible) + 2 * xHandGap);
-                // vertically: 2 * yLabel + 2 * hand + talon + 2 * handGap
-                h = (double) (panelHeight - 3 * MIN_Y_MARGIN) / (yLabel + hHand);
+        Logger.printf(DEBUG_LOG, "horiz=%b, card %4.1fx%4.1f\n",
+                this.horizontalLayout, this.cardW, this.cardH);
+        this.panelWidth = panelWidth;
+        this.panelHeight = panelHeight;
 
-                if (h < w * cardAspectRatio) {
-                    hMetrics.first = h / cardAspectRatio;
-                    hMetrics.second = h;
-                } else {
-                    hMetrics.first = w;
-                    hMetrics.second = w * cardAspectRatio;
-                }
-
-                this.cardW = hMetrics.first;
-                this.cardH = hMetrics.second;
-                horizontalLayout = true;
-            }
-
-            Logger.printf(DEBUG_LOG, "horiz=%b, card %4.1fx%4.1f\n",
-                    this.horizontalLayout, this.cardW, this.cardH);
-            this.panelWidth = panelWidth;
-            this.panelHeight = panelHeight;
-
-            this.font = new Font("Serif", Font.PLAIN, (int) (this.cardW * .5));
+        this.font = new Font("Serif", Font.PLAIN, (int) (this.cardW * .5));
     }
 }

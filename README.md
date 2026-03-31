@@ -1,6 +1,5 @@
 # JPref
-JPref will be the program to play Russian Preference (преферанс) eventually ;).  
-JPref - программа для игры в преферанс, будет со временем ;).
+JPref is Java program to play Russian Preference (преферанс).  
 
 [documentation](http://jpref.elementfx.com/)  
 

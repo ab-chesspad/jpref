@@ -1,71 +1,32 @@
 package com.ab.jprefdoc;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 
-/*
-Утяцкий проделал большую работу, но представил ее в совершенно ужасном виде.
-Мне пришлось проверять каждую строку на предмет расклада мастей.
-*/
-/*
-                        bits
-AKQJX9x             7   3
-Расклад             4*7 12
---
-Рука играющего      3   2
-Наличие торговли    1   1
-6
---
-Снос                2*4 4
-Заказ               5*5 5
- */
-
+import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
+import com.ab.util.BidData;
+import com.ab.util.Tuple;
+
+/*
+Утяцкий проделал большую работу, но представил ее в совершенно неудобоваримом виде.
+Мне пришлось проверять каждую строку на предмет расклада мастей.
+*/
 
 public class Utyatsky {
-    public static boolean DEBUG_LOG = false;
+    public static final boolean DEBUG_LOG = false;
 
     public static final String[] charMap = {
         "БК->4",
-/*
-        "Т->A",
-        "К->K",
-        "Д->Q",
-        "В->J",
-*/
-        "х->x",
+        "\u00A0-> ",
+        "х->x", // utyatsky-4
         ", ->,",
         "пик\\S?->0",
         "треф\\S?->1",
         "бубн\\S?->2",
         "черв\\S?->3",
-
-        // hexadecimal ASCII code
-        "Т->E",
-        "К->D",
-        "Д->C",
-        "В->B",
-
-/*
-        "10->X",
-        "БК->-",
-        "пик\\S?->♠",
-        "треф\\S?->♣",
-        "бубн\\S?->♦",
-        "черв\\S?->♥",
-*/
-//        "([♠♣♦♥012])-> $1",
-    };
-
-    public static final String[] charMap4 = {
-        " БК->4",
-        "х->x",
-        " пик\\S?->0",
-        " треф\\S?->1",
-        " бубн\\S?->2",
-        " черв\\S?->3",
-        "пас->59",
 
         // hexadecimal ASCII code
         "Т->E",
@@ -86,77 +47,81 @@ public class Utyatsky {
         return src;
     }
 
-    void run(String dataFileName, List<Pair<String, BidData>> allBidData) throws IOException {
+    void run(String dataFileName, List<Tuple<Object>> allBidData) throws IOException {
         String dataDirName = MainDoc.SRC_DIR_NAME;
         File f = new File(dataDirName, dataFileName);
         Logger.println(f.getAbsolutePath());
         Map<String, BidData> map = new HashMap<>();
 
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f)))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(f.toPath())))) {
             String inputLine;
             while ((inputLine = br.readLine()) != null) {
                 Logger.println(DEBUG_LOG, inputLine);
                 if (inputLine.isEmpty() || inputLine.startsWith("#")) {
                     continue;
                 }
-                String src = translate(inputLine, charMap);
-/*
-                for (String translate : charMap) {
-                    String[] parts = translate.split("->");
-                    String res = "";
-                    if (parts.length > 1) {
-                        res = parts[1];
-                    }
-                    src = src.replaceAll(parts[0], res);
-                }
-*/
+                String src = translate(inputLine.trim(), charMap);
                 String[] parts = src.split("\\.|\t");
                 Logger.println(DEBUG_LOG, src);
                 String key = getKey(parts[1]);
 
-                // each int - drop1, drop2, bid
-//                int[] params = new int[3];  // hand order
-
+                // "2,3";  "1", "2,3"
                 List<String> handNums = new ArrayList<>(Arrays.asList(parts[2].split("  ")));
-                List<String> biddings = new ArrayList<>(Arrays.asList(parts[3].split("  ")));
-                ArrayList<String> drops = null;
+                ArrayList<String> drops = new ArrayList<>();
                 List<String> bids = null;
+                List<String> biddings = new ArrayList<>();
+                int index = 3;
                 if (parts.length >= 5) {
-                    drops = new ArrayList<>(Arrays.asList(parts[4].split("  ")));
-                    for (int i = 0; i < drops.size(); ++i) {
-                        String drop = drops.get(i);
-                        if (drop.startsWith("2")) {
-                            String suit = drop.substring(drop.length() - 1);
-                            drop = suit + "," + suit;
-                            drops.remove(i);
-                            drops.add(i, drop);
-                        }
-                    }
-
-                    bids = new ArrayList<>(Arrays.asList(parts[5].split("  ")));
-                    for (int i = 0; i < bids.size(); ++i) {
-                        String bid = bids.get(i);
-                        bid = bid.replaceAll("\\s", "");
-                        bids.remove(i);
-                        bids.add(i, bid);
-                    }
-
+                    // - + space
+                    biddings = new ArrayList<>(Arrays.asList(parts[3].split("  ")));
                     if (biddings.size() == 2 && biddings.get(0).equals(biddings.get(1))) {
                         biddings.remove(1);
                     }
                     if (biddings.size() == 1 && biddings.get(0).equals("+")) {
                         biddings.set(0, "");
                     }
+                    // "2 2"
+                    drops = new ArrayList<>(Arrays.asList(parts[4].split("  ")));
+                    for (int i = 0; i < drops.size(); ++i) {
+                        String drop = drops.get(i);
+                        if (drop.startsWith("2 ")) {
+                            String suit = drop.substring(drop.length() - 1);
+                            drop = suit + "," + suit;
+                            drops.remove(i);
+                            drops.add(i, drop);
+                        }
+                    }
+                    index = 5;
+                } else {
+                    // utyatsky-4
+//                    totBiddings = 0;
+                    biddings.add(" ");
+                    drops.add("9 9");
+                }
+
+                // "8 0"
+                bids = new ArrayList<>(Arrays.asList(parts[index].split("  ")));
+                for (int i = 0; i < bids.size(); ++i) {
+                    String bid = bids.get(i);
+                    try {
+                        // utyatsky-4
+                        int b = Integer.parseInt(bid);
+                        bid += "0";
+                    } catch (NumberFormatException e) {
+                        bid = bid.replaceAll("\\s", "");
+                    }
+                    bids.remove(i);
+                    bids.add(i, bid);
                 }
 
                 int mask = 0x7;
                 boolean biddingOn = false;
-                boolean same23 = false;
-                int start = 0, end = 2;
+//                boolean same23 = false;
+//                int start = 0, end = 2;
                 String firstNum = handNums.get(0);
                 if (handNums.size() == 1) {
                     biddingOn = biddings.size() > 1;
-                    if (firstNum.toLowerCase().equals("любая")) {
+                    if (firstNum.trim().isEmpty() || firstNum.equalsIgnoreCase("любая")) {
                         mask = 0x7;
                     }
                     else if (firstNum.equals("1")) {
@@ -185,14 +150,8 @@ public class Utyatsky {
                     mask = 0x7;
                 }
 
-/*
-                Logger.printf(DEBUG_LOG, "%s -> %s, %s, %s, %s : biddingOn=%b\n",
-                    key, handNums, biddings, drops, bids, biddingOn);
-/*/
                 Logger.printf(DEBUG_LOG, "%s -> %s, %s, %s : biddingOn=%b\n",
                     key, handNums, biddings, drops, biddingOn);
-
-//*/
 
                 int nextBit = 1;
                 int dropIndx = -1;
@@ -203,10 +162,6 @@ public class Utyatsky {
                     if ((current & mask) == 0) {
                         continue;
                     }
-//                    if (++bidIndx >= bids.size()) {
-//                        --bidIndx;
-//                    }
-//                    String bid = bids.get(bidIndx);
 
                     int _dropIndx = dropIndx;
                     int _bidIndx = bidIndx;
@@ -233,21 +188,26 @@ public class Utyatsky {
                         }
                         String drop = drops.get(_dropIndx);
 
-//                        Card.Suit drop1 = Card.Suit.fromCode(drop.charAt(0));
-//                        Card.Suit drop2 = Card.Suit.fromCode(drop.charAt(2));
+                        try {
+                            int _drop1 = Integer.parseInt(drop.substring(0, 1));
+                        } catch (NumberFormatException e) {
+                            e.printStackTrace();
+                        }
                         int drop1 = Integer.parseInt(drop.substring(0, 1));
                         int drop2 = Integer.parseInt(drop.substring(2, 3));
-//                        int bid1 = Config.Bid.fromName(bid);
-                        int bid1 = Integer.parseInt(bid);
+                        int bid1 = Config.Bid.BID_PASS.getValue();
+                        try {
+                            bid1 = Integer.parseInt(bid);
+                        } catch (NumberFormatException e) {
+                            // ignore
+                        }
                         BidData.OneBid oneBid = new BidData.OneBid(bid1, drop1, drop2);
-//                        int pack = oneBid.pack();
-//                        com.ab.util.BidData.OneBid unpacked = new com.ab.util.BidData.OneBid(pack);
 
                         BidData bidData = map.get(key);
                         if (bidData == null) {
                             bidData = new BidData();
                             map.put(key, bidData);
-                            allBidData.add(new Pair<>(key, bidData));
+                            allBidData.add(new Tuple<>(parts[0], key, bidData));
                         }
                         BidData.OneBid old = null, old2 = null;
                         if (bidding.trim().isEmpty() || bidding.charAt(0) == 0xa0) {
@@ -257,180 +217,32 @@ public class Utyatsky {
                             boolean _bidding = bidding.equals("+");
                             old = bidData.set(oneBid, i, _bidding);
                         }
-//                        allBidData.add(new Pair<>(key, bidData));
 
                         Logger.printf(DEBUG_LOG, "%s -> hand %d: bidding %s, drop %s, declare %s",
                             key, i + 1, bidding, drop, bid);
                         if (old != null || old2 != null) {
-                            Logger.printf(" !! duplicate");
+                            Logger.printf(DEBUG_LOG, " !! duplicate");
                         }
                         Logger.println(DEBUG_LOG);
                     }
                 }
-                Logger.println(DEBUG_LOG);
             }
         }
         Logger.println("loaded");
     }
-
-/*
-    void run4bidding(String dataFileName, Map<String, BidData> allBidData) throws IOException {
-        String dataDirName = MainDoc.SRC_DIR_NAME;
-        File f = new File(dataDirName, dataFileName);
-        Logger.println(f.getAbsolutePath());
-
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f)))) {
-            String inputLine;
-            while ((inputLine = br.readLine()) != null) {
-                Logger.println(inputLine);
-                if (inputLine.isEmpty() || inputLine.startsWith("#")) {
-                    continue;
-                }
-                String src = translate(inputLine, charMap4);
-                String[] parts = src.split("\\.|\t");
-                Logger.println(DEBUG_LOG, src);
-                String key = getKey(parts[1]);
-
-                // each int - drop1, drop2, bid
-//                int[] params = new int[3];  // hand order
-
-                List<String> handNums = new ArrayList<>(Arrays.asList(parts[2].split("  ")));
-                List<String> bids = new ArrayList<>(Arrays.asList(parts[3].split("  ")));
-
-                for (int i = 0; i < bids.size(); ++i) {
-                    String bid = bids.get(i);
-                    if (bid.length() == 1) {
-                        bid += "0";
-                        bids.remove(i);
-                        bids.add(i, bid);
-                    }
-                }
-
-                for (int i = 0; i < handNums.size(); ++i) {
-                    String handNum = handNums.get(i);
-                    String bid;
-                    if (i < bids.size()) {
-                        bid = bids.get(i);
-                    } else {
-                        bid = bids.get(0);
-                    }
-                    int value = Integer.parseInt(bid);
-                    int mask = 0x7;
-                    if (handNum.equals("1")) {
-                        mask = 0x1;
-                    } else if (handNum.equals("2, 3")) {
-                        mask = 0x6;
-                    }
-                    BidData.OneBid oneBid = new BidData.OneBid(value, -1, -1);
-                    BidData bidData = allBidData.get(key);
-                    if (bidData == null) {
-                        bidData = new BidData();
-                        allBidData.put(key, bidData);
-                    }
-                    int k = -1;
-                    while (mask != 0) {
-                        ++k;
-                        int bit = mask & 1;
-                        mask >>= 1;
-                        if (bit == 0) {
-                            continue;
-                        }
-                        bidData.set(oneBid, k, false);
-                        bidData.set(oneBid, k, true);
-                    }
-                }
-
-                Logger.printf( "%s -> %s, %s\n",
-                    key, handNums, bids);
-                Logger.println(DEBUG_LOG);
-            }
-        }
-        Logger.println("loaded");
-    }
-*/
 
     private String getKey(String src) {
-        src = src.replaceAll("10", "A");    // hexadecimal ascii code
+        src = src.trim().replaceAll("10", "A");    // hexadecimal ascii code
         String[] parts = src.split("\\s+");
         StringBuilder sb = new StringBuilder();
-        String sep = "";
+//        String sep = "";
         for (String part : parts) {
-//            sep = "" + (8 - part.length());
-            sep = "" + part.length();
-            part = part.replaceAll("x", "");
-            sb.append(sep).append(part);
-//            sep = "|";
+            Pair<String, Integer> pair = BidData.searchTricks(part, 0);
+            sb.append(pair.first);
+//            sep = "" + part.length();
+//            part = part.replaceAll("x", "");
+//            sb.append(sep).append(part);
         }
         return new String(sb);
     }
-
-/*
-    private List<String> _getKeys(String src) {
-        Pattern p = Pattern.compile("\\((.*?)\\)");
-        String[] versions = src.split("\\(.\\)");
-        Matcher m = p.matcher(src);
-        if (m.find()) {
-            String group = m.group(1);
-            int start = m.start(1) - 1;
-            int end = m.end(1) + 1;
-            versions[0] = src.substring(0, start) + src.substring(end);
-            versions[1] = src.substring(0, start - 1) + group + src.substring(end);
-        }
-        List<String> results = new LinkedList<>();
-
-        for (String version : versions) {
-            String[] parts = version.split("\\s+");
-            StringBuilder sb = new StringBuilder();
-            String sep = "";
-            for (String part : parts) {
-                sb.append(sep).append(part);
-                sep = "|";
-            }
-            results.add(new String(sb));
-        }
-        return results;
-    }
-*/
-
-/*
-    private void generate() {
-        String[] tests = {
-            "AKX7 AKxx",
-            "KQX987 KQxxxx",
-            "QJX8 QJXx",
-            "JX987 Jxxxx",
-            "J987 Jxxx",
-            "J87 xxx",
-        };
-        for (String src : tests) {
-            String[] parts = src.split(" ");
-            String curr = parts[0];
-            String encoded = BidList.toBidString(curr);
-            if (!parts[1].equals(encoded)) {
-                Logger.printf(DEBUG_LOG, "%s: %s != %s\n", curr, encoded, parts[1]);
-            }
-            Logger.printf("for %s:\n", curr);
-//            List<String> next = BidList.getStrings(BidList.HAND_LENGTH - curr.length(), curr);
-            List<Map.Entry<String, Integer>> next = BidList.getStrings(0, curr);
-            Logger.println(DEBUG_LOG, String.join("\n", next.toString()));
-        }
-
-        Logger.printf("total %d lists\n", BidList.count());
-        List<Map.Entry<String, Integer>> first = BidList.getStrings();
-//        Logger.println(String.join("\n", first));
-        Logger.println(String.join(", ", first.toString()));
-
-
-        Logger.println("done");
-    }
-*/
-
-/*
-    List<String> generateNext(List<String> prevs) {
-        for (Card.Suit s : Card.Suit.values()) {
-
-        }
-
-    }
-*/
 }

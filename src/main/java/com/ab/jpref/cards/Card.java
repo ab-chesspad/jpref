@@ -13,15 +13,20 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 12/22/2024
+ *
+ * Use only cards from Card[] cards,
+ * to reduce memory fragmentation, critical on Android
  */
 
 package com.ab.jpref.cards;
 
 import com.ab.jpref.config.Config;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Config.Queueable {
@@ -33,15 +38,10 @@ public class Card implements Comparable<Card>, Config.Queueable {
 //    public static String ANSI_RED = "\u001B[31m";
 //    public static String ANSI_RESET = "\u001B[0m";
 
-    static {
-        boolean isDebug = java.lang.management.ManagementFactory.getRuntimeMXBean().
-            getInputArguments().toString().contains("jdwp");
-        if (isDebug) {
-//            ANSI_RED = ANSI_RESET = "";
-        }
-    }
-
     public static final int TOTAL_SUITS = Suit.values().length;
+    public static final int TOTAL_RANKS = Rank.values().length - 1;
+    public static final Card[] cards = new Card[TOTAL_SUITS * TOTAL_RANKS];
+    public static final Map<Integer, Card> cardMap = new HashMap<>();
 
     public enum Suit {
         SPADE('♠', 0),
@@ -92,6 +92,15 @@ public class Card implements Comparable<Card>, Config.Queueable {
             throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
         }
 
+        public static Suit fromValue(int value) {
+            for (Suit r : values()) {
+                if (r.value == value) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException(String.format("value for suit %d (0x%x)", value, value));
+        }
+
         public static Suit code(char unicode) {
             for (Suit r : values()) {
                 if (r.code == unicode) {
@@ -100,11 +109,8 @@ public class Card implements Comparable<Card>, Config.Queueable {
             }
             throw new IllegalArgumentException(String.valueOf(unicode));
         }
-        public static final int SUM = SPADE.value + CLUB.value + DIAMOND.value + HEART.value;
-        public static final int MASK = (Integer.highestOneBit(values().length - 1) << 1) - 1;
     }
 
-    public static final int TOTAL_RANKS = Rank.values().length;
     public enum Rank {
         SIX("6", 6),      // fictitious card to start all-pass
         SEVEN("7", 7),
@@ -167,14 +173,39 @@ public class Card implements Comparable<Card>, Config.Queueable {
     private final Suit suit;
     private final Rank rank;
 
-    public Card(Suit suit, Rank rank) {
+    static {
+        int i = -1;
+        int m = 1;
+        for (Suit suit : Suit.values()) {
+            for (int j = 0; j < TOTAL_RANKS; ++j) {
+                Rank rank = Rank.values()[j + 1];
+                Card card = new Card(suit, rank);
+                cardMap.put(m, card);
+                m <<= 1;
+                cards[++i] = card;
+            }
+        }
+    }
+
+    private Card(Suit suit, Rank rank) {
         this.suit = suit;
         this.rank = rank;
     }
 
-    public Card(String cardName) {
-        this.suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(0)));
-        this.rank = Rank.fromName(Character.toLowerCase(cardName.charAt(1)));
+    public static Card fromValue(int value) {
+        return cards[value];
+    }
+
+    public static Card fromName(String cardName) {
+        Suit suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(0)));
+        Rank rank = Rank.fromName(Character.toLowerCase(cardName.charAt(1)));
+        return fromValues(suit, rank);
+    }
+
+    public static Card fromValues(Suit suit, Rank rank) {
+        int suitNum = suit.value;
+        int rankNum = rank.value - Rank.SEVEN.value;
+        return cards[suitNum * TOTAL_RANKS + rankNum];
     }
 
     public Suit getSuit() {
@@ -185,8 +216,8 @@ public class Card implements Comparable<Card>, Config.Queueable {
         return rank;
     }
 
-    public Card clone() {
-        return new Card(this.getSuit(), this.getRank());
+    public int toInt() {
+        return suit.value * 8 + rank.value - Rank.SEVEN.value;
     }
 
     @Override
@@ -246,9 +277,9 @@ public class Card implements Comparable<Card>, Config.Queueable {
         Suit suit = this.getSuit();
         String s;
         if (suit.equals(Suit.DIAMOND) || suit.equals(Suit.HEART)) {
-            s = Card.ANSI_RED + suit.toString() + rank.toString() + Card.ANSI_RESET;
+            s = Card.ANSI_RED + suit + rank + Card.ANSI_RESET;
         } else {
-            s = suit.toString() + rank.toString();
+            s = "" + suit + rank;
         }
         return s;
     }

@@ -1,5 +1,12 @@
 #!/bin/bash
+
+mvn -f pom-jdoc.xml clean package -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.javadoc.skip=true
+java -jar target/jdoc.jar
+rm target/*.jar
+exit
+
+#cp -r src/main/java/com/ab/jpref/jdoc/ etc/jdoc/src/main/java/com/ab/jpref/
 pushd etc/jdoc
 mvn package
-java -jar target/jdoc.jar
+#rm -rf etc/jdoc/target
 popd

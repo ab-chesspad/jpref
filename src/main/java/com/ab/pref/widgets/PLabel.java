@@ -13,7 +13,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 2/11/2025
  */
@@ -62,7 +62,7 @@ public class PLabel extends javax.swing.JLabel {
         int x0 =  bounds.width / 2;
         int y0 =  bounds.height / 2;
 
-/*  // debug, axes and border
+/*  debug, axes and border
         g2d.drawLine( x0, 0, x0, bounds.height);
         g2d.drawLine( 0, y0, bounds.width, y0);
         g2d.drawRect(0, 0,  bounds.width,  bounds.height);  // without rotation

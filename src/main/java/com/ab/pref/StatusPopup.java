@@ -13,29 +13,32 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
- * Created: 3/4/25
+ * Created: 3/4/2025
  */
 
 package com.ab.pref;
 
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
-import com.ab.jpref.config.I18n;
 import com.ab.pref.config.Metrics;
+import com.ab.pref.MainPanel.Host;
 import com.ab.pref.config.PConfig;
 import com.ab.pref.widgets.ButtonPanel;
+import com.ab.pref.widgets.PButton;
 import com.ab.pref.widgets.PLabel;
+import static com.ab.jpref.config.I18n.m;
 import com.ab.util.Logger;
 import com.ab.util.Point;
+import static com.ab.util.Util.currMethodName;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 //import java.awt.geom.Line2D;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -64,39 +67,44 @@ public class StatusPopup extends JDialog {
         West = MainPanel.Alignment.West.ordinal(),
         East = MainPanel.Alignment.East.ordinal();
 
-    public static final PConfig pConfig = PConfig.getInstance();
     static StatusPopup instance;
 
+    private final PUtil pUtil = PUtil.getInstance();
+    final Host host;
     final ButtonPanel buttonPanel;
     final ScoresMetrics scoresMetrics = new ScoresMetrics();
     Rectangle popupRectangle;
     ScoresPanel scoresPanel;
 
-    StatusPopup(JFrame frame, boolean withButtons) {
-        super(frame, true);
+    StatusPopup(Host host, boolean withButtons) {
+        super(host.mainFrame(), true);
+        this.host = host;
         instance = this;
-        setTitle(I18n.m("Scores"));
+        setTitle(m("Scores"));
         setLayout(new BorderLayout(1, 4));
-        popupRectangle = pConfig.scoresPopupRectangle.get();
+        popupRectangle = PConfig.getInstance().scoresPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle = (Rectangle) Main.mainRectangle.clone();
+            popupRectangle = (Rectangle)PConfig.getInstance().mainRectangle.get().clone();
+        }
+        if (popupRectangle.y < 10) {
+            popupRectangle.y = 10;
         }
         this.setBounds(popupRectangle);
         this.setLocation(popupRectangle.x, popupRectangle.y);
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
-                pConfig.scoresPopupRectangle.set(popupRectangle);
+                PConfig.getInstance().scoresPopupRectangle.set(popupRectangle);
                 scoresPanel.recalc();
             }
 
             @Override
             public void componentMoved(ComponentEvent e) {
-                Logger.printf(DEBUG_LOG, "%s -> %s\n", com.ab.util.Util.currMethodName(), e);
+                Logger.printf(DEBUG_LOG, "%s -> %s\n", currMethodName(), e);
                 popupRectangle = StatusPopup.instance.getBounds();
-                pConfig.scoresPopupRectangle.set(popupRectangle);
+                PConfig.getInstance().scoresPopupRectangle.set(popupRectangle);
             }
 
         });
@@ -138,7 +146,7 @@ public class StatusPopup extends JDialog {
 
         public void recalc() {
             Rectangle scoresRectangle = StatusPopup.instance.getScoresRectangle();
-            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(), scoresRectangle);
+            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
 
             // center:
             scoresMetrics.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
@@ -317,7 +325,7 @@ public class StatusPopup extends JDialog {
         }
 
         protected void paintComponent(Graphics g) {
-            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", com.ab.util.Util.currMethodName(),
+            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(),
                 StatusPopup.instance.getScoresRectangle());
             Graphics2D g2d = (Graphics2D) g;
             g2d.setColor(Color.white);
@@ -360,7 +368,7 @@ public class StatusPopup extends JDialog {
             // pool size:
             Font font = new Font("Serif", Font.PLAIN, (int) (metrics.cardW));
             g2d.setFont(font);
-            String text = "" + pConfig.poolSize.get();
+            String text = "" + PConfig.getInstance().poolSize.get();
             FontMetrics fontMetrics = g2d.getFontMetrics(font);
             int _width = fontMetrics.stringWidth(text);
             int _height = fontMetrics.getHeight();
@@ -398,24 +406,24 @@ public class StatusPopup extends JDialog {
     }
 
     private ButtonPanel createButtonPanel() {
-        MainPanel.ButtonHandler[][] fullList = {{
-            new MainPanel.ButtonHandler(MainPanel.Command.goon, command -> {
+        PButton.ButtonHandler[][] fullList = {{
+            new PButton.ButtonHandler(MainPanel.ButtonCommand.goon, buttonCommand -> {
+                StatusPopup.instance.dispose();
                 GameManager.getInstance().restart(GameManager.RestartCommand.goon);
-                StatusPopup.instance.dispose();
             }),
-            new MainPanel.ButtonHandler(MainPanel.Command.replay, command -> {
+            new PButton.ButtonHandler(MainPanel.ButtonCommand.replay, buttonCommand -> {
+                StatusPopup.instance.dispose();
                 GameManager.getInstance().restart(GameManager.RestartCommand.replay);
-                StatusPopup.instance.dispose();
             }),
-            new MainPanel.ButtonHandler(MainPanel.Command.newGame, command -> {
-                GameManager.getInstance().restart(GameManager.RestartCommand.newGame);
+            new PButton.ButtonHandler(MainPanel.ButtonCommand.newGame, buttonCommand -> {
                 StatusPopup.instance.dispose();
+                GameManager.getInstance().restart(GameManager.RestartCommand.newGame);
             }),
         }};
-        MainPanel.ButtonHandler[][] buttonList = fullList;
-        if (Main.testFileName != null) {
-            MainPanel.ButtonHandler[][] testList =
-                new MainPanel.ButtonHandler[1][fullList[0].length - 1];
+        PButton.ButtonHandler[][] buttonList = fullList;
+        if (host.release()) {
+            PButton.ButtonHandler[][] testList =
+                new PButton.ButtonHandler[1][fullList[0].length - 1];
             System.arraycopy(fullList[0], 0, testList[0], 0, testList[0].length);
             buttonList = testList;
         }
@@ -424,7 +432,7 @@ public class StatusPopup extends JDialog {
 
     private static class PlayerArea {
         // debug:
-        Color[] bgColors = {Color.green, Color.magenta, Color.red, Color.cyan, Color.yellow};
+        final Color[] bgColors = {Color.green, Color.magenta, Color.red, Color.cyan, Color.yellow};
         final SLabel[] pLabels = new SLabel[Player.PlayerPoints.values().length];
         final Player player;
 
@@ -492,17 +500,12 @@ public class StatusPopup extends JDialog {
                 return;
             }
 
-            // todo: indicate the latest changes
             String sep = "";
             StringBuilder sb = new StringBuilder();
-            List<Integer> results = new LinkedList<>();
+            List<Integer> results = new ArrayList<>();
             int total = 0;
             for (Player.RoundResults roundResults : history) {
                 int res = roundResults.getPoints(label);
-                if (label.equals(Player.PlayerPoints.status)) {
-                    // todo:
-                    continue;
-                }
                 if (res == 0) {
                     continue;
                 }
@@ -512,7 +515,7 @@ public class StatusPopup extends JDialog {
                 sep = ".";
             }
             String trailing = "";
-            if (label.equals(Player.PlayerPoints.poolPoints) && total >= pConfig.poolSize.get()) {
+            if (label.equals(Player.PlayerPoints.poolPoints) && total >= PConfig.getInstance().poolSize.get()) {
                 trailing = ">>";
                 sb.append(trailing);
             }

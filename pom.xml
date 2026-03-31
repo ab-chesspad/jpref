@@ -29,41 +29,41 @@
 -->
 
     </dependencies>
-    <groupId>com.ab</groupId>
+    <groupId>com.ab.jpref</groupId>
     <version>0.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <sourceJavaVersion>1.8</sourceJavaVersion>
-        <targetJavaVersion>1.8</targetJavaVersion>
+        <sourceJavaVersion>8</sourceJavaVersion>
+        <targetJavaVersion>8</targetJavaVersion>
         <maven.compiler.version>2.3.2</maven.compiler.version>
         <junit.version>4.12</junit.version>
     </properties>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
-       <finalName>jpref</finalName>
+        <finalName>jpref</finalName>
 
         <plugins>
+<!--
             <plugin>
-                <artifactId>maven-invoker-plugin</artifactId>
-                <version>3.9.1</version>
-                <configuration>
-                    <debug>true</debug>
-                    <projectsDirectory>src/it</projectsDirectory>
-                    <preBuildHookScript>setup</preBuildHookScript>
-                    <postBuildHookScript>verify</postBuildHookScript>
-                </configuration>
+                <artifactId>maven-execshell-plugin</artifactId>
+                <groupId>com.datatub.lhfcws</groupId>
+                <version>1.0.0-SNAPSHOT</version>
                 <executions>
                     <execution>
-                        <id>integration-test</id>
+                        <id>deploy</id>
+                        <phase>package</phase>
                         <goals>
-                            <goal>run</goal>
+                            <goal>execsh</goal>
                         </goals>
+                        <configuration>
+                            <exec>prebuild</exec>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
-
+-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -72,8 +72,12 @@
                     <includes>
                         <include>**/*.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/jprefdoc/**</exclude>
+                    </excludes>
                     <source>8</source>
                     <target>8</target>
+                    <compilerArgument>-Xlint:unchecked</compilerArgument>
                 </configuration>
             </plugin>
 
@@ -101,6 +105,19 @@
                 </executions>
             </plugin>
 
+<!--
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <parallel>methods</parallel>
+                    <threadCount>4</threadCount>
+                    <forkCount>2</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
+            </plugin>
+-->
 <!--
             <plugin>
                 <groupId>com.github.wvengen</groupId>
@@ -135,8 +152,9 @@
             </plugin>
 -->
 
+<!--
             <plugin>
-                <!-- Build an executable JAR -->
+                &lt;!&ndash; Build an executable JAR &ndash;&gt;
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.1.0</version>
@@ -150,6 +168,7 @@
                     </archive>
                 </configuration>
             </plugin>
+-->
 
         </plugins>
     </build>
@@ -166,5 +185,3 @@
     </repositories>
 
 </project>
-
-

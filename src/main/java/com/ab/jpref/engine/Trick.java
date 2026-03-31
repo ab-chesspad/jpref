@@ -13,157 +13,231 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 3/20/2025
  */
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.util.Logger;
+import static com.ab.jpref.engine.Bot.targetBot;
 
-public class Trick {
-    public static final int NUMBER_OF_PLAYERS = GameManager.NUMBER_OF_PLAYERS;
-
-    Card.Suit startingSuit, trumpSuit;
+public class Trick extends BaseTrick {
+    int number;
+    Suit startingSuit, trumpSuit;
     Config.Bid minBid;
-    int startedBy = -1;
-    boolean startedFromTalon;
-    int top = -1;
     Card topCard;
-    CardList trickCards = new CardList(); // todo: cards are always sorted
-    int number = 0;
-//    int declarerNum = -1;
+
+    public Trick() {
+        super();
+    }
+
+    public Trick(Trick that) {
+        super(that);
+        this.startingSuit = that.startingSuit;
+        this.trumpSuit = that.trumpSuit;
+        this.minBid = that.minBid;
+        this.topCard = that.topCard;
+        this.setNumber(that.getNumber());
+    }
 
     public int getNumber() {
         return number;
     }
 
-    public Card.Suit getStartingSuit() {
+    public void incrementNumber() {
+        setNumber(getNumber() + 1);
+    }
+
+    public void decrementNumber() {
+        setNumber(getNumber() - 1);
+    }
+
+    public void setNumber(int number) {
+        if (number < -1 || number > 10) {   // temporary 10, next will be set to 0
+            throw new RuntimeException("invalid trick number " + number);
+        }
+        this.number = number;
+    }
+
+    public Suit getStartingSuit() {
         return startingSuit;
     }
 
-    public int getStartedBy() {
-        return startedBy;
-    }
-
-    public int getTurn() {
-        return (startedBy + trickCards.size()) % NUMBER_OF_PLAYERS;
-    }
-
-    public Card.Suit getTrumpSuit() {
+    public Suit getTrumpSuit() {
         return trumpSuit;
     }
 
-    public void setTrumpSuit(Card.Suit trumpSuit) {
-        this.trumpSuit = trumpSuit;
-    }
-
-    public String toColorString() {
-        GameManager gameManager = GameManager.getInstance();
-        StringBuilder sb = new StringBuilder();
-        sb.append("trick ").append(this.number).append(": ");
-        String sep = "";
-        if (this.startedFromTalon) {
-            sb.append("talon: ").append(gameManager.getTalonCards().last().toColorString());
-            sep = ", ";
-        }
-
-        for (int j = 0; j < gameManager.players.length; ++j) {
-            Player player = gameManager.players[(this.startedBy + j) % gameManager.players.length];
-            sb.append(sep).append(player.getName()).append(": ")
-                .append(this.trickCards.get(j).toColorString());
-            sep = ", ";
-        }
-        return new String(sb);
-    }
-
-    public CardList getTrickCards() {
-        return trickCards;
+    public void setBid(Config.Bid bid) {
+        this.minBid = bid;
+        this.trumpSuit = bid.getTrump();
     }
 
     public void clear(int startedBy) {
         clear();
-        this.startedBy = startedBy;
-        number = 0;
-        MisereBot.trickTree = null;
-        GameManager.getInstance().discarded = new CardSet();
-        Logger.printf("DeclarerDrop %s\n", MisereBot.declarerDrop.name());
+        this.setStartedBy(startedBy);
+        setNumber(0);
+        minBid = null;
+        trumpSuit = null;
+        GameManager.getInstance().discarded.clear();
     }
 
+    @Override
     public void clear() {
-        trickCards.clear();
-        ++number;
+        int num = getNumber();
+        int top = getTop();
+        super.clear();
+        if (num < 9) {
+            setNumber(num + 1);
+        }
         topCard = null;
         startingSuit = null;
-        minBid = null;
-        if (!startedFromTalon) {
-            startedBy = top;
+        setStartedBy(top);
+    }
+
+    public void clear(boolean startedFromTalon) {
+        int startedBy = getTop();
+        if (startedFromTalon) {
+            startedBy = this.getStartedBy();
         }
-        startedFromTalon = false;
-        top = -1;
+        clear();
+        this.setStartedBy(startedBy);
+    }
+
+    public void add(Card card, boolean fromTalon) {
+        startingSuit = card.getSuit();
+        drop(card);
+    }
+
+    public void add(Card card, int elderHand) {
+        startingSuit = card.getSuit();
+        drop(card);
+    }
+
+    @Override
+    public void add(Card card) {
+        Suit suit = card.getSuit();
+        int top = getTop();
+        if (startingSuit == null) {
+            startingSuit = suit;
+            topCard = card;
+            top = getTurn();
+        } else if (suit.equals(trumpSuit)) {
+            if (card.compareInTrick(topCard) > 0) {
+                topCard = card;
+                top = getTurn();
+            }
+        } else if (suit.equals(startingSuit)) {
+            if (topCard == null || topCard.compareInTrick(card) < 0) {
+                topCard = card;
+                top = getTurn();
+            }
+        }
+        setTop(top);
+        drop(card);
+        super.add(card);
     }
 
     protected void drop(Card card) {
-        int droppingPlayer = -1;
+        GameManager gameManager = GameManager.getInstance();
+        int discardingPlayer = -1;
         if (startingSuit != null && !card.getSuit().equals(startingSuit)) {
-            droppingPlayer = getTurn();
+            discardingPlayer = getTurn();
         }
 
-        Player[] players = GameManager.getInstance().players;
-        if (droppingPlayer >= 0) {
-            // 0 -> 2:left, 1:right
-            // 1 -> 0:left, 2:right
-            // 2 -> 1:left, 0:right
-            players[(droppingPlayer + 2) % players.length].leftHand.list(startingSuit).clear();
-            players[(droppingPlayer + 1) % players.length].rightHand.list(startingSuit).clear();
+        Player[] players = gameManager.players;
+        if (discardingPlayer >= 0) {
+            CardSet remove = CardSet.getList(startingSuit);
+            players[discardingPlayer].myHand.remove(remove);
+            players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
+            players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);
+            CardSet declarerHand = gameManager.declarerHand;
+            if (declarerHand != null) {
+                if (discardingPlayer == gameManager.declarerNumber) {
+                    declarerHand.remove(remove);
+                }
+            }
+            if (trumpSuit != null && !card.getSuit().equals(trumpSuit)) {
+                remove = CardSet.getList(trumpSuit);
+                players[discardingPlayer].myHand.remove(remove);
+                players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
+                players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);
+                if (declarerHand != null) {
+                    if (discardingPlayer == gameManager.declarerNumber) {
+                        declarerHand.remove(remove);
+                    }
+                }
+            }
         }
         for (Player player : players) {
             player.drop(card);
+        }
+        if (targetBot != null) {
+            targetBot.drop(card);
+        }
+        if (gameManager.declarerHand != null) {
+            gameManager.declarerHand.remove(card);
         }
 
         for (int i = 0; i < players.length; ++i) {
             int totalLeft = players[(i + 1) % players.length].totalCards();
             int totalRight = players[(i + 2) % players.length].totalCards();
+            CardSet allKnown = null;
+            CardSet third = null;
             Player player = players[i];
-            player.updateOthers(totalLeft, totalRight);
-        }
-        GameManager.getInstance().discarded.add(card);
-    }
+            if (totalLeft == player.leftHand.size()) {
+                // thus all cards are known, no more guessing
+                allKnown = player.leftHand;
+                third = player.rightHand;
+            } else if (totalRight == player.rightHand.size()) {
+                // thus all cards are known, no more guessing
+                allKnown = player.rightHand;
+                third = player.leftHand;
+            }
 
-    public void add(Card card, boolean fromTalon) {
-        if (fromTalon) {
-            startingSuit = card.getSuit();
-            startedFromTalon = true;
-        }
-        drop(card);
-    }
-
-    public void add(Card card) {
-        if (startingSuit == null) {
-            startingSuit = card.getSuit();
-        }
-        if (startingSuit.equals(card.getSuit())) {
-            if (topCard == null) {
-                topCard = card;
-                top = getTurn();
-            } else {
-                if (topCard.compareInTrick(card) < 0) {
-                    topCard = card;
-                    top = getTurn();
-                }
+            if (allKnown != null) {
+                third.remove(allKnown);
             }
         }
-        drop(card);
-        trickCards.add(card);
+        gameManager.discarded.add(card);
     }
 
-    @Override
-    public String toString() {
-        return trickCards.toString();
+    public CardList cards2List() {
+        CardList cardList = new CardList();
+        for (int i = 0; i < size(); ++i) {
+            cardList.add(get(i));
+        }
+        return cardList;
     }
 
+    public CardSet cards2CardSet() {
+        CardSet cardSet = new CardSet();
+        for (int i = 0; i < size(); ++i) {
+            cardSet.add(get(i));
+        }
+        return cardSet;
+    }
+
+    public String toColorString() {
+        GameManager gameManager = GameManager.getInstance();
+        StringBuilder sb = new StringBuilder();
+        sb.append("trick ").append(this.getNumber()).append(": ");
+        String sep = "";
+        if (!gameManager.getTalonCards().isEmpty()) {
+            sb.append("talon: ").append(gameManager.getTalonCards().last().toColorString());
+            sep = ", ";
+        }
+
+        for (int j = 0; j < this.size(); ++j) {
+            Player player = gameManager.players[(this.getStartedBy() + j) % gameManager.players.length];
+            sb.append(sep).append(player.getName()).append(": ")
+                .append(this.get(j).toColorString());
+            sep = ", ";
+        }
+        return new String(sb);
+    }
 }

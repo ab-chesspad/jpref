@@ -13,99 +13,27 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 2/6/2025
  */
 package com.ab.util;
 
-import com.ab.jpref.config.Config;
-
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.io.PrintStream;
 
 public class Logger {
-    public static boolean DEBUG = true;
-    public static final String LOG_EXT = ".log";
-    private static String logFileName;
+    private static LogHolder logHolder = new LogHolder() {};
     private static PrintStream out;
-    static String startDate;
 
-    public static void set(PrintStream out) {
-        Logger.out = out;
+    public static void setHolder(LogHolder logHolder) {
+        Logger.logHolder = logHolder;
+    }
+
+    private static PrintStream getOutput() {
         if (out == null) {
-            startDate = null;
+            out = logHolder.getLogStream();
         }
-    }
-
-    public static boolean isToFile() {
-        return System.out != out;
-    }
-
-    private static void setOutput() {
-        if (DEBUG) {
-            if (out != null) {
-                return;
-            }
-        }
-
-        if (System.out != out) {
-            String date = new SimpleDateFormat("yyyy-MM-dd-").format(new Date());
-            if (!date.equals(startDate)) {
-                close();
-                try {
-                    out = getNewOutput(date);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                startDate = date;
-            }
-        }
-    }
-
-    private static PrintStream getNewOutput(String date) throws IOException {
-        File dataDir = Config.getDataDirectory();
-        File logDir = new File(dataDir.getAbsolutePath(), "logs");
-        logDir.mkdir();
-        if (DEBUG) {
-            logFileName = logDir + File.separator + "0" + LOG_EXT;
-        } else {
-            final int[] lastNum = {0};
-            logDir.list((file, name) -> {
-                if (name.endsWith(LOG_EXT)) {
-                    name = name.substring(0, name.length() - LOG_EXT.length());
-                }
-                if (!name.startsWith(date)) {
-                    return false;
-                }
-                name = name.substring(date.length());
-                int num;
-                try {
-                    num = Integer.parseInt(name);
-                } catch (NumberFormatException e) {
-                    return false;
-                }
-                if (lastNum[0] < num) {
-                    lastNum[0] = num;
-                }
-                return false;
-            });
-            logFileName = logDir + File.separator + String.format("%s%03d%s", date, lastNum[0] + 1, LOG_EXT);
-        }
-        return new PrintStream(logFileName, StandardCharsets.UTF_8.name());
-    }
-
-    public static void close() {
-        if (out != null && out != System.out) {
-            out.close();
-            out = null;
-        }
-    }
-
-    public static String getLogFileName() {
-        return logFileName;
+        return out;
     }
 
     public static void println() {
@@ -124,6 +52,14 @@ public class Logger {
         printf(debug, "%s\n", msg);
     }
 
+    public static void println(StringBuilder msg) {
+        printf("%s\n", msg);
+    }
+
+    public static void println(boolean debug, StringBuilder msg) {
+        printf(debug, "%s\n", msg);
+    }
+
     public static void printf(boolean debug, String format, Object... args) {
         if (debug) {
             printf(format, args);
@@ -131,7 +67,7 @@ public class Logger {
     }
 
     public static void printf(String format, Object... args) {
-        setOutput();
+        PrintStream out = getOutput();
         out.printf(format, args);
     }
 
@@ -141,5 +77,11 @@ public class Logger {
 
     public static void println(boolean debug, int msg) {
         printf(debug, "%d\n", msg);
+    }
+
+    public interface LogHolder {
+        default PrintStream getLogStream() {return System.out; }
+        default String getLogFileName() { return null; }
+        default void close() {}
     }
 }

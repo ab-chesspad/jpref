@@ -1,5 +1,5 @@
 /**
- * avoid dependency on Java or android librarries
+ * avoid dependency on Java or android libraries
  */
 package com.ab.util;
 

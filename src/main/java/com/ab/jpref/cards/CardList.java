@@ -13,7 +13,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 12/22/2024
  *
@@ -33,7 +33,7 @@ public class CardList extends ArrayList<Card> {
                 if (rank.equals(Card.Rank.SIX)) {
                     continue;
                 }
-                cardList.add(new Card(suit, rank));
+                cardList.add(Card.fromValues(suit, rank));
             }
         }
         return cardList;
@@ -131,7 +131,7 @@ public class CardList extends ArrayList<Card> {
                         sb.append(Card.ANSI_RESET);
                     }
                 }
-                sb.append(sep).append(suit.toString());
+                sb.append(sep).append(suit);
                 sep = " ";
             }
             sb.append(c.getRank());
@@ -148,7 +148,6 @@ public class CardList extends ArrayList<Card> {
         }
         return remove(0);
     }
-
 
     public Card removeLast() {
         if (isEmpty()) {

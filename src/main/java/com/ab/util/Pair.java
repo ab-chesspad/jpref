@@ -1,11 +1,13 @@
 /*
  * copy of android.support.v4.util.Pair
+ * avoid dependency on Java or android libraries
  */
 package com.ab.util;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class Pair<F, S> implements Cloneable {
+public class Pair<F, S> implements Cloneable, Serializable {
     public F first;
     public S second;
 
@@ -53,6 +55,12 @@ public class Pair<F, S> implements Cloneable {
 
     public Pair<F, S> clone() {
         return new Pair<>(first, second);
+    }
+
+    // possibly use for config
+    @Override
+    public String toString() {
+        return first.toString();
     }
 
     /**

@@ -13,7 +13,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 12/22/2024.
  */
@@ -21,13 +21,17 @@ package com.ab.util;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.engine.GameManager;
 
 import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
 public class Util {
+    public static final String PROJECT_NAME = Config.PROJECT_NAME;
     public static final String DEAL_MARK = "deal:";
 
     public enum OS {
@@ -36,10 +40,22 @@ public class Util {
         windows,
         unknown
     }
+    final OS os = getOS();
 
     public static final Random myRand = new Random();
 
-    public static OS getOS() {
+    private static Util instance;
+
+    public static Util getInstance() {
+        if (instance == null) {
+            instance = new Util();
+        }
+        return instance;
+    }
+
+    protected Util() {}
+
+    public OS getOS() {
         OS os = OS.unknown;
         String osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
         if (osName.contains("nux")) {
@@ -49,19 +65,64 @@ public class Util {
         } else if ((osName.startsWith("windows"))) {
             os = OS.windows;
         }
-        Logger.println(String.format("running on %s", os));
         return os;
     }
 
-    public static Card[] toCardArray(String src) {
-        Card[] cards = new Card[src.length() / 2];
-        for (int i = 0; i < cards.length; ++i) {
-            cards[i] = new Card(src.substring(2 * i, 2 * i + 2));
-        }
-        return cards;
+    public InputStream openInputStream(String path) throws FileNotFoundException {
+        String dir = getDataDirectory();
+        return new FileInputStream(new File(dir, path));
     }
 
-    public static void getList(String filePath, LineHandler lineHandler) throws IOException {
+    public OutputStream openOutputStream(String path) throws FileNotFoundException {
+        String dir = getDataDirectory();
+        return new FileOutputStream(new File(dir, path));
+    }
+
+/*
+    public String getDataDirectory() {
+        String parent;
+        if (os == Util.OS.windows) {
+            String userHome = System.getProperty("user.home");
+            File f = new File(userHome, Config.PROJECT_NAME);
+            f.mkdirs();
+            parent = f.getAbsolutePath();
+        } else {
+            try {
+                parent = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        File dir = new File(parent);
+        dir.mkdirs();
+        return dir.getAbsolutePath();
+    }
+*/
+    public String getDataDirectory() {
+        return getDataFile().getAbsolutePath();
+    }
+
+    public File getDataFile() {
+        File file;
+        if (os == Util.OS.windows) {
+            String userHome = System.getProperty("user.home");
+            file = new File(userHome, PROJECT_NAME);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+        } else {
+            try {
+                file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                file = new File(file.getParent());
+                file.mkdirs();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return file;
+    }
+
+    public void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
             Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
         };
@@ -69,7 +130,7 @@ public class Util {
     }
 
     // charMap format "from->to"
-    public static void getList(String filePath, String[] charMap, LineHandler lineHandler) throws IOException {
+    public void getList(String filePath, String[] charMap, LineHandler lineHandler) throws IOException {
         File f = new File(filePath);
         String s = f.getAbsolutePath();
         try (BufferedReader reader =
@@ -103,7 +164,7 @@ public class Util {
                     continue;
                 }
                 String[] tokens = src.split(" ");
-                List<String> strings = new LinkedList<>();
+                List<String> strings = new ArrayList<>();
                 for (String t : tokens) {
                     if (t.isEmpty()) {
                         continue;
@@ -115,7 +176,7 @@ public class Util {
         }
     }
 
-    public static CardList toCardList(String src) {
+    public CardList toCardList(String src) {
         CardList cards = new CardList();
         if (src.isEmpty()) {
             return cards;
@@ -137,7 +198,7 @@ public class Util {
             }
             if (suit != null) {
                 String cardName = suit + src.charAt(i);
-                cards.add(new Card(cardName));
+                cards.add(Card.fromName(cardName));
                 ++i;
                 continue;
             }
@@ -145,7 +206,7 @@ public class Util {
             if (i >= src.length() - 1) {
                 break;
             }
-            cards.add(new Card(src.substring(i, i + 2)));
+            cards.add(Card.fromName(src.substring(i, i + 2)));
             i += 2;
         }
         return cards;
@@ -155,11 +216,11 @@ public class Util {
         void handleLine(String res, List<String> tokens);
     }
 
-    public static int nextRandInt(int max) {
+    public int nextRandInt(int max) {
         return myRand.nextInt(max);
     }
 
-    public static void sleep(int timeout) {
+    public void sleep(int timeout) {
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {

@@ -13,39 +13,41 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 1/12/2025
  */
 package com.ab.pref.config;
 
 import com.ab.jpref.config.Config;
-import com.ab.pref.Main;
+import com.ab.util.Couple;
 
 import java.awt.*;
+import java.util.Locale;
 
 public class PConfig extends Config {
-    // update serialVersionUID every time another property is being added!
-    private static final long serialVersionUID = 13L;
+    // update serialVersionUID every time a property is being added/changed!
+    private static final long serialVersionUID = 9L;
 
-    // these are for my macbook pro with external display because I'a a lazy bum
+    // these are for my macbook pro with external display because I'm a lazy bum
     private static final Rectangle DEFAULT_RECTANGLE = new Rectangle(7, 1634,1794,1929);
     private static final Rectangle DEFAULT_SCORES_RECTANGLE = new Rectangle(1875,1716,1032,1128);
 
     public final Property<Rectangle> mainRectangle;
     public final Property<Rectangle> scoresPopupRectangle;
+    public final Property<Rectangle> settingsPopupRectangle = new Property<>("", new Rectangle());
+    public final Property<Rectangle> helpPopupRectangle = new Property<>("", new Rectangle());
 
-    public final ColorProperty bgColor = new ColorProperty("Table Color", "#007000");
+    public final ColorProperty bgColor = new ColorProperty("", "#007000");
+//    public final ColorProperty bgColor = new ColorProperty("Table Color", "#007000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
     public final Property<String> GUID = new Property<>("", null);
 
-    protected static Object instance;
-
     public static PConfig getInstance() {
         if (instance == null) {
-            instance = Config.unserialize();
+            instance = PConfig.unserialize();
         }
         if (instance == null) {
             instance = new PConfig();
@@ -55,7 +57,19 @@ public class PConfig extends Config {
 
     protected PConfig() {
         super();
-        if (Main.RELEASE) {
+        Locale locale = Locale.getDefault();
+        String lang = locale.getLanguage();
+        int defaultLang = 0;
+        for (int i = 0; i < this.language.get().values.length; ++i) {
+            Couple<String> couple = this.language.get().values[i];
+            if (lang.equals(couple.second)) {
+                defaultLang = i;
+                break;
+            }
+        }
+        this.language.get().setSelected(defaultLang);
+
+        if (this.release.get()) {
             mainRectangle = new Property<>("", new Rectangle());
             scoresPopupRectangle = new Property<>("", new Rectangle());
         } else {
@@ -64,14 +78,21 @@ public class PConfig extends Config {
         }
     }
 
+    public static void refresh() {
+        instance = PConfig.unserialize();
+        if (instance == null) {
+            instance = new PConfig();
+        }
+    }
+
     public static class ColorProperty extends Property<String> {
 
         public ColorProperty(String name, String value) {
-            super(name, value);
+            super(name, true, value);
         }
 
         public ColorProperty(String name, Color color) {
-            super(name, String.format("#%06X", color.getRGB() & 0xffffff));
+            super(name, true, String.format("#%06X", color.getRGB() & 0xffffff));
         }
 
         public void setColor(Color color) {

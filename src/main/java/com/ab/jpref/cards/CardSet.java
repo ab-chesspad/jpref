@@ -13,19 +13,29 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
- * Created: 8/19/25
+ * Created: 8/19/2025
  *
  * 32-card deck as bitset
+ * simplified java.util.BitSet
+ * most operations, except size(), get(i) and iterators, are O(1)
  */
 
 package com.ab.jpref.cards;
 
+import com.ab.jpref.cards.Card.Rank;
+import com.ab.jpref.cards.Card.Suit;
+import com.ab.jpref.config.Config;
+import com.ab.util.Pair;
+
 import java.util.*;
 
 public class CardSet implements Iterable<Card> {
+    public static final int NOP = Config.NOP;   // Number of players
+    // todo: first, last, random
     public static final boolean RANDOM_ANY_CARD = false;
+/* this is nice, but I don't want to see it in debugger
     private static int _count = 0;
     static {
         int n = Integer.MAX_VALUE;
@@ -34,30 +44,51 @@ public class CardSet implements Iterable<Card> {
             ++_count;
         }
     }
+/*/
+    private static final int _count = 31;
+//*/
     public static final int TOTAL_BITS = _count + 1;
     public static final int MSB = 1 << _count;
     public static final int SUIT_LIST_LENGTH = TOTAL_BITS / 4;
     public static final int SUIT_LIST_MASK = (1 << (SUIT_LIST_LENGTH)) - 1;
-    public static final int TOTAL_RANKS = Card.TOTAL_RANKS - 1;
 
-    public static final Card[] cards = new Card[Card.TOTAL_SUITS * TOTAL_RANKS];
+    public static final int[] suitMasks = {0xff, 0xff00, 0xff0000, 0xff000000};
+
+    // number of necessary smaller cards     7  8  9  X  J  Q  K  A
+    public static final int[] misereCards = {0, 1, 1, 2, 2, 3, 3, 4};
+    public static final Map<Integer, Integer> clean4Misere = new HashMap<>();
     static {
-        int i = -1;
-        for (Card.Suit suit : Card.Suit.values()) {
-            for (int j = 0; j < TOTAL_RANKS; ++j) {
-                Card.Rank rank = Card.Rank.values()[j + 1];
-                cards[++i] = new Card(suit, rank);
+        for (Suit suit : Suit.values()) {
+            for (Rank rank : Rank.values()) {
+                if (rank.equals(Rank.SIX)) {
+                    continue;
+                }
+                int j = rank.getValue() - Rank.SEVEN.getValue();
+                int bit = 1 << (suitOffset(suit) + j);
+                clean4Misere.put(bit, misereCards[j]);
             }
         }
     }
+
     public static final Random random = new Random();
+
+    private static final CardSet empty = new CardSet();
 
     protected int bitmap;
 
     public CardSet() {}
 
-    public CardSet(Card card) {   // CardSet consists of a single card
+    public CardSet(com.ab.jpref.cards.Card card) {   // CardSet contains a single card
         add(card);
+    }
+
+    public CardSet(CardSet that) {
+        this.bitmap = that.bitmap;
+    }
+
+    // todo: get rid of it
+    public CardSet clone() {
+        return new CardSet(bitmap);
     }
 
     public CardSet(CardSet... cardSets) {
@@ -70,7 +101,7 @@ public class CardSet implements Iterable<Card> {
         add(cards);
     }
 
-    CardSet(int bitmap) {
+    public CardSet(int bitmap) {
         this.bitmap = bitmap;
     }
 
@@ -78,12 +109,37 @@ public class CardSet implements Iterable<Card> {
         return new CardSet(-1);
     }
 
-    public static int merge(CardSet[] cardSets) {
-        int res = 0;
+    public static CardSet getList(Suit suit) {
+        int bits = listMask(suit);
+        return new CardSet(bits);
+    }
+
+    public static CardSet empty() {
+        return empty;
+    }
+
+    public CardSet union(CardSet cardSet) {
+        CardSet newOne = new CardSet();
+        newOne.bitmap = bitmap | cardSet.bitmap;
+        return newOne;
+    }
+
+    public CardSet diff(CardSet cardSet) {
+        CardSet newOne = new CardSet();
+        newOne.bitmap = bitmap & ~cardSet.bitmap;
+        return newOne;
+    }
+
+    public int getBitmap() {
+        return bitmap;
+    }
+
+    public static CardSet union(CardSet... cardSets) {
+        int bitmap = 0;
         for (CardSet cardSet : cardSets) {
-            res |= cardSet.bitmap;
+            bitmap |= cardSet.bitmap;
         }
-        return res;
+        return new CardSet(bitmap);
     }
 
     public static String toString(CardSet[] cardSets) {
@@ -96,45 +152,52 @@ public class CardSet implements Iterable<Card> {
         return res.toString();
     }
 
-    protected static int suitOffset(Card.Suit suit) {
+    protected static int suitOffset(Suit suit) {
         int suitNum = suit.getValue();
         return suitNum * SUIT_LIST_LENGTH;
     }
 
     protected static int offset(Card card) {
         int suitNum = card.getSuit().getValue();
-        int rankNum = card.getRank().getValue() - Card.Rank.SEVEN.getValue();
+        int rankNum = card.getRank().getValue() - Rank.SEVEN.getValue();
         return suitNum * SUIT_LIST_LENGTH + rankNum;
     }
 
-    // 1st index of 1
-    protected static int first(int bitmap) {
-        int index = 0;
-        int mask = 1;
-        while ((bitmap & mask) == 0) {
-            ++index;
-            mask <<= 1;
-        }
-        return index;
+    protected static int listMask(Suit suit) {
+        int mask = SUIT_LIST_MASK << (suit.getValue() * SUIT_LIST_LENGTH);
+        return mask;
     }
 
-    // last index of 1
-    protected static int last(int bitmap) {
+    // https://www.geeksforgeeks.org/dsa/find-significant-set-bit-number/
+    static int lastBit(int bitmap) {
         if (bitmap == 0) {
             return -1;
         }
-        int index = TOTAL_BITS - 1;
-        int mask = 1 << TOTAL_BITS - 1;
-        while ((bitmap & mask) == 0) {
-            --index;
-            mask >>>= 1;
-        }
-        return index;
+        long n = bitmap & 0x0ffffffffL;
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        return (int)(++n >> 1);
     }
 
-    protected static int listMask(Card.Suit suit) {
-        int mask = SUIT_LIST_MASK << (suit.getValue() * SUIT_LIST_LENGTH);
-        return mask;
+    // cards are equivalent if they are from a consecutive list, e.g. 89XJ
+    public boolean equiv(Card card0, Card card1) {
+        if (!card0.getSuit().equals(card1.getSuit())) {
+            return false;
+        }
+        Card c0 = card0;
+        Card c1 = card1;
+        if (card0.compareTo(card1) > 0) {
+            c0 = card1;
+            c1 = card0;
+        }
+        int bit0 = 1 << offset(c0);
+        int bit1 = 1 << offset(c1);
+        int bitmap = this.bitmap | ((bit0 << 1) - 1);   // set all 1s on the right of c0
+        bitmap |= -bit1;                   // set all 1s on the left of c1
+        return ~bitmap == 0;
     }
 
     public static Card getMin(CardSet leftSuit, CardSet rightSuit) {
@@ -151,12 +214,32 @@ public class CardSet implements Iterable<Card> {
         return res;
     }
 
+    public boolean equals(Object that) {
+        if (!(that instanceof  CardSet)) {
+            return false;
+        }
+        return this.equals((CardSet)that);
+    }
+
     public boolean equals(CardSet that) {
         return this.bitmap == that.bitmap;
     }
 
-    public CardSet clone() {
-        return new CardSet(bitmap);
+    // compare ranks
+    public int compareTo(CardSet that) {
+        Card thisLast = this.last();
+        Card thatLast = that.last();
+
+        if (thatLast == null) {
+            return thisLast == null ? 0 : 1;
+        }
+        if (thisLast == null) {
+            return -1;
+        }
+
+        int s0 = this.bitmap >>> suitOffset(thisLast.getSuit());
+        int s1 = that.bitmap >>> suitOffset(thatLast.getSuit());
+        return s0 - s1;
     }
 
     public CardSet complement() {
@@ -182,6 +265,20 @@ public class CardSet implements Iterable<Card> {
         return bitmap == 0;
     }
 
+    public boolean contains(CardSet cardSet) {
+        if (cardSet == null) {
+            return true;    // let's treat null as empty set
+        }
+        int intersection = bitmap & cardSet.bitmap;
+        return intersection == cardSet.bitmap;
+    }
+
+    public CardSet intersection(CardSet cardSet) {
+        CardSet newOne = new CardSet();
+        newOne.bitmap = bitmap & cardSet.bitmap;
+        return newOne;
+    }
+
     public boolean contains(Card card) {
         int mask = 1 << offset(card);
         return (bitmap & mask) != 0;
@@ -191,39 +288,27 @@ public class CardSet implements Iterable<Card> {
         return size(bitmap);
     }
 
-    public int size(Card.Suit suit) {
+    public int size(Suit suit) {
         int bits = bitmap & listMask(suit);
         return size(bits);
     }
 
-    public boolean isEmpty(Card.Suit suit) {
-        int bits = bitmap & listMask(suit);
-        return bits == 0;
-    }
-
     public void add(Card card) {
-        int pos = 1 << offset(card);
-        bitmap |= pos;
+        if (card == null) {
+            return;
+        }
+        int bit = 1 << offset(card);
+        bitmap |= bit;
     }
 
     public CardSet list() {
         return list(null);
     }
 
-    public CardSet list(Card.Suit suit) {
-        CardSet cardSet = new CardSet();
-        int ind = 0;
-        int total = TOTAL_BITS;
+    public CardSet list(Suit suit) {
+        CardSet cardSet = this.clone();
         if (suit != null) {
-            ind = offset(new Card(suit, Card.Rank.SEVEN));
-            total = SUIT_LIST_LENGTH;
-        }
-        int mask = 1 << ind;
-        for (int i = 0; i < total; ++i) {
-            if ((bitmap & mask) != 0) {
-                cardSet.add(cards[ind + i]);
-            }
-            mask <<= 1;
+            cardSet.bitmap = cardSet.bitmap & listMask(suit);
         }
         return cardSet;
     }
@@ -236,35 +321,23 @@ public class CardSet implements Iterable<Card> {
         return anyCard(null);
     }
 
-    public Card anyCard(Card.Suit suit) {
+    public Card anyCard(Suit suit) {
         int bitmap = this.bitmap;
         if (suit != null) {
-            int mask = SUIT_LIST_MASK << suitOffset(suit);
-            bitmap &= mask;
+            bitmap = bitmap & listMask(suit);
         }
 
         if (bitmap == 0) {
             bitmap = this.bitmap;   // will return any card
         }
 
-        int size = size(bitmap);
-        int rand = size - 1;
+        int index;
         if (RANDOM_ANY_CARD) {
-            rand = random.nextInt(size);
+            int size = size(bitmap);
+            index = random.nextInt(size);
+            return Card.cards[index];
         }
-        int mask = 1;
-        int index = -1;
-        while (rand >= 0) {
-            if ((bitmap & mask) != 0) {
-                --rand;
-            }
-            mask <<= 1;
-            ++index;
-        }
-        if (index < 0) {
-            index = -1;
-        }
-        return cards[index];
+        return Card.cardMap.get(lastBit(bitmap));
     }
 
     public void add(CardSet cardSet) {
@@ -278,55 +351,66 @@ public class CardSet implements Iterable<Card> {
     }
 
     public boolean remove(Card card) {
-        int pos = 1 << offset(card);
-        boolean res = (bitmap & pos) != 0;
-        bitmap &= ~pos;
+        if (card == null) {
+            return false;
+        }
+        int bit = 1 << offset(card);
+        boolean res = (bitmap & bit) != 0;
+        bitmap &= ~bit;
         return res;
     }
 
-    public void remove(CardSet other) {
+    public CardSet remove(CardSet other) {
         this.bitmap &= ~other.bitmap;
+        return this;
     }
 
-    public void remove(Collection<Card> cards) {
+    public CardSet remove(Collection<Card> cards) {
         for (Card card : cards) {
             remove(card);
         }
+        return this;
     }
 
     public Card remove(int order) {
         return get(order, true);
     }
 
-    private Card get(int order, boolean remove) {
-        if (order < 0 || order >= TOTAL_BITS) {
+    private Card get(int index, boolean remove) {
+        if (index < 0 || index >= TOTAL_BITS) {
             return null;
         }
         int mask = 1;
-        int index = 0;
+        int _index = 0;
         for (int i = 0; i < TOTAL_BITS; ++i) {
             if ((bitmap & mask) != 0) {
-                if (--order < 0) {
+                if (--index < 0) {
                     break;
                 }
             }
             mask <<= 1;
-            ++index;
+            ++_index;
         }
-        if (index >= TOTAL_BITS) {
+        if (_index >= TOTAL_BITS) {
             return null;
         }
         if (remove) {
             bitmap &= ~mask;
         }
-        return cards[index];
+        return Card.cards[_index];
     }
 
     public Card first() {
+        return firstCard(bitmap);
+    }
+
+    protected Card firstCard(int bitmap) {
         if (bitmap == 0) {
             return null;
         }
-        return cards[first(bitmap)];
+        int bit = bitmap ^ (bitmap & (bitmap - 1));
+        Card card = Card.cardMap.get(bit);
+        return card;
     }
 
     public Card removeFirst() {
@@ -334,25 +418,22 @@ public class CardSet implements Iterable<Card> {
             return null;
         }
         int bit = bitmap ^ (bitmap & (bitmap - 1));
-        Card card = cards[first(bit)];
+        Card card = Card.cardMap.get(bit);
         bitmap &= ~bit;
         return card;
     }
 
     public Card last() {
-        if (bitmap == 0) {
-            return null;
-        }
-        return cards[last(bitmap)];
+        return Card.cardMap.get(lastBit(bitmap));
     }
 
     public Card removeLast() {
-        int index = last(bitmap);
-        if (index < 0) {
+        int bit = lastBit(bitmap);
+        if (bit == 0) {
             return null;
         }
-        Card card = cards[index];
-        bitmap &= ~(1 << index);
+        Card card = Card.cardMap.get(bit);
+        bitmap &= ~bit;
         return card;
     }
 
@@ -368,15 +449,69 @@ public class CardSet implements Iterable<Card> {
         return cardList;
     }
 
-    /// /////////////////////
+    public Card next(Card card) {
+        if (card == null) {
+            return first();
+        }
 
-    public int getMaxLessThan(Card other) {
+        int bit = 1 << offset(card);
+        if (bit == MSB) {
+            return null;
+        }
+
+        // clear all bits lesser than card
+        int bitmap = this.bitmap & -(bit << 1);
+        return firstCard(bitmap);
+    }
+
+    public Card prev(Card card) {
+        if (card == null) {
+            return null;
+        }
+
+        int bit = 1 << offset(card);
+
+        // clear all bits greater than card
+        int bitmap = this.bitmap & (bit - 1);
+        return Card.cardMap.get(lastBit(bitmap));
+    }
+
+    public boolean isClean4Misere() {
+        if (this.bitmap == 0) {
+            return true;
+        }
+        int bitmap = this.bitmap;
+        int count = 0;
+        int bit0 = bitmap ^ (bitmap & (bitmap - 1));
+        int mask = 0;
+        for (int m : suitMasks) {
+            if ((bit0 & m) != 0) {
+                mask = m;
+                break;
+            }
+        }
+        while (bitmap != 0) {
+            int bit = bitmap ^ (bitmap & (bitmap - 1));
+            if ((bit & mask) == 0) {
+                // sanity check
+                throw new InputMismatchException(String.format("invalid misere test for suit %s", toString()));
+            }
+            if (count < clean4Misere.get(bit)) {
+                return false;
+            }
+            ++count;
+            bitmap &= ~bit;
+        }
+        return true;
+    }
+
+    public int prevIndex(Card other) {
         if (other == null) {
             return 0;
         }
         int offset = other.getSuit().getValue() * SUIT_LIST_LENGTH;
         int mask = 1 << offset;
-        int rank = other.getRank().getValue() - Card.Rank.SEVEN.getValue();
+        int rank = other.getRank().getValue() - Rank.SEVEN.getValue();
         int index = -1;
         while (--rank >= 0) {
             if ((mask & bitmap) != 0) {
@@ -387,161 +522,45 @@ public class CardSet implements Iterable<Card> {
         return index;
     }
 
-    public int getOptimalStart(CardSet leftSuit, CardSet rightSuit) {
+    public Card getOptimalStart(CardSet leftSuit, CardSet rightSuit) {
         if (this.isEmpty()) {
-            return -1;
+            return null;
         }
+        Card myFirst = this.first();
         if (this.size() == 1) {
-            return 0;
+            return myFirst;
         }
 
-        if (this.first().compareInTrick(getMin(leftSuit, rightSuit)) > 0 ) {
-            return 0;
+        if (myFirst.compareInTrick(getMin(leftSuit, rightSuit)) > 0 ) {
+            return myFirst;
         }
 
         // size >= 2
-        Card myNext = get(1);
-        int next = getMaxLessThan(myNext);
-        if (next == 0) {
-            if (leftSuit.size() > 1 && rightSuit.size() > 1 ||
-                leftSuit.size() == 1 && myNext.compareInTrick(leftSuit.first()) < 0 ||
-                rightSuit.size() == 1 && myNext.compareInTrick(rightSuit.first()) < 0) {
-                ++next;     // preserve min
-            }
+        Card myNext = this.next(myFirst);
+        if (leftSuit.size() > 1 && rightSuit.size() > 1 ||
+            leftSuit.size() == 1 && myNext.compareInTrick(leftSuit.first()) < 0 ||
+            rightSuit.size() == 1 && myNext.compareInTrick(rightSuit.first()) < 0) {
+            return myNext;     // preserve min
         }
-        return next;
+        return myFirst;
     }
 
-    public int getMinGreaterThan(Card other) {
-        if (other == null) {
-            return 0;
-        }
-        Card.Suit suit = other.getSuit();
-        int mask = SUIT_LIST_MASK << suitOffset(suit);
-        int bitmap = this.bitmap & mask;
-        if (bitmap == 0) {
-            return -1;
-        }
-
-        int offset = suit.getValue() * SUIT_LIST_LENGTH;
-        mask = 1 << offset;
-        int rank = other.getRank().getValue() - Card.Rank.SEVEN.getValue();
-        int index = -1;
-        for (int i = 0; i < SUIT_LIST_LENGTH; ++i) {
-            if ((mask & bitmap) != 0) {
-                ++index;
-                if (rank < 0) {
-                    return index;
-                }
-            }
-            --rank;
-            mask <<= 1;
-        }
-        return -1;
-    }
-
-    // clone lists and remove duplicates from leftSuit
-    CardSet[] simplifyHands(CardSet _leftSuit, CardSet _rightSuit) {
+    // clone lists and remove duplicates
+    CardSet[] simplifyHands(CardSet _leftSuit, CardSet _rightSuit, boolean forMisere) {
         CardSet rightSuit = _rightSuit.clone();
         CardSet leftSuit = _leftSuit.clone();
-        int common = rightSuit.bitmap & leftSuit.bitmap;
-        leftSuit.bitmap &= ~common;
+        if (forMisere) {
+            CardSet common = rightSuit.intersection(leftSuit);
+            leftSuit.remove(common);
+        } else {
+            CardSet common = leftSuit.intersection(leftSuit);
+            rightSuit.remove(common);
+        }
         CardSet[] cardLists = new CardSet[3];
         cardLists[0] = this.clone();
         cardLists[1] = leftSuit;
         cardLists[2] = rightSuit;
         return cardLists;
-    }
-
-    public ListData maxUnwantedTricks(CardSet leftSuit, CardSet rightSuit, boolean meStart) {
-        ListData listData = new ListData(this);
-        if (this.isEmpty()) {
-            return listData;
-        }
-        listData.suit = this.first().getSuit();
-
-        CardSet[] cardLists = simplifyHands(leftSuit, rightSuit);
-        listData.good = true;
-        Card.Rank myMin = this.first().getRank();
-        if (listData.good && !leftSuit.isEmpty()) {
-            listData.good = myMin.compare(leftSuit.first().getRank()) < 0;
-        }
-        if (listData.good && !rightSuit.isEmpty()) {
-            listData.good = myMin.compare(rightSuit.first().getRank()) < 0;
-        }
-
-        boolean keepDoing = true;
-        boolean firstMove = true;
-        mainLoop:
-        while (keepDoing) {
-            int n = 0;
-            if (!meStart) {
-                n = 2;
-            }
-            if (cardLists[n].isEmpty()) {
-                break;
-            }
-            int j0 = 0;
-            if (meStart) {
-                j0 = cardLists[n].getOptimalStart(
-                    cardLists[(n + 1) % cardLists.length], cardLists[(n + 2) % cardLists.length]);      // 8JQK should start with JQK
-            }
-
-            Card firstCard = cardLists[n].get(j0);
-            cardLists[n].remove(j0);
-            boolean myTrick = true;
-            int empty = 0;
-            for (int i = 1; i < cardLists.length; ++i) {
-                int k = (n + i) % cardLists.length;
-                if (cardLists[k].isEmpty()) {
-                    if (k == 0) {
-                        myTrick = false;
-                    }
-                    if (++empty >= 2) {
-                        break mainLoop;
-                    }
-                    continue;
-                }
-                int j;
-                if (meStart) {
-                    if (cardLists[k].first().compareInTrick(firstCard) < 0) {
-                        j = cardLists[k].getMaxLessThan(firstCard);
-                    } else {
-                        myTrick = false;
-                        j = cardLists[k].size() - 1;
-                    }
-                } else {
-                    if (cardLists[k].first().compareInTrick(firstCard) < 0) {
-                        if (k == 0) {
-                            myTrick = false;
-                        }
-                        j = cardLists[k].getMaxLessThan(firstCard);
-                    } else {
-                        j = cardLists[k].size() - 1;
-                        firstCard = cardLists[k].get(j);
-                    }
-                }
-                cardLists[k].remove(j);
-            }
-
-            if (meStart) {
-                if (myTrick) {
-                    ++listData.maxMeStart;
-                }
-            } else {
-                if (myTrick) {
-                    ++listData.maxTheyStart;
-                } else if (firstMove) {
-                    meStart = false;
-                }
-            }
-            firstMove = false;
-        }
-
-        if (meStart) {
-            listData.cardsLeft = cardLists[0].size() - cardLists[2].size();
-        }
-        return listData;
     }
 
     public ListData maxUnwantedTricks(CardSet leftSuit, CardSet rightSuit, int elderHand) {
@@ -552,7 +571,7 @@ public class CardSet implements Iterable<Card> {
         }
         listData.suit = this.first().getSuit();
 
-        CardSet[] cardLists = simplifyHands(leftSuit, rightSuit);
+        CardSet[] cardLists = simplifyHands(leftSuit, rightSuit, true);
         listData.good = true;
         Card myMin = this.first();
         if (listData.good && !leftSuit.isEmpty()) {
@@ -564,11 +583,11 @@ public class CardSet implements Iterable<Card> {
 
         int n = elderHand;
 mainLoop:
-        while (cardLists[n].size() > 0) {
+        while (!cardLists[n].isEmpty()) {
             int k = (n + 1) % cardLists.length;
             int r = (n + 2) % cardLists.length;
-            int j0 = cardLists[n].getOptimalStart(cardLists[k], cardLists[r]);
-            Card topCard = cardLists[n].remove(j0);
+            Card topCard = cardLists[n].getOptimalStart(cardLists[k], cardLists[r]);
+            cardLists[n].remove(topCard);
             int top = n;
             int empty = 0;
             for (int i = 1; i < cardLists.length; ++i) {
@@ -591,7 +610,7 @@ mainLoop:
                     } else {
                         if (top == 0 || k == 0) {
                             // yield it
-                            j = cardLists[k].getMaxLessThan(topCard);
+                            j = cardLists[k].prevIndex(topCard);
                         } else {
                             j = cardLists[k].size() - 1;    // ok to grab it
                         }
@@ -605,7 +624,7 @@ mainLoop:
                             j = cardLists[k].size() - 1;    // ok to grab it
                         } else {
                             // both are smaller than top
-                            j = cardLists[k].getMaxLessThan(topCard);
+                            j = cardLists[k].prevIndex(topCard);
                         }
                     } else {
                         // self has not played yet
@@ -615,10 +634,10 @@ mainLoop:
                         if (k == 0) {
                             // self playing
                             if (myMin.compareTo(cardLists[left].first()) < 0) {
-                                jLeft = cardLists[k].getMaxLessThan(cardLists[left].first());
+                                jLeft = cardLists[k].prevIndex(cardLists[left].first());
                             }
                             if (myMin.compareTo(topCard) < 0) {
-                                jTop = cardLists[k].getMaxLessThan(topCard);
+                                jTop = cardLists[k].prevIndex(topCard);
                             }
                             j = cardLists[k].size() - 1;
                             if (j > jLeft) {
@@ -630,10 +649,10 @@ mainLoop:
                         } else {
                             if (myMin.compareTo(cardLists[left].first()) < 0) {
                                 // compare to self
-                                jLeft = cardLists[k].getMaxLessThan(cardLists[left].first());
+                                jLeft = cardLists[k].prevIndex(cardLists[left].first());
                             }
                             if (myMin.compareTo(topCard) < 0) {
-                                jTop = cardLists[k].getMaxLessThan(topCard);
+                                jTop = cardLists[k].prevIndex(topCard);
                             }
                             j = cardLists[k].size() - 1;    // ok to grab it
                             if (j > jTop) {
@@ -678,28 +697,25 @@ mainLoop:
         int rightSize = rightSuit.size();
         CardSet otherSuits = new CardSet(leftSuit);
         otherSuits.add(rightSuit);
-        ListData listData = this.maxUnwantedTricks(dummy, otherSuits.list(), 2);
-        try {
-            if (this.size() <= 1 || myMin.compareInTrick(getMin(leftSuit, rightSuit)) > 0) {
-                // do nothing, myMin is not the lowest
-            } else if (this.size() <= 4 && myMax.getRank().compare(Card.Rank.ACE) >= 0 &&
-                rightSize > 0 && leftSize > 0) {
-                listData.maxTheyStart = 0;
-            } else if (this.size() <= 3 && myMax.getRank().compare(Card.Rank.QUEEN) >= 0 && rightSize >= 3 &&
-                myMax.compareInTrick(rightSuit.get(mySize - 1)) < 0) {
-                listData.maxTheyStart = 0;
-            } else if ((myNextMin = this.get(1)).getRank().compare(Card.Rank.TEN) >= 0) {
-                // 7X, et al.
-                if (leftSize >= 2 && myNextMin.compareInTrick(leftSuit.first()) > 0 ||
+        ListData listData = this.maxUnwantedTricks(dummy, otherSuits, 2);
+        if (this.size() <= 1 || myMin.compareInTrick(getMin(leftSuit, rightSuit)) > 0) {
+            // do nothing, myMin is not the lowest
+        } else if (this.size() <= 4 && myMax.getRank().compare(Rank.ACE) >= 0 &&
+            rightSize > 0 && leftSize > 0) {
+            listData.maxTheyStart = 0;
+        } else if (this.size() <= 3 && myMax.getRank().compare(Rank.QUEEN) >= 0 && rightSize >= 3 &&
+            myMax.compareInTrick(rightSuit.get(mySize - 1)) < 0) {
+            listData.maxTheyStart = 0;
+        } else if ((myNextMin = this.get(1)).getRank().compare(Rank.TEN) >= 0) {
+            // 7X, et al.
+            if (leftSize >= 2 && myNextMin.compareInTrick(leftSuit.first()) > 0 ||
 //                leftSize < 2 && myNextMin.compareInTrick(rightSuit.get(1)) > 0 ||  // "7X 8 9JQKA 0"
-                    rightSize >= 2 && myNextMin.compareInTrick(rightSuit.get(1)) > 0) {
-                    // ловится:
-                } else {
-                    listData.maxTheyStart = 0;
-                }
+                rightSize >= 2 && myNextMin.compareInTrick(rightSuit.get(1)) > 0) {
+                // ловится:
+                listData.maxTheyStart = 1;
+            } else {
+                listData.maxTheyStart = 0;
             }
-        } catch (java.lang.IndexOutOfBoundsException e) {
-            e.printStackTrace();
         }
         return listData;
     }
@@ -712,108 +728,102 @@ mainLoop:
         return listData;
     }
 
-    public ListData minWantedTricks(CardSet leftSuit, CardSet rightSuit, int elderHand) {
-        ListData listData = new ListData(this);
-        if (this.isEmpty()) {
-            return listData;
-        }
-        // todo!
-/*
-//        listData.suit = this.get(0).getSuit();
-        listData.suitNum = this.get(0).getSuit().getValue();
-        simplifyHands(listData, leftSuit, rightSuit);
-        int[] order;
-        if (meStart) {
-            order = new int[] {0,1,2};
-        } else {
-            order = new int[] {2,1,0};
-        }
-
-        CardList[] cardLists = new CardList[3];
-        cardLists[0] = listData.thisSuit;
-        cardLists[1] = listData.leftSuit;
-        cardLists[2] = listData.rightSuit;
-
-        int n = order[0];
-        while (cardLists[n].size() > 0) {
-            int j = cardLists[n].size() - 1;
-            Card.Rank firstCard = cardLists[n].get(j).getRank();
-            cardLists[n].remove(j);
-            boolean myTrick = true;
-            for (int i = 1; i < cardLists.length; ++i) {
-                int k = order[i];
-                if (cardLists[k].size() == 0) {
-                    if (k == 0) {
-                        myTrick = false;
-                    }
-                    continue;
-                }
-
-                int m = cardLists[k].size() - 1;
-                if (meStart) {
-                    if (cardLists[k].get(m).getRank().compare(firstCard) < 0) {
-                        j = 0;
-                    } else {
-                        j = cardLists[k].getMinGreaterThan(firstCard);
-                        firstCard = cardLists[k].get(j).getRank();
-                        myTrick = false;
-                    }
-                } else {
-                    if (cardLists[k].get(m).getRank().compare(firstCard) < 0) {
-                        if (k == 0) {
-                            myTrick = false;
-                        }
-                        j = 0;
-                    } else {
-                        j = cardLists[k].getMinGreaterThan(firstCard);
-                        firstCard = cardLists[k].get(j).getRank();
-                    }
-                }
-                cardLists[k].remove(j);
-            }
-
-            if (meStart) {
-                if (myTrick) {
-                    ++listData.minMeStart;
-                }
-            } else {
-                if (myTrick) {
-                    ++listData.minTheyStart;
-                }
-            }
-        }
-*/
-        return listData;
+    public static Card min(CardSet... hands) {
+        CardSet union = hands[0].union(hands[1]);
+        return union.first();
     }
 
-/////////////////////////////////
+    public static Card max(CardSet... hands) {
+        CardSet union = hands[0].union(hands[1]);
+        return union.last();
+    }
+
+    // assuming always self's turn
+    public Pair<Integer, Card> minWantedTricks(CardSet _leftSuit, CardSet _rightSuit) {
+        CardSet[] hands = simplifyHands(_leftSuit, _rightSuit, false);
+        return _minWantedTricks(hands[1], hands[2]);
+    }
+
+
+    // assuming always self's turn
+    private Pair<Integer, Card> _minWantedTricks(CardSet _leftSuit, CardSet _rightSuit) {
+        Pair<Integer, Card> res = new Pair<>(0, null);
+        if (this.isEmpty()) {
+            return res;
+        }
+        CardIterator it = this.reverseIterator();
+        while (it.hasNext()) {
+            Card myCard = it.next();
+            CardSet leftSuit = _leftSuit.clone();
+            CardSet rightSuit = _rightSuit.clone();
+            int _count = 0;
+            CardSet clone = new CardSet(this);
+            clone.remove(myCard);
+            Card left = leftSuit.next(myCard);
+            Card right = rightSuit.next(myCard);
+            if (left == null && right == null) {
+                leftSuit.removeFirst();
+                rightSuit.removeFirst();
+                ++_count;
+            } else if (left != null) {
+                if (right == null || left.compareInTrick(right) < 0) {
+                    leftSuit.remove(left);
+                    rightSuit.removeFirst();
+                } else {
+                    leftSuit.removeFirst();
+                    rightSuit.remove(right);
+                }
+            } else {
+                rightSuit.remove(right);
+                leftSuit.removeFirst();
+            }
+            Pair<Integer, Card> pair = clone._minWantedTricks(leftSuit, rightSuit);
+            _count += pair.first;
+            if (res.first < _count) {
+                res.first = _count;
+                res.second = myCard;
+            }
+        }
+        return res;
+    }
+
+    /////////////////////////////////
     @Override
     public String toString() {
-        return toColorString(false);
+        return toColorString(bitmap, false);
     }
 
     public String toColorString() {
-        return toColorString(true);
+        return toColorString(bitmap, true);
     }
 
     public String toColorString(boolean color) {
-        Iterator<Card> iterator = this.iterator();
-        StringBuilder sb = new StringBuilder();
-        Card.Suit suit = null;
+        return toColorString(bitmap, color);
+    }
+
+    static String toString(int bitmap) {
+        return toColorString(bitmap, false);
+    }
+
+    static String toColorString(int bitmap, boolean color) {
+        Suit suit = null;
         String sep = "";
-        while (iterator.hasNext()) {
-            Card c = iterator.next();
-            Card.Suit s = c.getSuit();
+        StringBuilder sb = new StringBuilder();
+        while (bitmap != 0) {
+            int bit = bitmap ^ (bitmap & (bitmap - 1));
+            Card c = Card.cardMap.get(bit);
+            bitmap &= ~bit;
+            Suit s = c.getSuit();
             if (!s.equals(suit)) {
                 suit = s;
                 if (color) {
-                    if (s.equals(Card.Suit.DIAMOND) || s.equals(Card.Suit.HEART)) {
+                    if (s.equals(Suit.DIAMOND) || s.equals(Suit.HEART)) {
                         sb.append(Card.ANSI_RED);
                     } else {
                         sb.append(Card.ANSI_RESET);
                     }
                 }
-                sb.append(sep).append(suit.toString());
+                sb.append(sep).append(suit);
                 sep = " ";
             }
             sb.append(c.getRank());
@@ -821,14 +831,21 @@ mainLoop:
         if (color) {
             sb.append(Card.ANSI_RESET);
         }
-        return new String(sb);
+        return sb.toString();
+    }
+
+    public abstract class CardIterator implements Iterator<Card> {
+        int bitmap = CardSet.this.bitmap;
+        public String toString() {
+            return CardSet.toString(bitmap);
+        }
     }
 
     public Iterator<CardSet> suitIterator() {
         return suitIterator(null);
     }
 
-    public Iterator<CardSet> suitIterator(final Card.Suit exclude) {
+    public Iterator<CardSet> suitIterator(final Suit exclude) {
         return new Iterator<CardSet>() {
             int index = nextSuitNum(-1);
 
@@ -839,7 +856,7 @@ mainLoop:
                     if (++index >= Card.TOTAL_SUITS) {
                         break;
                     }
-                    Card.Suit suit = Card.Suit.values()[index];
+                    Suit suit = Suit.values()[index];
                     if (suit.equals(exclude)) {
                         continue;
                     }
@@ -855,7 +872,7 @@ mainLoop:
 
             @Override
             public CardSet next() {
-                CardSet cardSet = list(Card.Suit.values()[index]);
+                CardSet cardSet = list(Suit.values()[index]);
                 index = nextSuitNum(index);
                 return cardSet;
             }
@@ -868,10 +885,9 @@ mainLoop:
     }
 
     @Override
-    public Iterator<Card> iterator() {
-        return new Iterator<Card>() {
-            int bitmap = CardSet.this.bitmap;
-            int index = 0;
+    public CardIterator iterator() {
+        return new CardIterator() {
+            int bit;
 
             @Override
             public boolean hasNext() {
@@ -880,31 +896,24 @@ mainLoop:
 
             @Override
             public Card next() {
-                int res = bitmap;
-                index = 0;
-                while ((res & 1) == 0) {
-                    res >>>= 1;
-                    ++index;
+                if (bitmap == 0) {
+                    return null;
                 }
-                bitmap = bitmap & (bitmap - 1);
-                if (index < cards.length) {
-                    return cards[index];
-                }
-                return null;
+                bit = bitmap ^ (bitmap & (bitmap - 1));
+                bitmap &= ~bit;
+                return Card.cardMap.get(bit);
             }
 
             @Override
             public void remove() {
-                int mask = 1 << index;
-                CardSet.this.bitmap &= ~ mask;
+                CardSet.this.bitmap &= ~bit;
             }
         };
     }
 
-    public Iterator<Card> reverseIterator() {
-        return new Iterator<Card>() {
-            int bitmap = CardSet.this.bitmap;
-            int index = TOTAL_BITS - 1;
+    public CardIterator reverseIterator() {
+        return new CardIterator() {
+            int bit;
 
             @Override
             public boolean hasNext() {
@@ -913,92 +922,226 @@ mainLoop:
 
             @Override
             public Card next() {
-                while ((bitmap & MSB) == 0) {
-                    bitmap <<= 1;
-                    --index;
+                if (bitmap == 0) {
+                    return null;
                 }
-                bitmap <<= 1;
-                if (index >= 0) {
-                    return cards[index--];
-                }
-                return null;
+                bit = lastBit(bitmap);
+                bitmap &= ~bit;
+                return Card.cardMap.get(bit);
             }
 
             @Override
             public void remove() {
-                int mask = 1 << index;
-                CardSet.this.bitmap &= ~ mask;
+                CardSet.this.bitmap &= ~bit;
             }
         };
+    }
+
+    static int compare(int b0, int b1) {
+        int r0 = (b0 & 1) - (b1 & 1);
+        int r1 = (b0 >>>1) - (b1 >>>1);
+        if (r1 == 0) {
+            return r0;
+        }
+        return r1;
+    }
+
+    // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
+    public CardIterator buildIterator(CardSet friend, CardSet foe) {
+        int union = this.union(friend).bitmap;
+
+        // build minimal bitmap
+        int suitListMask = SUIT_LIST_MASK;
+        int lsb = union ^ (union & (union - 1));
+        union |= ~foe.bitmap;           // fill in all foe and missing bits
+        union &= -lsb;                  // clear all bits to the right of lsb
+        int bitmap = 0;
+        while (lsb != 0) {
+            while ((lsb & suitListMask) == 0) {
+                suitListMask <<= SUIT_LIST_LENGTH;
+            }
+            int u = union & suitListMask;
+            int msb = lastBit(u);               // for suit
+            int m0 = (u + lsb) & suitListMask;  // convert all 1s to 0s before next 0
+            int groupMSB;   // group of 1s
+            if (m0 == 0) {
+                // suit overfloating, means Ace
+                groupMSB = msb;
+            } else {
+                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
+            }
+            if ((this.bitmap & lsb) != 0) {
+                // lsb belongs to this
+                int friendBitmap = friend.bitmap & suitListMask;
+                int b = friendBitmap & -(lsb << 1);    // clear friend's bits smaller than lsb
+                int friendLSB = b ^ (b & (b - 1));      // friend's' lsb next to this' lsb
+                int friendMSB = lastBit(b);             // friend's' group msb
+                if ((friendLSB & suitListMask) == 0) {
+                    bitmap |= lsb;
+                } else {
+                    b = this.bitmap & -(friendLSB << 1);    // clear this' bits smaller than friendLSB
+                    int thisLSB = b ^ (b & (b - 1));        // this' lsb next to friendLSB
+                    if (compare(friendMSB, thisLSB) < 0) {
+                        bitmap |= lsb;
+                        bitmap |= thisLSB;
+                    }
+                    if (thisLSB == 0 || thisLSB == msb || thisLSB == groupMSB) {
+                        bitmap |= lsb;
+                    } else {
+                        bitmap |= thisLSB;
+                    }
+                }
+            } else {
+                // lsb belongs to friend or noone
+                int b = this.bitmap & -(lsb << 1);    // clear all bits to the right of lsb
+                b &= (groupMSB << 1) - 1;             // clear all to the left of groupMSB
+                int next = b ^ (b & (b - 1));         // group next lsb
+                if (next != 0) {
+                    bitmap |= next;         // this has cards between lsb & groupMSB
+                }
+            }
+
+            m0 &= (m0 - 1);                         // clear converted lsb back
+            union = union & ~suitListMask | m0;
+            if ((this.bitmap & union) == 0) {
+                break;
+            }
+            lsb = union ^ (union & (union - 1));    // new lsb
+        }
+        CardSet cardSet = new CardSet(bitmap);
+        return cardSet.iterator();
+    }
+
+    // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
+    public CardIterator buildIterator(CardSet _others) {
+        int others = ~_others.bitmap;
+        int bitmap = this.bitmap;
+        int bit = bitmap ^ (bitmap & (bitmap - 1)); // lsb
+        others &= -bit;                         // clear all bits to the right of lsb
+        others &= ((lastBit(bitmap) << 1) - 1); // clear all to the left of msb
+        bitmap |= others;                       // fill in all missing bits
+
+        // build mask:
+        int suitListMask = SUIT_LIST_MASK;
+        int mask = 0;
+        while (bit != 0) {
+            mask |= bit;
+            while ((bit & suitListMask) == 0) {
+                suitListMask <<= SUIT_LIST_LENGTH;
+            }
+            int m0 = (bitmap + bit) & suitListMask; // convert all 1s to 0s before next 0
+            m0 &= (m0 - 1);                         // clear that converted 0 back
+            bitmap = bitmap & ~suitListMask | m0;
+            bit = bitmap ^ (bitmap & (bitmap - 1)); // lsb
+            while (bit != 0 && (bit & this.bitmap) == 0) {
+                bitmap &= ~bit;
+                bit <<= 1;
+            }
+        }
+        return new CardSet(mask).iterator();
+    }
+
+    // unfinished, probably will not be needed
+    public CardIterator buildReverseIterator(CardSet friend, CardSet foe) {
+        int union = this.union(friend).bitmap;
+
+        // build minimal bitmap
+        int suitListMask = SUIT_LIST_MASK;
+        int lsb = union ^ (union & (union - 1));
+        union |= ~foe.bitmap;           // fill in all foe and missing bits
+        union &= -lsb;                  // clear all bits to the right of lsb
+        int bitmap = 0;
+        while (lsb != 0) {
+            while ((lsb & suitListMask) == 0) {
+                suitListMask <<= SUIT_LIST_LENGTH;
+            }
+            int u = union & suitListMask;
+            int m0 = (u + lsb) & suitListMask;  // convert all 1s to 0s before next 0
+            int groupMSB;
+            if (m0 == 0) {
+                // suit overfloating, means A
+                groupMSB = lastBit(suitListMask);
+            } else {
+                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
+            }
+
+            if ((this.bitmap & groupMSB) != 0) {
+                // groupMSB belongs to this
+                bitmap |= groupMSB;
+                if ((this.bitmap & lsb) != 0) {
+                    // lsb also belongs to this
+                    int b = u & ~lsb & ~groupMSB;
+                    if ((friend.bitmap & b) != 0) {
+                        // friend has cards between lsb & groupMSB
+                        // include groupMSB, so either this or friend can take the trick
+                        bitmap |= lsb;
+                    }
+                }
+            } else {
+                // groupMSB belongs to friend or noone
+                int b = this.bitmap & -(lsb << 1);          // clear all bits to the right of lsb
+                b &= (groupMSB << 1) - 1;                   // clear all to the left of groupMSB
+                int prev = lastBit(b);                      // group prev msb
+                if (prev != -1) {
+                    // this has cards between lsb & groupMSB
+                    bitmap |= prev;
+                }
+            }
+
+            m0 &= (m0 - 1);                         // clear converted lsb back
+            union = union & ~suitListMask | m0;
+            if ((this.bitmap & union) == 0) {
+                break;
+            }
+            lsb = union ^ (union & (union - 1));    // new lsb
+        }
+        CardSet cardSet = new CardSet(bitmap);
+        return cardSet.iterator();
     }
 
     // reversed order, skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♥7 ♦A ♣AQ7 ♠A
-    public Iterator<Card> trickTreeIterator() {
-        return new Iterator<Card>() {
-            int index = last(CardSet.this.bitmap);
-            int bitmap = CardSet.this.bitmap << 31 - index;
-            int nextIndex = toNext();
+    public CardIterator buildReverseIterator(CardSet _others) {
+        int others = ~_others.bitmap;
+        int bitmap = this.bitmap;
+        int bit = bitmap ^ (bitmap & (bitmap - 1)); // lsb
+        others &= -bit;                         // clear all bits to the right of lsb
+        others &= ((lastBit(bitmap) << 1) - 1); // clear all to the left of msb
+        bitmap |= others;                       // fill in all missing bits
 
-            private int toNext() {
-                int nextIndex = index;
-                if (index < 0) {
-                    return nextIndex;
-                }
-
-                // skip all 1s
-                while ((bitmap & MSB) != 0) {
-                    bitmap <<= 1;
-                    if ((nextIndex-- % SUIT_LIST_LENGTH) == 0) {
-                        break;
-                    }
-                    if (nextIndex < 0) {
-                        break;
-                    }
-                }
-
-                // skip all 0s
-                while ((bitmap & MSB) == 0) {
-                    bitmap <<= 1;
-                    if (--nextIndex < 0) {
-                        break;
-                    }
-                }
-                return nextIndex;
+        // build mask:
+        int suitListMask = SUIT_LIST_MASK;
+        int mask = 0;
+        while (bit != 0) {
+            while ((bit & suitListMask) == 0) {
+                suitListMask <<= SUIT_LIST_LENGTH;
             }
-
-            @Override
-            public boolean hasNext() {
-                return index >= 0;
+            int m0 = (bitmap + bit) & suitListMask; // convert all 1s to 0s before next 0
+            int groupMSB; // bit converted from 0 to 1
+            if (m0 == 0) {
+                // suit overfloating, means A
+                groupMSB = lastBit(suitListMask);
+            } else {
+                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
             }
-
-            @Override
-            public Card next() {
-                Card card = cards[index];
-                index = nextIndex;
-                nextIndex = toNext();
-                return card;
+            while (groupMSB != 0 && (groupMSB & this.bitmap) == 0) {
+                groupMSB >>>= 1;
             }
-
-            @Override
-            public void remove() {
-                // just for completeness
-                int mask = 1 << index;
-                CardSet.this.bitmap &= ~mask;
-            }
-        };
+            mask |= groupMSB;
+            m0 &= (m0 - 1);                         // clear that converted 0 back
+            bitmap = bitmap & ~suitListMask | m0;
+            bit = bitmap ^ (bitmap & (bitmap - 1)); // lsb
+        }
+        return new CardSet(mask).reverseIterator();
     }
 
     public static class ListData {
-        public Card.Suit suit;
+        public Suit suit;
         public final CardSet thisSuit;
         public int maxTheyStart;    // unwanted tricks
         public int maxMeStart;      // unwanted tricks
         public int cardsLeft = -1;  // when I always start
         public boolean good;        // for all-pass, includes smallest rank
         public int misereEval = 0;
-
-        public int minMeStart;      // wanted tricks
-        public int minTheyStart;    // wanted tricks
 
         public ListData(CardSet thisSuit) {
             this.thisSuit = thisSuit;

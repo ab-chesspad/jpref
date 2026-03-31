@@ -1,0 +1,8 @@
+#fixedbid: hands, talon, elderhand -> bid, tricks
+
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
+
+deal: ♣XK ♦789XQ ♥78Q  ♠7J ♣79J ♦K ♥9JKA  ♠9XQA ♣8QA ♦JA ♥X  ♠8K  0 -> Misère 5 tricks
+
+
+

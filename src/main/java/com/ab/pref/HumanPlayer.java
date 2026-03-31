@@ -13,39 +13,44 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 1/30/2025
  */
 package com.ab.pref;
 
 import com.ab.jpref.cards.Card;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.Trick;
+import com.ab.util.BidData;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class HumanPlayer extends com.ab.jpref.engine.Player {
+public class HumanPlayer extends Player {
     public static final boolean DEBUG_LOG = false;
 
+    private final Util util = Util.getInstance();
     private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
-    private final Clickable clickable;
+    final GameManager.EventObserver clickable;
 
     GameManager.RestartCommand restartCommand;
+    private CardSet drop;
 
-    public HumanPlayer(String name, Clickable clickable) {
-        super(name);
+    public HumanPlayer(int number, GameManager.EventObserver clickable) {
+        this.number = number;
         this.clickable = clickable;
     }
 
-    @Override
-    public int getNumber() {
-        return 0;
+    protected HumanPlayer(Player other, GameManager.EventObserver clickable) {
+        super(other);
+        this.number = other.getNumber();
+        this.clickable = clickable;
     }
 
     @Override
@@ -63,7 +68,7 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     @Override
     public void clearQueue() {
         accept(Config.Bid.BID_PASS);
-        Util.sleep(10);
+        util.sleep(10);
         while (queue.peek() != null) {
             queue.remove();
         }
@@ -85,7 +90,9 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
                 restartCommand = null;
                 throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
             }
+            Logger.printf(DEBUG_LOG, "human blocking:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
             Config.Queueable q = queue.take();
+            Logger.printf(DEBUG_LOG, "human unblock:%s bid %s\n", Thread.currentThread().getName(), q.toString());
             if (restartCommand != null) {
                 GameManager.RestartCommand _restartCommand = restartCommand;
                 restartCommand = null;
@@ -99,11 +106,14 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
 
     @Override
     public Config.Bid getBid(Config.Bid minBid, int elderHand) {
-        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         bid = (Config.Bid)takeFromQueue();
-        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), bid.getName());
         return bid;
+    }
+
+    public void drop(CardSet drop) {
+        super.drop(drop);
+        this.drop = drop.clone();
     }
 
     @Override
@@ -117,28 +127,39 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
     }
 
     @Override
-    public PlayerBid declareRound(Config.Bid minBid, int elderHand) {
-        PlayerBid playerBid = new PlayerBid();
-        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
-        clickable.setSelectedPlayer(this);
-        playerBid.setBid((Config.Bid)takeFromQueue());
-        Logger.printf(DEBUG_LOG, "human:%s bid %s\n", Thread.currentThread().getName(), playerBid.toBid().getName());
-        return playerBid;
+    public void declareRound(Config.Bid minBid, int elderHand) {
+        BidData.PlayerBid playerBid = new BidData.PlayerBid();
+        if (!minBid.equals(Config.Bid.BID_MISERE)) {
+            clickable.setSelectedPlayer(this);
+            this.bid = (Config.Bid) takeFromQueue();
+        }
+        playerBid.setBid(this.bid);
+        playerBid.drops = this.drop;
     }
 
     @Override
-    public void respondOnRoundDeclaration(Config.Bid bid, Trick trick) {
-        // todo: whist or half or pass
+    public void respondOnDeclaration() {
+        // todo: whist or half-whist or pass
+        clickable.setSelectedPlayer(this);
+        Config.Queueable q = takeFromQueue();        // block
+        this.bid = (Config.Bid)q;
+    }
+
+    @Override
+    public boolean playWhistLaying() {
+        clickable.setSelectedPlayer(this);
+        Config.Queueable q = takeFromQueue();        // block
+        Config.Bid bid = (Config.Bid)q;
+        return bid.equals(Config.Bid.BID_WHIST_LAYING);
     }
 
     @Override
     public Card play(Trick trick) {
-        Logger.printf(DEBUG_LOG, "human:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
         clickable.setSelectedPlayer(this);
         Config.Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {
             Logger.println(q.toString());
-            return new Card("♦7");  // dummy
+            return Card.fromValue(1);  // dummy
         }
         return (Card)q;
     }
@@ -151,14 +172,13 @@ public class HumanPlayer extends com.ab.jpref.engine.Player {
         if (card.getSuit().equals(trick.getStartingSuit())) {
             return true;
         }
-        if (card.getSuit().equals(trick.getTrumpSuit())) {
+        if (!myHand.list(trick.getStartingSuit()).isEmpty()) {
+            return false;
+        }
+        Card.Suit trumpSuit = trick.getTrumpSuit();
+        if (card.getSuit().equals(trumpSuit)) {
             return true;
         }
-        return myHand.list(trick.getStartingSuit()).isEmpty();
+        return trumpSuit == null || myHand.list(trumpSuit).isEmpty();
     }
-
-    public interface Clickable {
-        void setSelectedPlayer(HumanPlayer humanPlayer);
-    }
-
 }

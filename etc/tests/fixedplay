@@ -1,21 +1,102 @@
-#fixedplay
+#fixedplay: hands, talon, elderhand -> bid, tricks
 
-deal: ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠A ♣AX ♦AK987 ♥A9    ♠J8  1 -> 7♦ # ?
-deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> misere # ловится
-deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> misere # Ласкера, 2 или 3 взятки
-deal: ♠JX987 ♣9 ♦X87 ♥7 ♠AQ ♣A7 ♦KQJ9 ♥J9 ♠K ♣KQJX8 ♥KQX8 ♦A ♥A  0 -> misere # ловится
+deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится
 
-deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 0 6♠
-deal: ♠78Q ♣9J ♦89A ♥8A   ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK     ♥JQ 2  -> 1 6♠
-deal: ♠9JQA ♣7K ♦8JQ ♥X   ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♦7X 2 -> 1 6♠
-deal: ♠78KA ♣JQ ♦9XJK   ♠J ♣7KA ♦Q ♥89JKA   ♠9XQ ♣9 ♦78A ♥7XQ     ♣8X 1 -> 1 6♠
-deal: ♠J ♣7KA ♦Q ♥89JKA   ♠9 ♣9JQ ♦78A ♥7XQ   ♠78XQKA ♦9XJK     ♣8X 1 -> 0 6♣
-deal: ♠Q ♣8J ♦7XJK ♥78Q  ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠8K  2
-deal:  ♣8JQK ♦89Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79  1
-deal: ♠9 ♣8JQK ♦8Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♦9 ♠7  0
-deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0
-deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0
-deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> all-pass
-deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> all-pass
-deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> all-pass
-deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> 0 misere # small hole 7-10
+deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится
+
+declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
+deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
+
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
+
+deal: ♠7 ♣8X ♦7JQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♦X8  1 -> 6♦ 6
+
+deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
+
+[♣X87, ♠Q89, ♠7JK, ♦Q98, ♥9K8, ♦7X ♣9, ♠A ♣J ♦J, ♣Q ♥X ♦K, ♣A ♥J ♦A, ♥QA7]
+[♣XAJ, ♦XQJ, ♠97A, ♦8 ♠K ♦7, ♥QJK, ♠QJ ♥A, ♦9 ♥8X, ♦K ♣Q ♥9, ♦A ♣89, ♥7 ♠8 ♣7]
+declarer: 6 tricks
+deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> Misère 1 # ловится xx
+
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 1 # ловится
+deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
+
+deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # не ловится
+deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
+
+list build duration: 4 sec, positions 434226, similar 3,122,481
+list build duration: 5 sec, positions 434226, similar 3,122,173
+list build duration: 4 sec, positions 434226, similar 3,119,174
+[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
+deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
+
+list build duration: 2 sec, positions 270229, similar 2,028,375
+[♠A8Q, ♠79 ♦7, ♣9KQ, ♠XJ ♦9, ♣A7 ♦8, ♦AK ♣8, ♠K ♥Q ♣X, ♦X ♥KX, ♦J ♥7J, ♦Q ♥9A]
+deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 6
+
+list build duration: 1 sec, positions 61771, similar 409,030
+[♣X97, ♣KA8, ♠78 ♦7, ♠9 ♦8 ♠X, ♠KJ ♦K, ♠AQ ♥9, ♣QJ ♥X, ♦A9 ♥J, ♥8 ♦X ♥Q, ♥KA ♦Q]
+deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
+
+deal: ♠XQA ♣9KA ♦8QA ♥J  ♠89K ♣XJ ♦7K ♥7QA  ♣78Q ♦9XJ ♥89XK  ♠7J  2 -> All-pass
+
+♠JK ♣89XKA ♦8JK  ♠8Q ♣7J ♦7A ♥8JKA  ♠79XA ♣Q ♦9XQ ♥7X
+[♠87J, ♠KQA, ♠9 ♣K7, ♣AJQ, ♣8 ♦7 ♠X, ♣9 ♦A ♥X, ♣X ♥8 ♦9, ♦K ♥J ♦X, ♦8 ♥K ♦Q, ♥7 ♦J ♥A]
+declarer: 7 tricks
+deal: ♠JK ♣89A ♦8JK ♥9Q  ♠8Q ♣7J ♦7A ♥8JKA  ♠79XA ♣Q ♦9XQ ♥7X  ♣XK  1 -> 6♣ 7
+
+[♠87 ♥7, ♣87J, ♠9 ♥J ♠X, ♣9 ♥X ♣Q, ♠JA ♥Q, ♣A ♠K ♣K, ♣X ♦7 ♥8, ♦9A8, ♦JQ ♥9, ♥AK ♦K]
+deal: ♣89XA ♦XA ♥7JQK  ♠8XJK ♣7 ♦78QK ♥X  ♠79A ♣JQK ♦9 ♥89A  ♠Q ♦J  1 -> 6♥ 5
+
+[♠X79, ♠J8A, ♣K97, ♣AJ8, ♦7JX, ♣QX ♦8, ♦A ♥7 ♦Q, ♥8X9, ♥J ♦K ♥Q, ♠Q ♦9 ♥K]
+deal: ♠9A ♣KA ♦789A ♥8Q  ♠XJ ♣9JQ ♦J ♥7XJK  ♠78Q ♣78X ♦XQK ♥9  ♥A ♠K  1 -> 7♦ 7
+
+[♦QA9, ♦7X ♠J, ♣79 ♠7, ♠X ♣K ♠9, ♠8 ♣AJ, ♠Q ♥8 ♣Q, ♠K ♥9 ♦8, ♠A ♥J7, ♦J ♥KX, ♦K ♥AQ]
+list build duration: 1 sec, positions 67311
+deal: ♠78XQKA ♦9XJK   ♠J ♣7KA ♦Q ♥89JKA   ♠9 ♣9JQ ♦78A ♥7XQ   ♣8X 1 -> 8♠ 8
+
+[♠A9 ♣9, ♠7J ♣Q, ♠K ♣A ♠8, ♣X ♦9 ♠X, ♠Q ♣J ♦J, ♦K7 ♥7, ♥9A8, ♣K ♥X ♦X, ♦8 ♥J ♦A, ♥K ♦Q ♥Q]
+list build duration: 2 sec, positions 190485
+deal: ♠78XQA ♦XKA ♥9K  ♠9JK ♣XJK ♦78Q ♥A  ♣9QA ♦9J ♥7X8JQ  ♣78  0 -> 6♠ 6
+
+deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> 6♠ 5
+
+[♠QA8, ♠7 ♦9 ♠9, ♣78J, ♠X ♦J ♠K, ♣9KQ, ♦A7K, ♦X8 ♣X, ♣A ♠J ♥J, ♦Q ♥7Q, ♥K8A]
+declarer: 5 tricks
+# declarer wants to play 6-
+#deal: ♠9QK ♣8K ♦XQA ♥9K  ♠7XJA ♣JQ ♦78 ♥78  ♠8 ♣79X ♦9JK ♥JQA  ♣A ♥X  0 -> 6♦ 5
+
+deal: ♠JK ♣9 ♦89JQKA ♥7  ♠8 ♣78JK ♦7 ♥8JQA  ♠9XQA ♣XA ♦X ♥9XK  ♣Q ♠7  0 -> 6♦ 6
+
+#deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
+#deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7
+
+[♥8JK, ♣X9K, ♠K97, ♠X ♣Q ♠8, ♦X8 ♣7, ♠A ♦J ♠Q, ♣A ♦Q ♣J, ♠J ♦K9, ♣8 ♥9 ♦A, ♥QXA]
+list build duration: 1 sec, positions 25939
+deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
+
+[♠QX8, ♠7 ♦J ♠J, ♣7A8, ♠A9 ♣9, ♦KX ♣J, ♦AQ ♣Q, ♦7 ♠K ♥7, ♦8 ♣K ♥8, ♦9 ♥XJ, ♥AKQ]
+list build duration: 1 sec, positions 158228
+deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
+
+##########################
+
+#[♣A79, ♣KQX, ♣8 ♠79, ♦Q78, ♦K9 ♠Q, ♦AX ♠A, ♥JA7, ♠J ♥8 ♣J, ♥Q ♠K ♥9, ♥K ♦J ♥X]
+#list build duration: 0 sec, positions 7282
+deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
+
+########
+deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79 ♣8JQK ♦89Q ♥7   ♥9K  2 -> 6♦ 6
+
+deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
+
+###
+
+# invalid bid:
+#deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> all-pass
+#deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> all-pass
+#deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> all-pass
+#deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> all-pass
+#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> 0 misere # small hole 7-10

@@ -13,20 +13,22 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 3/1/2025
  */
 package com.ab.pref;
 
-import com.ab.jpref.config.I18n;
 import com.ab.pref.config.Metrics;
+import com.ab.pref.config.PConfig;
 import com.ab.pref.widgets.HtmlLabel;
+import com.ab.jpref.config.I18n;
 import com.ab.util.Logger;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class TestHtml {
     static final Metrics metrics = Metrics.getInstance();
@@ -39,7 +41,7 @@ public class TestHtml {
     }
 
     public TestHtml() {
-        Locale.setDefault(new Locale("ru", "RU"));
+//        Locale.setDefault(new Locale("ru", "RU"));
         mainFrame = new JFrame();
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setBounds(1000, 1000, 400, 600);
@@ -76,12 +78,28 @@ public class TestHtml {
     }
 
     boolean popupShown = false;
+    static final String versionVar = "<!-- *** VERVION ***-->";
+    static final String remoteMark = "<!--*** REMOTE ***-->";
     private void popup() {
         if (popupShown) {
             return;
         }
         popupShown = true;
-        String text = I18n.loadString("index.html");
+        String src = I18n.loadString("index.html").replace(versionVar, PConfig.VERSION);
+        StringBuilder sb = new StringBuilder();
+        int start = 0;
+        int end;
+        while ((end = src.indexOf(remoteMark, start)) >= 0) {
+            sb.append(src, start, end);
+            start = src.indexOf(remoteMark, end + 1);
+            if (start < 0) {
+                start = src.length();
+                break;
+            }
+            start += remoteMark.length();
+        }
+        sb.append(src, start, src.length());
+        String text = sb.toString();
         UIManager.put("OptionPane.minimumSize",new Dimension(500,300));
         JLabel label = new HtmlLabel(text);
         label.setFont(new Font("Arial", Font.PLAIN, 20));

@@ -81,5 +81,5 @@ deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥7
 deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> 6, 3, 1
 
 deal: ♠Q ♣8J ♦7XJK ♥78Q  ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠8K  2 -> 1, 7, 2
-deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> 0, 10, 0
+#deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> 0, 10, 0
 

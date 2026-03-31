@@ -13,7 +13,7 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 02/19/2025
  */
@@ -35,7 +35,7 @@ public class ButtonPanel extends JPanel {
     private final int rows;
     private final double scaleW, scaleH;
 
-    public ButtonPanel(double scaleW, double scaleH, MainPanel.ButtonHandler[][] commands) {
+    public ButtonPanel(double scaleW, double scaleH, PButton.ButtonHandler[][] commands) {
         this.scaleW = scaleW;
         this.scaleH = scaleH;
         metrics = Metrics.getInstance();
@@ -44,8 +44,8 @@ public class ButtonPanel extends JPanel {
         rows = commands.length;
         columns = commands[0].length;
         this.setLayout(new GridLayout(rows, columns, xGap, xGap));
-        for (MainPanel.ButtonHandler[] buttonHandlers : commands) {
-            for (MainPanel.ButtonHandler command : buttonHandlers) {
+        for (PButton.ButtonHandler[] buttonHandlers : commands) {
+            for (PButton.ButtonHandler command : buttonHandlers) {
                 if (command == null) {
                     this.add(new JLabel());
                 } else {
@@ -95,10 +95,10 @@ public class ButtonPanel extends JPanel {
         super.paintComponent(g);
     }
 
-    public PButton getButton(MainPanel.Command command) {
+    public PButton getButton(MainPanel.ButtonCommand buttonCommand) {
         for (Component c : getComponents()) {
             if (c instanceof PButton) {
-                if (command.equals(((PButton) c).command.command)) {
+                if (buttonCommand.equals(((PButton) c).command.buttonCommand)) {
                     return (PButton) c;
                 }
             }

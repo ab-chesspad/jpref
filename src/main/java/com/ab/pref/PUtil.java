@@ -13,28 +13,40 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 2/15/2025
  */
 package com.ab.pref;
 
 import com.ab.pref.config.PConfig;
+import com.ab.util.Util;
 
 import javax.imageio.ImageIO;
-import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.URLConnection;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class PUtil {
+public class PUtil extends Util {
     public static boolean DEBUG = true;
 
-    public static BufferedImage loadImage(String path) {
+    private static PUtil instance;
+
+    public static PUtil getInstance() {
+        if (instance == null) {
+            instance = new PUtil();
+        }
+        return instance;
+    }
+
+    public BufferedImage loadImage(String path) {
         BufferedImage image = null;
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         try {
@@ -42,15 +54,22 @@ public class PUtil {
             image = ImageIO.read(is);
         } catch (Exception e) {
             // ignore
-//            throw new RuntimeException(e);
         }
         return image;
     }
 
-    public static BufferedImage scale(BufferedImage original, int newWidth, int newHeight) {
+    public BufferedImage scale(BufferedImage original, int newWidth, int newHeight) {
         if (newWidth < 10 || newHeight < 10) {
             return original;    // quick & dirty
         }
+        BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = scaledImage.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(original, 0, 0, newWidth, newHeight, null);
+        g.dispose();
+        return scaledImage;
+
+/*
         BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
         double scale = (double) newWidth / original.getWidth(null);
         double scaleH = (double) newHeight / original.getHeight(null);
@@ -59,10 +78,11 @@ public class PUtil {
                 = new AffineTransformOp(scaleInstance, AffineTransformOp.TYPE_BILINEAR);
         scaleOp.filter(original, scaledImage);
         return scaledImage;
+*/
     }
 
     // return result file name
-    public static String submitLog(String filePath) {
+    public String submitLog(String filePath) {
         final String CrLf = "\r\n";
         final String url = "http://jpref.elementfx.com/upload.php";
         final String boundary = "---------------------------4664151417711";
@@ -79,7 +99,6 @@ public class PUtil {
         try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
             byte[] fileData= new byte[input.available()];
             input.read(fileData);
-//            System.out.println("url:" + url);
             String message1 = "";
             message1 += "--" + boundary + CrLf;
             message1 += "Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + remoteFileName + "\"" + CrLf;
@@ -100,21 +119,18 @@ public class PUtil {
 
             os = conn.getOutputStream();
             os.write(message1.getBytes());
-            // SEND THE file body
+            // send the file body
             int index = 0;
             int size = 1024;
             do {
-//                System.out.println("write:" + index);
                 if ((index + size) > fileData.length) {
                     size = fileData.length - index;
                 }
                 os.write(fileData, index, size);
                 index += size;
             } while (index < fileData.length);
-//            System.out.println("written:" + index);
             os.write(message2.getBytes());
             os.flush();
-//            System.out.println("open is");
             is = conn.getInputStream();
 
             char buff = 512;
@@ -122,27 +138,23 @@ public class PUtil {
             byte[] data = new byte[buff];
             StringBuilder sb = new StringBuilder();
             do {
-//                System.out.println("READ");
                 len = is.read(data);
                 if (len > 0) {
                     sb.append(new String(data, 0, len)).append("\n");
-//                    System.out.println(new String(data, 0, len));
                 }
             } while (len > 0);
             res = sb.toString();
             System.out.println(res);
-            res = remoteFileName;
+            res = fileName;
         } catch(IOException e) {
-//            throw new RuntimeException(e);
             res = e.toString();
         } finally {
-//            System.out.println("Close connection");
             try {
                 os.close();
                 is.close();
             } catch(IOException e){
-//                throw new RuntimeException(e);
                 // ignore
+                res = e.toString();
             }
         }
         return res;

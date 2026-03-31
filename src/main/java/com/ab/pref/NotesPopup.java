@@ -13,15 +13,17 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright 2025 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
  * Created: 2/21/2025
  */
 package com.ab.pref;
 
-import com.ab.jpref.config.I18n;
 import com.ab.pref.config.Metrics;
+import com.ab.pref.config.PConfig;
+import com.ab.pref.MainPanel.Host;
 import com.ab.util.Logger;
+import static com.ab.jpref.config.I18n.m;
 
 import javax.swing.*;
 import java.awt.*;
@@ -29,16 +31,17 @@ import java.awt.*;
 public class NotesPopup extends JDialog {
     final Metrics metrics = Metrics.getInstance();
 
-    NotesPopup(JFrame frame) {
-        super(frame, false);
-        setTitle(I18n.m("Comments"));
-        setSize(Main.mainRectangle.width, Main.mainRectangle.height);
+    NotesPopup(Host host) {
+        super(host.mainFrame(), false);
+        setTitle(m("Comments"));
+        Rectangle mainRectangle = (Rectangle)PConfig.getInstance().mainRectangle.get().clone();
+        setSize(mainRectangle.width, mainRectangle.height);
 
-        setLocationRelativeTo(frame);
+        setLocationRelativeTo(host.mainFrame());
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JLabel label = new JLabel(I18n.m("Your notes"));
+        JLabel label = new JLabel(m("Your notes"));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
         label.setFont(metrics.font);
         panel.add(label);
@@ -49,7 +52,7 @@ public class NotesPopup extends JDialog {
         panel.add(text);
 
         panel.add(Box.createVerticalGlue()); // Add vertical glue above button
-        JButton b = new JButton(I18n.m("Record Notes"));
+        JButton b = new JButton(m("Record Notes"));
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
         b.setFont(metrics.font);
         panel.add(b);
