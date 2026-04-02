@@ -266,8 +266,8 @@ public class ForTricksBot extends Bot {
             ♦X or ♦K are equivalent when declarer has ♦9A
             so, adding ♦Q back enforces iterator to issue both ♦XK
          */
-//        return cardSet.buildReverseIterator(trickNode.hands[friend], foeHand);
-        return cardSet.buildIterator(trickNode.hands[friend], foeHand);
+        return cardSet.buildReverseIterator(trickNode.hands[friend], foeHand);
+//        return cardSet.buildIterator(trickNode.hands[friend], foeHand);
     }
 
     @Override

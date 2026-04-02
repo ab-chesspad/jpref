@@ -195,6 +195,7 @@ public class TestPosition implements Host {
     void runTests() {
         final String[] sources = {
             // hands, bid, [elderHand]
+            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK : 6♣",
             "♠7 ♣9QK ♦7JQK ♥8X ♦X8  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK : 6♦ : 1",
             "♣9K ♦QK  ♣XA ♥7A  ♣7 ♥9QK : 6♦",
             "♣9QK ♦78XJQK  ♠9XA ♣8XA ♥7JA  ♠QK ♣7J ♦9A ♥9QK : 6♦",

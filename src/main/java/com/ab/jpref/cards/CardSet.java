@@ -947,72 +947,6 @@ mainLoop:
     }
 
     // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
-    public CardIterator buildIterator(CardSet friend, CardSet foe) {
-        int union = this.union(friend).bitmap;
-
-        // build minimal bitmap
-        int suitListMask = SUIT_LIST_MASK;
-        int lsb = union ^ (union & (union - 1));
-        union |= ~foe.bitmap;           // fill in all foe and missing bits
-        union &= -lsb;                  // clear all bits to the right of lsb
-        int bitmap = 0;
-        while (lsb != 0) {
-            while ((lsb & suitListMask) == 0) {
-                suitListMask <<= SUIT_LIST_LENGTH;
-            }
-            int u = union & suitListMask;
-            int msb = lastBit(u);               // for suit
-            int m0 = (u + lsb) & suitListMask;  // convert all 1s to 0s before next 0
-            int groupMSB;   // group of 1s
-            if (m0 == 0) {
-                // suit overfloating, means Ace
-                groupMSB = msb;
-            } else {
-                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
-            }
-            if ((this.bitmap & lsb) != 0) {
-                // lsb belongs to this
-                int friendBitmap = friend.bitmap & suitListMask;
-                int b = friendBitmap & -(lsb << 1);    // clear friend's bits smaller than lsb
-                int friendLSB = b ^ (b & (b - 1));      // friend's' lsb next to this' lsb
-                int friendMSB = lastBit(b);             // friend's' group msb
-                if ((friendLSB & suitListMask) == 0) {
-                    bitmap |= lsb;
-                } else {
-                    b = this.bitmap & -(friendLSB << 1);    // clear this' bits smaller than friendLSB
-                    int thisLSB = b ^ (b & (b - 1));        // this' lsb next to friendLSB
-                    if (compare(friendMSB, thisLSB) < 0) {
-                        bitmap |= lsb;
-                        bitmap |= thisLSB;
-                    }
-                    if (thisLSB == 0 || thisLSB == msb || thisLSB == groupMSB) {
-                        bitmap |= lsb;
-                    } else {
-                        bitmap |= thisLSB;
-                    }
-                }
-            } else {
-                // lsb belongs to friend or noone
-                int b = this.bitmap & -(lsb << 1);    // clear all bits to the right of lsb
-                b &= (groupMSB << 1) - 1;             // clear all to the left of groupMSB
-                int next = b ^ (b & (b - 1));         // group next lsb
-                if (next != 0) {
-                    bitmap |= next;         // this has cards between lsb & groupMSB
-                }
-            }
-
-            m0 &= (m0 - 1);                         // clear converted lsb back
-            union = union & ~suitListMask | m0;
-            if ((this.bitmap & union) == 0) {
-                break;
-            }
-            lsb = union ^ (union & (union - 1));    // new lsb
-        }
-        CardSet cardSet = new CardSet(bitmap);
-        return cardSet.iterator();
-    }
-
-    // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
     public CardIterator buildIterator(CardSet _others) {
         int others = ~_others.bitmap;
         int bitmap = this.bitmap;
@@ -1039,64 +973,6 @@ mainLoop:
             }
         }
         return new CardSet(mask).iterator();
-    }
-
-    // unfinished, probably will not be needed
-    public CardIterator buildReverseIterator(CardSet friend, CardSet foe) {
-        int union = this.union(friend).bitmap;
-
-        // build minimal bitmap
-        int suitListMask = SUIT_LIST_MASK;
-        int lsb = union ^ (union & (union - 1));
-        union |= ~foe.bitmap;           // fill in all foe and missing bits
-        union &= -lsb;                  // clear all bits to the right of lsb
-        int bitmap = 0;
-        while (lsb != 0) {
-            while ((lsb & suitListMask) == 0) {
-                suitListMask <<= SUIT_LIST_LENGTH;
-            }
-            int u = union & suitListMask;
-            int m0 = (u + lsb) & suitListMask;  // convert all 1s to 0s before next 0
-            int groupMSB;
-            if (m0 == 0) {
-                // suit overfloating, means A
-                groupMSB = lastBit(suitListMask);
-            } else {
-                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
-            }
-
-            if ((this.bitmap & groupMSB) != 0) {
-                // groupMSB belongs to this
-                bitmap |= groupMSB;
-                if ((this.bitmap & lsb) != 0) {
-                    // lsb also belongs to this
-                    int b = u & ~lsb & ~groupMSB;
-                    if ((friend.bitmap & b) != 0) {
-                        // friend has cards between lsb & groupMSB
-                        // include groupMSB, so either this or friend can take the trick
-                        bitmap |= lsb;
-                    }
-                }
-            } else {
-                // groupMSB belongs to friend or noone
-                int b = this.bitmap & -(lsb << 1);          // clear all bits to the right of lsb
-                b &= (groupMSB << 1) - 1;                   // clear all to the left of groupMSB
-                int prev = lastBit(b);                      // group prev msb
-                if (prev != -1) {
-                    // this has cards between lsb & groupMSB
-                    bitmap |= prev;
-                }
-            }
-
-            m0 &= (m0 - 1);                         // clear converted lsb back
-            union = union & ~suitListMask | m0;
-            if ((this.bitmap & union) == 0) {
-                break;
-            }
-            lsb = union ^ (union & (union - 1));    // new lsb
-        }
-        CardSet cardSet = new CardSet(bitmap);
-        return cardSet.iterator();
     }
 
     // reversed order, skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♥7 ♦A ♣AQ7 ♠A
@@ -1132,6 +1008,82 @@ mainLoop:
             bit = bitmap ^ (bitmap & (bitmap - 1)); // lsb
         }
         return new CardSet(mask).reverseIterator();
+    }
+
+    CardSet getMinimalCardSet(CardSet friend, CardSet foe) {
+        int union = this.union(friend).bitmap;
+
+        int res = 0;
+        int suitListMask = SUIT_LIST_MASK;
+        int lsb = union ^ (union & (union - 1));
+        union |= ~foe.bitmap;           // fill in all foe and missing bits
+        union &= -lsb;                  // clear all bits to the right of lsb
+        while (lsb != 0) {
+            while ((lsb & suitListMask) == 0) {
+                suitListMask <<= SUIT_LIST_LENGTH;
+            }
+            int u = union & suitListMask;
+            int msb = lastBit(u);               // for suit
+            int m0 = (u + lsb) & suitListMask;  // convert all 1s to 0s before next 0
+            int groupMSB;   // group of 1s
+            if (m0 == 0) {
+                // suit overfloating, means Ace
+                groupMSB = msb;
+            } else {
+                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
+            }
+            if ((this.bitmap & lsb) != 0) {
+                // lsb belongs to this
+                int friendBitmap = friend.bitmap & suitListMask;
+                int b = friendBitmap & -(lsb << 1);    // clear friend's bits smaller than lsb
+                int friendLSB = b ^ (b & (b - 1));      // friend's' lsb next to this' lsb
+                int friendMSB = lastBit(b);             // friend's' group msb
+                if ((friendLSB & suitListMask) == 0) {
+                    res |= lsb;
+                } else {
+                    b = this.bitmap & -(friendLSB << 1);    // clear this' bits smaller than friendLSB
+                    int thisLSB = b ^ (b & (b - 1));        // this' lsb next to friendLSB
+                    if (compare(friendMSB, thisLSB) < 0) {
+                        res |= lsb;
+                        res |= thisLSB;
+                    }
+//                    if (thisLSB == 0 || thisLSB == msb || thisLSB == groupMSB || (u & lsb) != 0) {
+                    if (thisLSB == 0 || thisLSB == msb || thisLSB == groupMSB) {
+                        res |= lsb;
+                    } else {
+                        res |= thisLSB;
+                    }
+                }
+            } else {
+                // lsb belongs to friend or noone
+                int b = this.bitmap & -(lsb << 1);    // clear all bits to the right of lsb
+                b &= (groupMSB << 1) - 1;             // clear all to the left of groupMSB
+                int next = b ^ (b & (b - 1));         // group next lsb
+                if (next != 0) {
+                    res |= next;         // this has cards between lsb & groupMSB
+                }
+            }
+
+            m0 &= (m0 - 1);                         // clear converted lsb back
+            union = union & ~suitListMask | m0;
+            if ((this.bitmap & union) == 0) {
+                break;
+            }
+            lsb = union ^ (union & (union - 1));    // new lsb
+        }
+        return new CardSet(res);
+    }
+
+    // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
+    public CardIterator buildIterator(CardSet friend, CardSet foe) {
+        CardSet cardSet = getMinimalCardSet(friend, foe);
+        return cardSet.iterator();
+    }
+
+    // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
+    public CardIterator buildReverseIterator(CardSet friend, CardSet foe) {
+        CardSet cardSet = getMinimalCardSet(friend, foe);
+        return cardSet.reverseIterator();
     }
 
     public static class ListData {
