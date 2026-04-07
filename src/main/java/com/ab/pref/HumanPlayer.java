@@ -92,7 +92,7 @@ public class HumanPlayer extends Player {
             }
             Logger.printf(DEBUG_LOG, "human blocking:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
             Config.Queueable q = queue.take();
-            Logger.printf(DEBUG_LOG, "human unblock:%s bid %s\n", Thread.currentThread().getName(), q.toString());
+            Logger.printf(DEBUG_LOG, "human unblock:%s bid %s\n", Thread.currentThread().getName(), q);
             if (restartCommand != null) {
                 GameManager.RestartCommand _restartCommand = restartCommand;
                 restartCommand = null;
@@ -158,7 +158,7 @@ public class HumanPlayer extends Player {
         clickable.setSelectedPlayer(this);
         Config.Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {
-            Logger.println(q.toString());
+            Logger.println(q);
             return Card.fromValue(1);  // dummy
         }
         return (Card)q;

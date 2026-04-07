@@ -21,8 +21,11 @@ package com.ab.pref.config;
 
 import com.ab.jpref.config.Config;
 import com.ab.util.Couple;
+import com.ab.pref.PUtil;
 
+import javax.swing.*;
 import java.awt.*;
+import java.io.*;
 import java.util.Locale;
 
 public class PConfig extends Config {
@@ -44,6 +47,8 @@ public class PConfig extends Config {
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
     public final Property<String> GUID = new Property<>("", null);
+
+    static final PUtil util = PUtil.getInstance();
 
     public static PConfig getInstance() {
         if (instance == null) {
@@ -78,6 +83,14 @@ public class PConfig extends Config {
         }
     }
 
+    public static PConfig unserialize() {
+        return (PConfig)unserialize(util.getDataDirectory());
+    }
+
+    public void serialize() {
+        serialize(util.getDataDirectory());
+    }
+
     public static void refresh() {
         instance = PConfig.unserialize();
         if (instance == null) {
@@ -103,6 +116,15 @@ public class PConfig extends Config {
             return Color.decode(super.get());
         }
 
+    }
+
+    public interface Host extends Config.Host {
+        int SPECIAL_OPTION_SHOW_CARDS = 0x1;
+        int SPECIAL_OPTION_MANUAL = 0x1;
+
+        int specialOption();
+        void repaint();
+        JFrame mainFrame();
     }
 
 }

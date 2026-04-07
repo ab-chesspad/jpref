@@ -21,7 +21,7 @@ package com.ab.pref;
 
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
-import com.ab.pref.MainPanel.Host;
+import com.ab.pref.config.PConfig.Host;
 import com.ab.util.Logger;
 import static com.ab.jpref.config.I18n.m;
 

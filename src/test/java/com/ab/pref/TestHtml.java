@@ -70,7 +70,7 @@ public class TestHtml {
             this.setBackground(Color.red);
             JButton jButton = new JButton("pop up");
             jButton.addActionListener(actionEvent -> {
-                Logger.println(actionEvent.toString());
+                Logger.println(actionEvent);
                 popup();
             });
             this.add(jButton);

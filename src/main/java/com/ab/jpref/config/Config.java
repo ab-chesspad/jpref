@@ -36,14 +36,11 @@ import com.ab.util.Couple;
 import com.ab.util.Tuple;
 import com.ab.util.Util;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.text.SimpleDateFormat;
+import java.io.*;
 
 public class Config implements Serializable {
     public static final String PROJECT_NAME = "JPref";
+    public static final String VERSION = "0.0.5";
 
     public final Property<Boolean> release = new Property<>("", true);
 
@@ -98,15 +95,10 @@ public class Config implements Serializable {
     public static final char NO_TRUMP = '-';
 
     static final Util util = Util.getInstance();
-    public static final String VERSION = "0.0.5, built " +
-        new SimpleDateFormat("yyyy-MM-dd").format(util.buildDate());
 
     protected static Config instance;
 
     public static Config getInstance() {
-        if (instance == null) {
-            instance = Config.unserialize();
-        }
         if (instance == null) {
             instance = new Config();
         }
@@ -115,47 +107,27 @@ public class Config implements Serializable {
 
     protected Config() {}
 
-    public static Config unserialize() {
+    public static Config unserialize(String dir) {
         Object object = null;
-        try (ObjectInputStream in = new ObjectInputStream(util.openInputStream(CONFIG_FILENAME))) {
-            object = in.readObject();
+        try (FileInputStream fis = new FileInputStream(new File(dir, CONFIG_FILENAME));
+                ObjectInputStream ois = new ObjectInputStream(fis)) {
+            object = ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             System.out.println(e.getMessage());
         }
-/*
-        File dir = util.getDataDirectory();
-        File configFile = new File(dir, CONFIG_FILENAME);
-        try (FileInputStream file = new FileInputStream(configFile);
-                ObjectInputStream in = new ObjectInputStream(file)) {
-            object = in.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
-        }
-*/
         return (Config)object;
     }
 
-    public void serialize() {
-        try (ObjectOutputStream out = new ObjectOutputStream(util.openOutputStream(CONFIG_FILENAME))) {
-            out.writeObject(this);
+    public void serialize(String dir) {
+        try (FileOutputStream fos = new FileOutputStream(new File(dir, CONFIG_FILENAME));
+                ObjectOutputStream oot = new ObjectOutputStream(fos) ) {
+            oot.writeObject(this);
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
-/*
-        File dir = util.getDataDirectory();
-        File configFile = new File(dir, CONFIG_FILENAME);
-        try (FileOutputStream file = new FileOutputStream(configFile);
-             ObjectOutputStream out = new ObjectOutputStream(file)) {
-            out.writeObject(this);
-        } catch (IOException e) {
-            Logger.println(Arrays.toString(e.getStackTrace()));
-        }
-*/
     }
 
-    public interface Queueable {
-    }
+    public interface Queueable {}
 
     // not sure if I'll need it
     public static class IntTriplet implements Serializable {
@@ -385,6 +357,12 @@ public class Config implements Serializable {
         public String toString() {
             return getName();
         }
+    }
+
+    public interface Host {
+        default String getLogFileName() { return null; }
+        default boolean release() { return false; }
+        long buildDate();
     }
 
 }

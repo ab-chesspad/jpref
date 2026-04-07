@@ -19,6 +19,7 @@
  */
 package com.ab.pref;
 
+import com.ab.jpref.engine.GameManager;
 import com.ab.pref.config.PConfig;
 import com.ab.util.Util;
 
@@ -29,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -44,6 +46,28 @@ public class PUtil extends Util {
             instance = new PUtil();
         }
         return instance;
+    }
+
+    @Override
+    public String getDataDirectory() {
+        OS os = getOS();
+        File file;
+        if (os == Util.OS.windows) {
+            String userHome = System.getProperty("user.home");
+            file = new File(userHome, PROJECT_NAME);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+        } else {
+            try {
+                file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                file = new File(file.getParent());
+                file.mkdirs();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return file.getAbsolutePath();
     }
 
     public BufferedImage loadImage(String path) {

@@ -135,7 +135,6 @@ public class TestCardSet {
             while (it.hasNext()) {
                 res.add(it.next());
             }
-//            Logger.println(res.toString());
             Assert.assertEquals(parts[1], res.toString());
         }
     }
@@ -232,18 +231,13 @@ public class TestCardSet {
             }
             CardList res = util.toCardList(parts[1]);
             CardSet.CardIterator it = hands[0].buildReverseIterator(hands[1], hands[2]);
-//            Assert.assertEquals(parts[1], it.toString());
             CardList cardList = new CardList();
             while (it.hasNext()) {
-                Card c0 = res.removeFirst();
+//                Card c0 = res.removeFirst();
                 Card c1 = it.next();
-//                Assert.assertEquals(c0, c1);
                 cardList.add(c1);
             }
-//            Assert.assertTrue(String.format("missing cards %s", res.toString()), res.isEmpty());
             Assert.assertEquals(parts[1], cardList.toString());
-
-//            Logger.println(it.toString());
         }
     }
 

@@ -636,7 +636,7 @@ public class GameManager {
             }
             roundState.set(RoundStage.trickTaken);
             sleep(config.pauseBetweenMoves.get());
-            println(trick.toString());
+            println(trick);
             println(trick.toColorString());
             lastTrickCards.clear();
             incrementTricks();
@@ -695,7 +695,7 @@ public class GameManager {
                     roundState.set(RoundStage.waitForBot);
                 }
             }
-            println(trick.toString());
+            println(trick);
             println(trick.toColorString());
             lastTrickCards.clear();
             incrementTricks();
@@ -793,7 +793,7 @@ public class GameManager {
             try {
                 printf(DEBUG_LOG, "%s, GameManager blocked %s\n", Thread.currentThread().getName(), state);
                 q = stageQueue.take();
-                printf(DEBUG_LOG, "%s, GameManager unblocked %s\n", Thread.currentThread().getName(), q.toString());
+                printf(DEBUG_LOG, "%s, GameManager unblocked %s\n", Thread.currentThread().getName(), q);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

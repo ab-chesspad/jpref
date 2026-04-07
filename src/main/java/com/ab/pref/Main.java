@@ -25,6 +25,7 @@ import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
+import static com.ab.pref.config.PConfig.Host;
 import com.ab.util.Logger;
 import static com.ab.util.Util.currMethodName;
 
@@ -32,15 +33,19 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
-public class Main implements Logger.LogHolder, MainPanel.Host {
+public class Main implements Logger.LogHolder, Host {
     static final boolean release = true;
     static boolean DEBUG_LOG = true;
     public static boolean SHOW_ALL = true;
@@ -123,8 +128,8 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
    output to System.out will be ugly and useless
 //*/
         Logger.setHolder(this);
-        System.out.println("output to " + getLogStream());
-        Logger.printf("%s %s options 0x%x\n", Config.PROJECT_NAME, Config.VERSION, specialOption());
+        String version = Config.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
+        Logger.printf("%s %s, options 0x%x\n", Config.PROJECT_NAME, version, specialOption());
         Logger.println(String.format("running on %s", pUtil.getOS()));
 
         if (args.length > 0) {
@@ -169,7 +174,7 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 insets = mainFrame.getInsets();
                 mainRectangle.height -= insets.top;
-                Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle.toString());
+                Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
                 PConfig.getInstance().mainRectangle.set(mainRectangle);
                 Metrics.getInstance().recalculateSizes();
                 setMainPanel();
@@ -180,7 +185,7 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 insets = mainFrame.getInsets();
                 mainRectangle.height -= insets.top;
-                Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle.toString());
+                Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
                 PConfig.getInstance().mainRectangle.set(mainRectangle);
             }
         });
@@ -205,6 +210,7 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
     private void saveConfig() {
         mainRectangle.height += insets.top;
         PConfig.getInstance().serialize();
+        closeLog();
     }
 
     GameManager.PlayerFactory createPlayerFactory() {
@@ -334,12 +340,13 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
     @Override
     public PrintStream getLogStream() {
         if (DEBUG_LOG || specialOption() != 0) {
+            System.out.println("output to System.out");
             return System.out;
         }
 
         long today = new Date().getTime() / LOG_THRESHOLD;
         if (today != logStartDate) {
-            close();
+            closeLog();
             String date = new SimpleDateFormat("yyyy-MM-dd-").format(new Date());
             try {
                 logStream = getNewOutput(date);
@@ -348,6 +355,7 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
                 throw new RuntimeException(e);
             }
         }
+        System.out.println("output to " + logStream);
         return logStream;
     }
 
@@ -390,8 +398,7 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
         return new PrintStream(logFileName, StandardCharsets.UTF_8.name());
     }
 
-    @Override
-    public void close() {
+    private void closeLog() {
         if (logStream != null && logStream != System.out) {
             logStream.close();
             logStream = null;
@@ -440,6 +447,25 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
     }
 
     @Override
+    public long buildDate() {
+        try {
+            File file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            if (file.getAbsolutePath().endsWith(".jar")) {
+                try {
+                    ZipInputStream zis = new ZipInputStream(new FileInputStream(file.getAbsolutePath()));
+                    ZipEntry entry = zis.getNextEntry();
+                    return entry.getTime();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return file.lastModified();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public int specialOption() {
         int res = 0;
         boolean allHuman = true;
@@ -451,10 +477,10 @@ public class Main implements Logger.LogHolder, MainPanel.Host {
         }
 
         if (allHuman) {
-            res |= MainPanel.SPECIAL_OPTION_MANUAL;
+            res |= Host.SPECIAL_OPTION_MANUAL;
         }
         if (SHOW_ALL || allHuman) {
-            res |= MainPanel.SPECIAL_OPTION_SHOW_CARDS;
+            res |= Host.SPECIAL_OPTION_SHOW_CARDS;
         }
         return res;
     }

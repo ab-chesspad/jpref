@@ -36,6 +36,9 @@ import com.ab.jpref.engine.MisereBot;
 import com.ab.jpref.engine.Player;
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
+import static com.ab.pref.config.PConfig.Host;
+import static com.ab.pref.config.PConfig.Host.SPECIAL_OPTION_SHOW_CARDS;
+import static com.ab.pref.config.PConfig.Host.SPECIAL_OPTION_MANUAL;
 import com.ab.pref.config.SettingsPopup;
 import com.ab.pref.widgets.ButtonPanel;
 import com.ab.pref.widgets.PButton;
@@ -323,7 +326,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
         if (gameManager.replayMode || (host.specialOption() & SPECIAL_OPTION_SHOW_CARDS) != 0) {
             return true;
         } else {
-            Logger.printf(DEBUG_LOG, "showCards %s\n", GameManager.getState().getRoundStage().toString());
+            Logger.printf(DEBUG_LOG, "showCards %s\n", GameManager.getState().getRoundStage());
             if (isStage(RoundStage.play)
                     || isStage(RoundStage.waitForBot)
                     || isStage(RoundStage.trickTaken)) {
@@ -411,7 +414,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
     private void setTitle() {
         String title = Config.PROJECT_NAME;
         if (gameManager.declarerNumber >= 0) {
-            title += " - " + m(gameManager.getMinBid().toString());
+            title += " - " + m(gameManager.getMinBid());
         } else if (gameManager.getMinBid().equals(Bid.BID_ALL_PASS)) {
             title += " " + Bid.BID_ALL_PASS + " *" + (gameManager.getAllPassFactor() + 1);
         }
@@ -613,17 +616,6 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
 
         // todo: remove to allow play whist standing
         whistOptionPanel.getButton(ButtonCommand.standing).setEnabled(false);
-    }
-
-    public static final int SPECIAL_OPTION_SHOW_CARDS = 0x1;
-    public static final int SPECIAL_OPTION_MANUAL = 0x1;
-
-    public interface Host {
-        void repaint();
-        JFrame mainFrame();
-        int specialOption();
-        default String getLogFileName() { return null; }
-        default boolean release() { return false; }
     }
 
 }

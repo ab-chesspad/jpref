@@ -201,7 +201,7 @@ public class TrickList {
         hand0.remove(drops);
         targetBot.myHand = hand0;   // replace on the newly found cards
         System.arraycopy(bestNodes, 0, TrickList.bestNodes, 0, bestNodes.length);
-        printf(DEBUG_LOG, "list rebuilt after %s\n", trick.toString());
+        printf(DEBUG_LOG, "list rebuilt after %s\n", trick);
     }
 
     // minimax criteria, pass to targetBot
@@ -405,7 +405,7 @@ String test = null;
                 (dur + 500) / 1000, positions.size(), similar);
             if (PRINT_BEST_PATH) {
                 sb.append("]");
-                println(sb.toString());
+                println(sb);
                 printf("declarer: %d tricks\n", getEstimate());
             }
 

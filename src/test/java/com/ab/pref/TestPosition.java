@@ -26,7 +26,7 @@ import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.jpref.config.Config.NOP;
 import com.ab.jpref.engine.*;
 import com.ab.jpref.engine.GameManager.PlayerFactory;
-import com.ab.pref.MainPanel.Host;
+import com.ab.pref.config.PConfig.Host;
 import com.ab.pref.config.Metrics;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
@@ -36,7 +36,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.util.Arrays;
+import java.util.Date;
 
 // convenience GUI program to test intermediate positions for TrickList search
 // add/modify sources using hands from either a breakpoint in buildSubList(CardList cards)
@@ -111,7 +111,12 @@ public class TestPosition implements Host {
 
     @Override
     public int specialOption() {
-        return MainPanel.SPECIAL_OPTION_SHOW_CARDS;
+        return Host.SPECIAL_OPTION_SHOW_CARDS;
+    }
+
+    @Override
+    public long buildDate() {
+        return new Date().getTime();
     }
 
     class TestPlayerFactory implements PlayerFactory {
@@ -234,7 +239,7 @@ public class TestPosition implements Host {
                         // assuming needed drop
                         gameManager.getRoundState().set(GameManager.RoundStage.drop);
                         Bid _bid = gameManager.getPlayers()[0].drop();
-                        Logger.println(_bid.toString());
+                        Logger.println(_bid);
 //                        hands[0] = gameManager.getPlayers()[0].getMyHand();
                         BidData.PlayerBid playerBid = forTricksBot.getDrop(elderHand);
                         forTricksBot.drop(playerBid.drops);

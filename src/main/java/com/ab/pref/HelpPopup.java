@@ -21,13 +21,14 @@
 
 package com.ab.pref;
 
-import com.ab.pref.MainPanel.Host;
+import com.ab.pref.config.PConfig.Host;
 import com.ab.pref.config.Metrics;
 import com.ab.jpref.config.I18n;
 import com.ab.pref.config.PConfig;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.SimpleDateFormat;
 
 public class HelpPopup extends JDialog {
     final Metrics metrics = Metrics.getInstance();
@@ -44,8 +45,9 @@ public class HelpPopup extends JDialog {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
+        String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(host.buildDate());
         String src = I18n.loadString("index.html")
-            .replace(versionVar, PConfig.VERSION);
+            .replace(versionVar, version);
         StringBuilder sb = new StringBuilder();
         int start = 0;
         int end;
@@ -75,7 +77,7 @@ public class HelpPopup extends JDialog {
         b.setFont(metrics.font);
         panel.add(b);
         b.addActionListener(e -> {
-//            Logger.printf("helpPopup: %s\n", e.toString());
+//            Logger.printf("helpPopup: %s\n", e);
             dispose();
         });
         add(panel);

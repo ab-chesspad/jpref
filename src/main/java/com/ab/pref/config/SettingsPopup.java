@@ -2,7 +2,7 @@ package com.ab.pref.config;
 
 import com.ab.jpref.config.Config;
 import com.ab.pref.MainPanel;
-import com.ab.pref.MainPanel.Host;
+import com.ab.pref.config.PConfig.Host;
 import com.ab.pref.PUtil;
 import com.ab.pref.widgets.ButtonPanel;
 import com.ab.pref.widgets.PButton;
@@ -198,7 +198,7 @@ public class SettingsPopup extends JDialog {
             });
             editor = jList;
         } else if (propValue instanceof Integer) {
-            Logger.printf(DEBUG_LOG, "%s -> integer %s\n", label, propValue.toString());
+            Logger.printf(DEBUG_LOG, "%s -> integer %s\n", label, propValue);
             final JTextField jTextField = new JTextField(MAX_NUMBER_SIZE);
             jTextField.setText(propValue.toString());
             jTextField.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -230,7 +230,7 @@ public class SettingsPopup extends JDialog {
             editor = jTextField;
         } else {
             editor = null;
-            Logger.printf(DEBUG_LOG, "%s -> %s\n", label, propValue.toString());
+            Logger.printf(DEBUG_LOG, "%s -> %s\n", label, propValue);
         }
         if (editor != null) {
             editor.setFont(font);

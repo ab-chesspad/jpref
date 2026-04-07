@@ -55,6 +55,7 @@ class MainPanelLayout {
 
     final BufferedImage sourceDeckImage, sourceBackImage;
     final Image[][] cardImages = new Image[Card.TOTAL_SUITS][Card.TOTAL_RANKS];
+    final BufferedImage elderHandImage = pUtil.loadImage("buttons/hand.png");
     final Metrics metrics = Metrics.getInstance();
     final HandVisualData[] handVisualData = new HandVisualData[4];
     BufferedImage scaledDeckImage, scaledBackImage;
@@ -203,14 +204,14 @@ class MainPanelLayout {
                     mainPanel.isStage(RoundStage.showTalon) ||
                     mainPanel.isStage(RoundStage.selectWhistOption) ||
                     mainPanel.isStage(RoundStage.drop) ||
+                    mainPanel.isStage(RoundStage.play.declareRound) ||
                     mainPanel.isStage(RoundStage.responseOnDeclaration)) {
                     Bid bid = player.getBid();
                     if (!Bid.BID_UNDEFINED.equals(bid)) {
                         text += ": " + I18n.m(bid.getName());
                     }
                     if (player.getNumber() == gameManager.elderHand) {
-                        BufferedImage image = pUtil.loadImage("buttons/hand.png");
-                        BufferedImage scaledImage = pUtil.scale(image, height, height);
+                        BufferedImage scaledImage = pUtil.scale(elderHandImage, height, height);
                         elderHandIcon = new ImageIcon(scaledImage);
                     }
                 } else {

@@ -60,9 +60,9 @@ public class I18n {
         return res;
     }
 
-    public static String m(String text) {
+    public static String m(Object text) {
         I18n instance = getInstance();
-        return instance.translate(text);
+        return instance.translate(text.toString());
     }
 
     private void loadLanguageMap(String iso639_1_2002_code) {

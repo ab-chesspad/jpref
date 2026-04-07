@@ -218,7 +218,7 @@ public abstract class ScoreCalculator {
                 .append(player.getRoundResults().points[statusPoints]);
             sep = "; ";
         }
-        Logger.println(sb.toString());
+        Logger.println(sb);
     }
 
     private static class MiamiScoreCalculator extends ScoreCalculator {

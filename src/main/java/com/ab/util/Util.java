@@ -83,6 +83,10 @@ public class Util {
         return new FileOutputStream(new File(dir, path));
     }
 
+    public String getDataDirectory() {
+        throw new RuntimeException("stub!");
+    }
+
 /*
     public String getDataDirectory() {
         String parent;
@@ -103,6 +107,7 @@ public class Util {
         return dir.getAbsolutePath();
     }
 */
+/*
     public String getDataDirectory() {
         return getDataFile().getAbsolutePath();
     }
@@ -126,24 +131,7 @@ public class Util {
         }
         return file;
     }
-
-    public long buildDate() {
-        try {
-            File file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-            if (file.getAbsolutePath().endsWith(".jar")) {
-                try {
-                    ZipInputStream zis = new ZipInputStream(new FileInputStream(file.getAbsolutePath()));
-                    ZipEntry entry = zis.getNextEntry();
-                    return entry.getTime();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return file.lastModified();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
+*/
 
     public void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
