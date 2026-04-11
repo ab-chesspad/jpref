@@ -28,12 +28,9 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.Card.Suit;
 
 import com.ab.jpref.cards.CardList;
-import com.ab.jpref.engine.Bot;
-import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.engine.*;
 import com.ab.jpref.engine.GameManager.RoundStage;
 
-import com.ab.jpref.engine.MisereBot;
-import com.ab.jpref.engine.Player;
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
 import static com.ab.pref.config.PConfig.Host;
@@ -132,19 +129,26 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
         this.host = host;
         this.mainPanelLayout = new MainPanelLayout(this);
 
-        addMouseMotionListener(new MouseMotionAdapter() {
+/*
+        addMouseMotionListener(new MouseMotionListener() {
             @Override
-            public void mouseDragged(MouseEvent e) {
-                // for the future, play by dragging
-                super.mouseDragged(e);
-//                System.out.printf("%s -> %s\n", currMethodName(), e);
+            public void mouseDragged(MouseEvent mouseEvent) {
+                Logger.printf("%s -> %s\n", currMethodName(), mouseEvent);
             }
 
+            @Override
+            public void mouseMoved(MouseEvent mouseEvent) {
+                Logger.printf("%s -> %s\n", currMethodName(), mouseEvent);
+            }
         });
+*/
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
+                if (menuPanel.isVisible()) {
+                    host.repaint();
+                }
                 menuPanel.setVisible(false);
                 if (isStage(RoundStage.showTalon)) {
                     gameManager.unblockGameManager(RoundStage.showTalon);
@@ -155,6 +159,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
                     update();
                 }
                 if (e.getButton() == 3) {
+                    // right button
                     Rectangle bounds = menuPanel.getBounds();
                     bounds.x = e.getX();
                     if (bounds.x + bounds.width > mainRectangle().width) {
@@ -172,7 +177,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
                     boolean enable = Bot.trickList != null || Bot.targetBot instanceof MisereBot;
                     b.setEnabled(enable);
                     b = menuPanel.getButton(ButtonCommand.newGame);
-                    b.setEnabled(host.release());
+                    b.setEnabled(host.testing());
                     b = menuPanel.getButton(ButtonCommand.submitLog);
                     b.setEnabled(host.getLogFileName() != null);
                 }
@@ -419,7 +424,7 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
             title += " " + Bid.BID_ALL_PASS + " *" + (gameManager.getAllPassFactor() + 1);
         }
         if ((host.specialOption() & SPECIAL_OPTION_MANUAL) != 0) {
-            title += ", All open";
+            title += ", open cards";
         }
         host.mainFrame().setTitle(title);
     }
@@ -523,6 +528,41 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
     }
 
     private void createButtonPanels() {
+        menuPanel = new ButtonPanel(3.5, .6,
+            new PButton.ButtonHandler[][] {
+                {new PButton.ButtonHandler(ButtonCommand.showScores, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    new StatusPopup(host, false);
+                })},
+                {new PButton.ButtonHandler(ButtonCommand.lastTrick, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    trickPanel.setVisible(true);
+                    update();
+                })},
+                {new PButton.ButtonHandler(ButtonCommand.yourOffer, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    new OfferPopup(host);
+                })},
+                {new PButton.ButtonHandler(ButtonCommand.replay, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    for (Player player : gameManager.getPlayers()) {
+                        player.abortThread(GameManager.RestartCommand.replay);
+                    }
+                })},
+                {new PButton.ButtonHandler(ButtonCommand.submitLog, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    submitLog();
+                })},
+                {new PButton.ButtonHandler(ButtonCommand.newGame, buttonCommand -> {
+                    menuPanel.setVisible(false);
+                    for (Player player : gameManager.getPlayers()) {
+                        player.abortThread(GameManager.RestartCommand.newGame);
+                    }
+                })},
+            });
+        menuPanel.setVisible(false);
+        this.add(menuPanel);
+
         dropPanel = new ButtonPanel( 4, 1,
             new PButton.ButtonHandler[][] {
                 {new PButton.ButtonHandler(ButtonCommand.drop, buttonCommand -> currentPlayer.drop(new CardSet(selectedCards)))},
@@ -561,41 +601,6 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
             }});
         buttonPanel.setVisible(true);
         this.add(buttonPanel);
-
-        menuPanel = new ButtonPanel(3.5, .6,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.showScores, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    new StatusPopup(host, false);
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.lastTrick, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    trickPanel.setVisible(true);
-                    update();
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.yourOffer, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    new OfferPopup(host);
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.replay, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    for (Player player : gameManager.getPlayers()) {
-                        player.abortThread(GameManager.RestartCommand.replay);
-                    }
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.submitLog, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    submitLog();
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.newGame, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    for (Player player : gameManager.getPlayers()) {
-                        player.abortThread(GameManager.RestartCommand.newGame);
-                    }
-                })},
-            });
-        menuPanel.setVisible(false);
-        this.add(menuPanel);
 
         whistSelectionPanel = new ButtonPanel(4, 1,
             new PButton.ButtonHandler[][] {

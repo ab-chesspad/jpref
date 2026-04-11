@@ -118,6 +118,7 @@ public class StatusPopup extends JDialog {
         add(scoresPanel, BorderLayout.NORTH);
 
         setVisible(true);   // blocks until dialog ends
+        host.repaint();
     }
 
     Rectangle getScoresRectangle() {
@@ -421,9 +422,10 @@ public class StatusPopup extends JDialog {
             }),
         }};
         PButton.ButtonHandler[][] buttonList = fullList;
-        if (host.release()) {
+        if (host.testing()) {
             PButton.ButtonHandler[][] testList =
                 new PButton.ButtonHandler[1][fullList[0].length - 1];
+            // no new game option
             System.arraycopy(fullList[0], 0, testList[0], 0, testList[0].length);
             buttonList = testList;
         }

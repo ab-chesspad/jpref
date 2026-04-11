@@ -1,5 +1,10 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+[♥A8K, ♦AXK, ♣KQJ, ♣978, ♠9X7, ♣X ♦Q ♥Q, ♣A ♦J ♥J, ♦7 ♥X9, ♦8 ♠A ♥7, ♦9 ♠J8]
+deal: ♠Q ♣7XQA ♦789X ♥8  ♠7JA ♣8J ♦JQK ♥XK  ♠89 ♣9K ♦A ♥79JQA  ♠XK  2 -> Misère 1 # не ловится
+
+deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
+
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
@@ -15,8 +20,6 @@ declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
 
 deal: ♠7 ♣8X ♦7JQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♦X8  1 -> 6♦ 6
-
-deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
 
 [♣X87, ♠Q89, ♠7JK, ♦Q98, ♥9K8, ♦7X ♣9, ♠A ♣J ♦J, ♣Q ♥X ♦K, ♣A ♥J ♦A, ♥QA7]
 [♣XAJ, ♦XQJ, ♠97A, ♦8 ♠K ♦7, ♥QJK, ♠QJ ♥A, ♦9 ♥8X, ♦K ♣Q ♥9, ♦A ♣89, ♥7 ♠8 ♣7]

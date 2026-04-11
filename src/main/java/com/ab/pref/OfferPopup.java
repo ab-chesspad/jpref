@@ -53,6 +53,9 @@ public class OfferPopup extends JDialog {
     final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
 
     final JList<String> jList;
+    final int minTricks;
+    final int maxTricks;
+    int selectedIndex = -1;
 
     public OfferPopup(Host host) {
         super(host.mainFrame(), false);
@@ -79,8 +82,6 @@ public class OfferPopup extends JDialog {
             tricksEstimate = Bot.trickList.getEstimate();
         }
 
-        final int minTricks;
-        final int maxTricks;
         if (player0.getBid().equals(Bid.BID_MISERE)) {
             minTricks = tricksEstimate;
             maxTricks = ROUND_SIZE - theirTricks;
@@ -158,28 +159,38 @@ public class OfferPopup extends JDialog {
             "0",
         };
 
+        JLabel[] jLabels = new JLabel[values.length];
         jList = new JList<>(values);
         jList.setCellRenderer((jList, value, index, isSelected, cellHasFocus) -> {
-                JLabel jLabel;
-                String text = m(value);
-                if (isSelected) {
-                    jLabel = new JLabel(text, selectedLineIcon, JLabel.LEFT);
-                } else {
-                    jLabel = new JLabel(text, lineIcon, JLabel.LEFT);
-                }
+            String text = m(value);
+            JLabel jLabel = jLabels[index];
+            if (jLabel == null) {
+                jLabel = new JLabel(text, lineIcon, JLabel.LEFT);
                 jLabel.setFont(font);
                 jLabel.setOpaque(true);
-                if (index > (ROUND_SIZE - minTricks) || index < (ROUND_SIZE - maxTricks)) {
-                    jLabel.setEnabled(false);
-                    jLabel.setForeground(Color.GRAY);
-                }
+            }
+            if (index > (ROUND_SIZE - minTricks) || index < (ROUND_SIZE - maxTricks)) {
+                jLabel.setEnabled(false);
+                jLabel.setForeground(Color.GRAY);
+            } else if (isSelected) {
+                jLabel.setIcon(selectedLineIcon);
+            } else {
+                jLabel.setIcon(lineIcon);
+            }
+
             return jLabel;
         });
         jList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent event) {
                 if (!event.getValueIsAdjusting()) {
-                    okButton.setEnabled(true);
+                    int index = jList.getSelectedIndex();
+                    if (index >= (ROUND_SIZE - maxTricks) && index <= (ROUND_SIZE - minTricks)) {
+                        selectedIndex = index;
+                        okButton.setEnabled(true);
+                    } else {
+                        jList.setSelectedIndex(selectedIndex);
+                    }
                 }
             }
         });
@@ -187,6 +198,7 @@ public class OfferPopup extends JDialog {
         add(scrollPane, BorderLayout.CENTER);
 
         setVisible(true);
+        host.repaint();
     }
 
     private void accept() {

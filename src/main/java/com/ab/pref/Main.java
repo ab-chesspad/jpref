@@ -20,9 +20,9 @@
 package com.ab.pref;
 
 import com.ab.jpref.config.Config;
-import com.ab.jpref.engine.Bot;
+import static com.ab.jpref.config.Config.NOP;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.Player;
+import com.ab.jpref.engine.HumanPlayer;
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
 import static com.ab.pref.config.PConfig.Host;
@@ -51,13 +51,6 @@ public class Main implements Logger.LogHolder, Host {
     public static boolean SHOW_ALL = true;
     public static final String LOG_EXT = ".log";
     public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
-    public static final int NOP = Config.NOP;   // Number of players
-    public static final boolean[] BOTS = new boolean[NOP];
-    static {
-        BOTS[0] = false;
-        BOTS[1] = true;
-        BOTS[2] = true;
-    }
     static {
          PConfig.getInstance().release.set(release);
     }
@@ -65,9 +58,9 @@ public class Main implements Logger.LogHolder, Host {
         GameManager.RELEASE = release;
         if (release) {
             DEBUG_LOG = false;
-            BOTS[0] = false;
-            BOTS[1] = true;
-            BOTS[2] = true;
+            GameManager.BOTS[0] = false;
+            GameManager.BOTS[1] = true;
+            GameManager.BOTS[2] = true;
             SHOW_ALL = false;
         }
     }
@@ -85,7 +78,6 @@ public class Main implements Logger.LogHolder, Host {
     private long logStartDate;
 
     String GUID;
-    GameManager.PlayerFactory playerFactory;
     GameManager gameManager;
     Thread gameThread;
 
@@ -121,8 +113,6 @@ public class Main implements Logger.LogHolder, Host {
             GUID = java.util.UUID.randomUUID().toString();
             PConfig.getInstance().GUID.set(GUID);
         }
-
-        logsCleanup();
 
 /* until IntelliJ adds ansi colors handling to their debugger,
    output to System.out will be ugly and useless
@@ -213,80 +203,14 @@ public class Main implements Logger.LogHolder, Host {
         closeLog();
     }
 
-    GameManager.PlayerFactory createPlayerFactory() {
-        return new GameManager.PlayerFactory() {
-            @Override
-            public Player[] getPlayers() {
-                Player[] players = new Player[NOP];
-                for (int i = 0; i < NOP; ++i) {
-                    if (BOTS[i]) {
-                        players[i] = new Bot(i);
-                    } else {
-                        players[i] = new HumanPlayer(i, mainPanel);
-                    }
-                }
-                return players;
-            }
-
-            @Override
-            public Player[] avatars4Round() {
-                // replace human or bot depending on whist elections
-                int i = gameManager.declarerNumber;
-                Player declarer = gameManager.getPlayers()[i];
-                Player defender0 = gameManager.getPlayers()[(i + 1) % NOP];
-                Player defender1 = gameManager.getPlayers()[(i + 2) % NOP];
-                Player[] avatars = new Player[NOP];
-                GameManager.EventObserver clickable = mainPanel;
-
-                if (gameManager.replayMode) {
-                    avatars[declarer.getNumber()] =
-                        new HumanPlayer(declarer, clickable);
-                    avatars[defender0.getNumber()] =
-                        new HumanPlayer(defender0, clickable);
-                    avatars[defender1.getNumber()] =
-                        new HumanPlayer(defender1, clickable);
-                    return avatars;
-                }
-
-                if (declarer instanceof HumanPlayer) {
-                    avatars[declarer.getNumber()] =
-                        new HumanPlayer(declarer, clickable);
-                    if (defender0 instanceof HumanPlayer && defender1 instanceof HumanPlayer) {
-                        avatars[defender0.getNumber()] =
-                            new HumanPlayer(defender0, clickable);
-                        avatars[defender1.getNumber()] =
-                            new HumanPlayer(defender1, clickable);
-                    } else {
-                        avatars[defender0.getNumber()] = new Bot(defender0);
-                        avatars[defender1.getNumber()] = new Bot(defender1);
-                    }
-                } else {
-                    avatars[declarer.getNumber()] = new Bot(declarer);
-                    if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
-                        defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST)) {
-                        avatars[defender0.getNumber()] =
-                            new HumanPlayer(defender0, clickable);
-                        avatars[defender1.getNumber()] =
-                            new HumanPlayer(defender1, clickable);
-                    } else {
-                        avatars[defender0.getNumber()] = new Bot(defender0);
-                        avatars[defender1.getNumber()] = new Bot(defender1);
-                    }
-                }
-                return avatars;
-            }
-        };
-    }
-
     void setMainPanel() {
         if (mainPanel == null) {
             mainPanel = new MainPanel(this);
             mainContainer.add(mainPanel);
         }
 
-        playerFactory = createPlayerFactory();
         if (gameManager == null) {
-            gameManager = new GameManager(PConfig.getInstance(), mainPanel, playerFactory);
+            gameManager = new GameManager(PConfig.getInstance(), mainPanel);
             if (gameThread == null) {
                 gameThread = new Thread(() -> {
                     try {
@@ -405,26 +329,6 @@ public class Main implements Logger.LogHolder, Host {
         }
     }
 
-    private void logsCleanup() {
-        String dataDir = pUtil.getDataDirectory();
-        File logDir = new File(dataDir, "logs");
-        int deleteTimeout = Config.getInstance().deleteLogsAfter.get();
-        Calendar c = new GregorianCalendar();
-        c.add(Calendar.HOUR, -24 * deleteTimeout);
-        long threshold = c.getTimeInMillis();
-        logDir.list((file, name) -> {
-            if (name.endsWith(LOG_EXT)) {
-                File f = new File(file, name);
-                long fileTS = f.lastModified();
-                long diff = fileTS - threshold;
-                if (diff < 0) {
-                    f.delete();
-                }
-            }
-            return false;
-        });
-    }
-
     @Override
     public void repaint() {
         mainContainer.validate();
@@ -442,7 +346,7 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     @Override
-    public boolean release() {
+    public boolean testing() {
         return testFileName != null;
     }
 
@@ -470,7 +374,7 @@ public class Main implements Logger.LogHolder, Host {
         int res = 0;
         boolean allHuman = true;
         for (int i = 0; i < NOP; ++i) {
-            if (BOTS[i]) {
+            if (GameManager.BOTS[i]) {
                 allHuman = false;
                 break;
             }

@@ -27,7 +27,7 @@ public class TestBot {
 
     @BeforeClass
     public static void initClass() {
-        gameManager = new GameManager(config, null, playerFactory());
+        gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
 
@@ -36,25 +36,6 @@ public class TestBot {
         Bot.targetBot = null;
         Bot.trickList = null;
 
-    }
-
-    private static GameManager.PlayerFactory playerFactory() {
-        return new GameManager.PlayerFactory() {
-            @Override
-            public Player[] getPlayers() {
-                Player[] players = new Player[NOP];
-                for (int i = 0; i < NOP; ++i) {
-                    players[i] = new Bot(i);
-                }
-                return players;
-            }
-
-            @Override
-            public Player[] avatars4Round() {
-                Player[] players = gameManager.getPlayers();
-                return players;
-            }
-        };
     }
 
     @Test

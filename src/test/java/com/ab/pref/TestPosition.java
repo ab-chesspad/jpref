@@ -119,68 +119,9 @@ public class TestPosition implements Host {
         return new Date().getTime();
     }
 
-    class TestPlayerFactory implements PlayerFactory {
-        public Player[] getPlayers() {
-            Player[] players = new Player[NOP];
-            for (int i = 0; i < NOP; ++i) {
-                if (BOTS[i]) {
-                    players[i] = new Bot(i);
-                } else {
-                    players[i] = new HumanPlayer(i, mainPanel) {
-                        @Override
-                        public void declareRound(Bid minBid, int elderHand) {
-                        }
-
-                        @Override
-                        public void respondOnDeclaration() {
-                            if (this.number == 1) {
-                                bid = Bid.BID_WHIST;
-                            } else {
-                                bid = Bid.BID_PASS;
-                            }
-                        }
-
-                        @Override
-                        public boolean playWhistLaying() {
-                            return true;
-                        }
-
-                        @Override
-                        public Card play(Trick trick) {
-                            Card card = super.play(trick);
-                            Trick trickClone = new Trick(trick);
-                            CardSet[] hands = new CardSet[NOP];
-                            for (int i = 0; i < NOP; ++i) {
-                                Player p = gameManager.getPlayers()[i];
-                                hands[i] = p.getMyHand().clone();
-                            }
-                            Card expectedCard = Bot.trickList.getCard(trickClone, hands);
-                            if (!card.equals(expectedCard)) {
-                                hands[trick.getTurn()].remove(card);
-                                trickClone.add(card);
-                                if (trickClone.size() == BaseTrick.MAX_TRICK_CARDS) {
-                                    trickClone.clear();
-                                }
-                                Bot.trickList = new TrickList(forTricksBot, trickClone, hands);
-                            }
-                            return card;
-                        }
-
-                    };
-                }
-            }
-            return players;
-        }
-
-        @Override
-        public Player[] avatars4Round() {
-            return gameManager.getPlayers();
-        }
-    }
-
     class TestGameManager extends GameManager {
         TestGameManager() {
-            super(PConfig.getInstance(), mainPanel, new TestPlayerFactory());
+            super(PConfig.getInstance(), mainPanel);
         }
 
         @Override

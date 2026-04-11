@@ -17,14 +17,11 @@
  *
  * Created: 1/30/2025
  */
-package com.ab.pref;
+package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.Player;
-import com.ab.jpref.engine.Trick;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -39,7 +36,7 @@ public class HumanPlayer extends Player {
     private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
     final GameManager.EventObserver clickable;
 
-    GameManager.RestartCommand restartCommand;
+    private GameManager.RestartCommand restartCommand;
     private CardSet drop;
 
     public HumanPlayer(int number, GameManager.EventObserver clickable) {

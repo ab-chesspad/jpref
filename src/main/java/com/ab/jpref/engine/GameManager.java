@@ -26,7 +26,6 @@ import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
 import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
-//import com.ab.pref.HumanPlayer; // no dependencies on com.ab.pref!
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 import com.ab.util.ScoreCalculator;
@@ -41,6 +40,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class GameManager {
     public static boolean RELEASE = false;
     public static boolean DEBUG_LOG = false;
+
+    public static final boolean[] BOTS = new boolean[NOP];
+    static {
+        BOTS[0] = false;
+        BOTS[1] = true;
+        BOTS[2] = true;
+    }
 
     public enum RoundStage implements Config.Queueable {
         waitForBot,     // for long operations
@@ -78,7 +84,6 @@ public class GameManager {
     private final Util util = Util.getInstance();   // needed for testing
     private Thread gameThread;
     private final EventObserver eventObserver;
-    private final PlayerFactory playerFactory;
     final CardSet discarded = new CardSet();
 
     Player[] players = new Player[NOP];
@@ -102,15 +107,31 @@ public class GameManager {
     public boolean replayMode;
 
     // eventObserver == null for test run
-    public GameManager(Config config, EventObserver eventObserver, PlayerFactory playerFactory) {
+    public GameManager(Config config, EventObserver eventObserver) {
         instance = this;
         GameManager.config = config;
         this.eventObserver = eventObserver;
-        this.playerFactory = playerFactory;
+        if (eventObserver == null) {
+            GameManager.BOTS[0] = true;
+            GameManager.BOTS[1] = true;
+            GameManager.BOTS[2] = true;
+        }
         sleep(config.pauseBetweenTricks.get());
         roundState = new RoundState();
-        players = playerFactory.getPlayers();
+        players = createPlayers();
         printf(DEBUG_LOG, "GameManager constructed\n");
+    }
+
+    Player[] createPlayers() {
+        Player[] players = new Player[NOP];
+        for (int i = 0; i < NOP; ++i) {
+            if (BOTS[i]) {
+                players[i] = new Bot(i);
+            } else {
+                players[i] = new HumanPlayer(i, eventObserver);
+            }
+        }
+        return players;
     }
 
     public static GameManager getInstance() {
@@ -543,13 +564,66 @@ public class GameManager {
     }
 
     private void incrementTricks() {
-        players[trick.getTop()].incrementTricks();
-        if (Bot.targetBot != null && Bot.targetBot.number == trick.getTop()) {
-            Bot.targetBot.incrementTricks();
+        Player p = players[trick.getTop()];
+        p.incrementTricks();
+        if (Bot.targetBot != null && p == this.declarer) {
+            Bot.targetBot.setTricks(p.getTricks());
         }
     }
 
-    protected void playRoundForTricks() {
+    public Player[] avatars4Round() {
+        // replace human or bot depending on whist elections
+        int i = this.declarerNumber;
+        Player declarer = this.getPlayers()[i];
+        Player defender0 = this.getPlayers()[(i + 1) % NOP];
+        Player defender1 = this.getPlayers()[(i + 2) % NOP];
+        EventObserver clickable = eventObserver;
+//        for (Player p : this.players) {
+//            if (p instanceof HumanPlayer) {
+//                clickable = ((HumanPlayer) p).clickable;
+//            }
+//        }
+        Player[] avatars = new Player[NOP];
+
+        if (this.replayMode) {
+            avatars[declarer.getNumber()] =
+                new HumanPlayer(declarer, clickable);
+            avatars[defender0.getNumber()] =
+                new HumanPlayer(defender0, clickable);
+            avatars[defender1.getNumber()] =
+                new HumanPlayer(defender1, clickable);
+            return avatars;
+        }
+
+        if (declarer instanceof HumanPlayer) {
+            avatars[declarer.getNumber()] =
+                new HumanPlayer(declarer, clickable);
+            if (defender0 instanceof HumanPlayer && defender1 instanceof HumanPlayer) {
+                avatars[defender0.getNumber()] =
+                    new HumanPlayer(defender0, clickable);
+                avatars[defender1.getNumber()] =
+                    new HumanPlayer(defender1, clickable);
+            } else {
+                avatars[defender0.getNumber()] = new Bot(defender0);
+                avatars[defender1.getNumber()] = new Bot(defender1);
+            }
+        } else {
+            avatars[declarer.getNumber()] = new Bot(declarer);
+            if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
+                defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST)) {
+                avatars[defender0.getNumber()] =
+                    new HumanPlayer(defender0, clickable);
+                avatars[defender1.getNumber()] =
+                    new HumanPlayer(defender1, clickable);
+            } else {
+                avatars[defender0.getNumber()] = new Bot(defender0);
+                avatars[defender1.getNumber()] = new Bot(defender1);
+            }
+        }
+        return avatars;
+    }
+
+protected void playRoundForTricks() {
         roundState.set(RoundStage.declareRound);
         declarer.declareRound(minBid, elderHand);
         this.minBid = declarer.getBid();
@@ -594,7 +668,7 @@ public class GameManager {
         }
         sleep(200);     // give jPrefPanel a chance to paint
 
-        this.players = playerFactory.avatars4Round();
+        this.players = avatars4Round();
         this.declarer = this.players[this.declarerNumber];
 
         roundState.set(RoundStage.play);
@@ -658,7 +732,7 @@ public class GameManager {
             }
             player.bid = Bid.BID_WHIST;
         }
-        this.players = playerFactory.avatars4Round();
+        this.players = avatars4Round();
         this.declarer = this.players[this.declarerNumber];
         showDefendersCards = true;
         roundState.set(RoundStage.play);
@@ -812,6 +886,5 @@ public class GameManager {
 
     public interface PlayerFactory {
         Player[] getPlayers();
-        Player[] avatars4Round();
     }
 }

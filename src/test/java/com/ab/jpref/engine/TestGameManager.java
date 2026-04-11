@@ -27,7 +27,7 @@ public class TestGameManager {
 
     @Before
     public void initClass() {
-        gameManager = new GameManager(config, null, playerFactory());
+        gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }
@@ -37,28 +37,6 @@ public class TestGameManager {
         Bot.targetBot = null;
         Bot.trickList = null;
 
-    }
-
-    private GameManager.PlayerFactory playerFactory() {
-        return new GameManager.PlayerFactory() {
-            @Override
-            public Player[] getPlayers() {
-                Player[] players = new Player[NOP];
-                for (int i = 0; i < NOP; ++i) {
-                    players[i] = new Bot(i);
-                }
-                return players;
-            }
-
-            @Override
-            public Player[] avatars4Round() {
-                Player[] players = new Player[NOP];
-                for (int i = 0; i < players.length; ++i) {
-                    players[i] = new Bot(gameManager.getPlayers()[i]);
-                }
-                return players;
-            }
-        };
     }
 
     private void printStatistics(int count) {

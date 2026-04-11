@@ -40,7 +40,7 @@ import java.io.*;
 
 public class Config implements Serializable {
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.0.5";
+    public static final String VERSION = "0.0.6";
 
     public final Property<Boolean> release = new Property<>("", true);
 
@@ -361,7 +361,7 @@ public class Config implements Serializable {
 
     public interface Host {
         default String getLogFileName() { return null; }
-        default boolean release() { return false; }
+        default boolean testing() { return false; }
         long buildDate();
     }
 
