@@ -31,8 +31,8 @@ import static com.ab.util.Logger.println;
 import com.ab.util.ScoreCalculator;
 import com.ab.util.Util;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -74,7 +74,7 @@ public class GameManager {
         offer,
     }
 
-    public static String testFileName;
+    InputStream testInputStream;
 
     protected static RoundState roundState;
     private static GameManager instance;
@@ -169,16 +169,13 @@ public class GameManager {
         return minBid;
     }
 
-    public void runGame(final String testFileName, int skip) {
-        GameManager.testFileName = testFileName;
-        gameThread = Thread.currentThread();
-        printf(DEBUG_LOG, "runGame %s\n", gameThread.getName());
-        if (testFileName == null) {
+    public void runGame(InputStream testInputStream, int skip) {
+        this.testInputStream = testInputStream;
+        if (testInputStream == null) {
             runGame();
         } else {
             try {
-                String s = new File(testFileName).getAbsolutePath();
-                util.getList(testFileName,
+                util.getList(testInputStream,
                     (res, tokens) -> {
                         if (lineCount++ < skip) {
                             return;
@@ -334,48 +331,35 @@ public class GameManager {
             cardsRevealed = false;
 
             this.elderHand = elderHand;
-            if (testFileName != null && testFileName.contains("misere") && declarer instanceof Bot) {
-                declarerNumber = 0;
-                declarer = players[declarerNumber];
-                declarer.bid = Bid.BID_MISERE;
-                minBid = Bid.BID_MISERE;
-                Bot.debugDrop = new CardList(talonCards);
+            declarer = bidding(elderHand);
+            if (declarer == null) {
+                printf("playing all-pass\n");
+                playRoundAllPass();
+            } else {
+                printf("declarer %s: %s, %s\n",
+                    declarer.getName(), declarer.getBid(), declarer.toColorString());
+                declarerNumber = declarer.getNumber();
+                for (Player p : players) {
+                    if (!(p instanceof Bot)) {
+                        roundState.set(RoundStage.showTalon);
+                        sleep(10);
+                        break;
+                    }
+                }
                 declarer.takeTalon(talonCards);
                 declarerHand = declarer.myHand.clone();
-                declarer.declareRound(minBid, elderHand);
-                trick.clear(elderHand);
-                playRoundMisere();
-            } else {
-                declarer = bidding(elderHand);
-                if (declarer == null) {
-                    printf("playing all-pass\n");
-                    playRoundAllPass();
-                } else {
-                    printf("declarer %s: %s, %s\n",
-                        declarer.getName(), declarer.getBid(), declarer.toColorString());
-                    declarerNumber = declarer.getNumber();
-                    for (Player p : players) {
-                        if (!(p instanceof Bot)) {
-                            roundState.set(RoundStage.showTalon);
-                            sleep(10);
-                            break;
-                        }
-                    }
-                    declarer.takeTalon(talonCards);
-                    declarerHand = declarer.myHand.clone();
-                    initialDeclarerHand = declarerHand.clone();
-                    roundState.set(RoundStage.drop);
-                    sleep(10);
-                    Bid bid = declarer.drop();
-                    printf("%s wins bidding %s\n", declarer.getName(), bid);
-                    savedPlayers = this.players;    // save
-                    if (Bid.BID_MISERE.equals(bid)) {
-                        playRoundMisere();
-                    } else if (!Bid.BID_WITHOUT_THREE.equals(bid)) {
-                        playRoundForTricks();
-                    }
-                    updateFromAvatars();
+                initialDeclarerHand = declarerHand.clone();
+                roundState.set(RoundStage.drop);
+                sleep(10);
+                Bid bid = declarer.drop();
+                printf("%s wins bidding %s\n", declarer.getName(), bid);
+                savedPlayers = this.players;    // save
+                if (Bid.BID_MISERE.equals(bid)) {
+                    playRoundMisere();
+                } else if (!Bid.BID_WITHOUT_THREE.equals(bid)) {
+                    playRoundForTricks();
                 }
+                updateFromAvatars();
             }
 
             if (!replayMode) {
@@ -486,7 +470,7 @@ public class GameManager {
         talonCards = new CardList(deck.subList(30, 32));
 
         sb.append(talonCards.toColorString());
-        if (testFileName == null) {
+        if (testInputStream == null) {
             // when testing it was displayed already
             printf("%s %s  %d\n", Util.DEAL_MARK, sb, trick.getStartedBy());
         }
@@ -578,11 +562,6 @@ public class GameManager {
         Player defender0 = this.getPlayers()[(i + 1) % NOP];
         Player defender1 = this.getPlayers()[(i + 2) % NOP];
         EventObserver clickable = eventObserver;
-//        for (Player p : this.players) {
-//            if (p instanceof HumanPlayer) {
-//                clickable = ((HumanPlayer) p).clickable;
-//            }
-//        }
         Player[] avatars = new Player[NOP];
 
         if (this.replayMode) {
@@ -623,7 +602,7 @@ public class GameManager {
         return avatars;
     }
 
-protected void playRoundForTricks() {
+    protected void playRoundForTricks() {
         roundState.set(RoundStage.declareRound);
         declarer.declareRound(minBid, elderHand);
         this.minBid = declarer.getBid();

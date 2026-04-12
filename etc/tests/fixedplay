@@ -1,13 +1,21 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+list build duration: 4 sec, positions 434226, similar 3,122,481
+list build duration: 5 sec, positions 434226, similar 3,122,173
+list build duration: 4 sec, positions 434226, similar 3,119,174
+[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
+deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
+
+
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
+deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
+
 [♥A8K, ♦AXK, ♣KQJ, ♣978, ♠9X7, ♣X ♦Q ♥Q, ♣A ♦J ♥J, ♦7 ♥X9, ♦8 ♠A ♥7, ♦9 ♠J8]
 deal: ♠Q ♣7XQA ♦789X ♥8  ♠7JA ♣8J ♦JQK ♥XK  ♠89 ♣9K ♦A ♥79JQA  ♠XK  2 -> Misère 1 # не ловится
 
 deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
 
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
 
 [♠AX7, ♠9JQ, ♠K ♥K7, ♣8K7, ♣AXJ, ♣9 ♥J ♣Q, ♦X8 ♥8, ♥AQ ♦9, ♥9 ♦QJ, ♥X ♦KA]
 deal: ♠8J ♣9KA ♦7 ♥789A  ♠7QK ♣7X ♦XQK ♥JQ  ♠9A ♣8JQ ♦89JA ♥K  ♥X ♠X  2 -> 6♥ 6
@@ -31,12 +39,6 @@ deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA
 
 deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # не ловится
 deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
-
-list build duration: 4 sec, positions 434226, similar 3,122,481
-list build duration: 5 sec, positions 434226, similar 3,122,173
-list build duration: 4 sec, positions 434226, similar 3,119,174
-[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
-deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
 
 list build duration: 2 sec, positions 270229, similar 2,028,375
 [♠A8Q, ♠79 ♦7, ♣9KQ, ♠XJ ♦9, ♣A7 ♦8, ♦AK ♣8, ♠K ♥Q ♣X, ♦X ♥KX, ♦J ♥7J, ♦Q ♥9A]

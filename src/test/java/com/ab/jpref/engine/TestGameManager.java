@@ -16,6 +16,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 
 public class TestGameManager {
@@ -60,7 +61,7 @@ public class TestGameManager {
     public void testFixedBid() throws IOException {
         println("running: " + currMethodName());
         final String testFileName = "etc/tests/fixedbid";
-        GameManager.testFileName = testFileName;    // just to avoid duplicate line print
+        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
 
         util.getList(testFileName,
@@ -144,7 +145,7 @@ if (++count[0] > 0) {
     public void testPlay() throws IOException {
         println("running: " + currMethodName());
         final String testFileName = "etc/tests/fixedplay";
-        GameManager.testFileName = testFileName;    // just to avoid duplicate line print
+        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
 
         util.getList(testFileName,
@@ -228,7 +229,7 @@ if (++count[0] > 0) {
     public void testBiddedPlay() throws IOException {
         println("running: " + currMethodName());
         final String testFileName = "etc/tests/biddedplay";
-        GameManager.testFileName = testFileName;    // just to avoid duplicate line print
+        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
         util.getList(testFileName,
             (res, tokens) -> {
@@ -283,7 +284,7 @@ if (++count[0] > 0) {
     public void testMisere() throws IOException {
         println("running: " + currMethodName());
         final String testFileName = "etc/tests/misereplay";
-        GameManager.testFileName = testFileName;    // just to avoid duplicate line print
+        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
         util.getList(testFileName,
             (res, tokens) -> {
@@ -347,7 +348,7 @@ if (++count[0] > 0) {
     public void testAllPass() throws IOException {
         println("running: " + currMethodName());
         final String testFileName = "etc/tests/allpassplay";
-        GameManager.testFileName = testFileName;
+        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
         util.getList(testFileName,
                 (res, tokens) -> {

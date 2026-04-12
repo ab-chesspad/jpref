@@ -32,10 +32,7 @@ import static com.ab.util.Util.currMethodName;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -81,7 +78,7 @@ public class Main implements Logger.LogHolder, Host {
     GameManager gameManager;
     Thread gameThread;
 
-    static String testFileName = null;
+    static InputStream testInputStream;
 
     /**
      * @param args optional [fixed-games-file]
@@ -123,9 +120,14 @@ public class Main implements Logger.LogHolder, Host {
         Logger.println(String.format("running on %s", pUtil.getOS()));
 
         if (args.length > 0) {
-            testFileName = args[0];
+            String testFileName = args[0];
             File f = new File(testFileName);
             Logger.println(f.getAbsolutePath());
+            try {
+                testInputStream = new FileInputStream(testFileName);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         GraphicsDevice mainGD = getGraphicsDevice();
@@ -215,7 +217,7 @@ public class Main implements Logger.LogHolder, Host {
                 gameThread = new Thread(() -> {
                     try {
                         while (true) {
-                            gameManager.runGame(testFileName, 0);
+                            gameManager.runGame(testInputStream, 0);
                             Logger.println("game ended!");
                         }
                     } catch (HumanPlayer.PrefExceptionRerun e) {
@@ -347,7 +349,7 @@ public class Main implements Logger.LogHolder, Host {
 
     @Override
     public boolean testing() {
-        return testFileName != null;
+        return testInputStream != null;
     }
 
     @Override

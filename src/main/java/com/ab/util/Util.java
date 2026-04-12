@@ -133,19 +133,28 @@ public class Util {
     }
 */
 
+    public void getList(InputStream is, LineHandler lineHandler) throws IOException {
+        final String[] charMap = {
+            Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
+        };
+        getList(is, charMap, lineHandler);
+    }
+
     public void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
             Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
         };
-        getList(filePath, charMap, lineHandler);
+        File f = new File(filePath);
+        String s = f.getAbsolutePath();
+        try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
+            getList(is, charMap, lineHandler);
+        }
     }
 
     // charMap format "from->to"
-    public void getList(String filePath, String[] charMap, LineHandler lineHandler) throws IOException {
-        File f = new File(filePath);
-        String s = f.getAbsolutePath();
+    public void getList(InputStream is, String[] charMap, LineHandler lineHandler) throws IOException {
         try (BufferedReader reader =
-                 new BufferedReader(new InputStreamReader(Files.newInputStream(Paths.get(filePath))))) {
+                 new BufferedReader(new InputStreamReader(is))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();

@@ -372,7 +372,7 @@ String test = null;
             this.minBid = trick.minBid;
             init(hands);
             this.setNumber(trick.getNumber() - 1);
-            printf("analysing: %s\n", CardSet.toString(hands));
+            printf("analyzing: %s\n", CardSet.toString(hands));
 
             start = System.currentTimeMillis();
             BaseTrick next = buildList(trick.cards2List());
