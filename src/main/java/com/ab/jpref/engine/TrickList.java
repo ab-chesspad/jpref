@@ -24,7 +24,11 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.jpref.config.Config;
+import com.ab.util.SimpleLongIntMap;
+
+import static com.ab.jpref.config.Config.NOP;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
+import static com.ab.jpref.engine.BaseTrick.getTrickData;
 
 import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import static com.ab.util.Logger.println;
@@ -34,27 +38,24 @@ import java.util.*;
 
 public class TrickList {
     public static final boolean DEBUG_LOG = false;
+    public static final boolean MULTI_THREADED = true;
     public static final boolean PRINT_BEST_PATH = true;    // for debug
-
-    public static final int NOP = Config.NOP;   // Number of players
-    public static final int ROUND_SIZE = Config.ROUND_SIZE;
 
     static final TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
     static int nodeIndex = 0;
 
     final Bot targetBot;
-    final Map<Long, BaseTrick> positions = new HashMap<>(1000000); // to reuse duplicate situations
-
     final int myNum;
+    int targetTricks;
+
+    final SimpleLongIntMap positions = new SimpleLongIntMap();
 
     // just statistics, not used
     long start;
     public static long maxListBuildTime = 0;
     public static long maxSimilar = 0;
-    public static long maxBaseCount = 0;
-    public static long maxBaseDeleted = 0;
-    public static long maxLocalCount = 0;
-    int nodeCount = 0;
+    public static long maxPoolCount = 0;
+    public static long maxPositions = 0;
     int similar = 0;
 
     final TrickNode root;
@@ -65,6 +66,7 @@ public class TrickList {
 
     public TrickList(Bot targetBot, Trick trick, CardSet... hands) {
         this.targetBot = targetBot;
+        targetTricks = targetBot.getTricks();
         myNum = gameManager().declarerNumber;
         if (bestNodes[0] == null) {
             for (int i = 0; i <= ROUND_SIZE; ++i) {
@@ -75,7 +77,7 @@ public class TrickList {
     }
 
     public int getEstimate() {
-        return bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
+        return targetTricks + bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
     }
 
     public Card getCard(Trick trick, CardSet... hands) {
@@ -83,7 +85,7 @@ public class TrickList {
         boolean expected = true;
         if (trick.getNumber() == bestNode.getNumber()) {
             for (int i = 0; i < trick.size(); ++i) {
-                if (!trick.get(i).equals(bestNode.get(i))) {
+                if (!trick.getCard(i).equals(bestNode.getCard(i))) {
                     expected = false;
                     break;
                 }
@@ -98,9 +100,10 @@ public class TrickList {
                 handsCardSet.add(card);
             }
             expected = nodeCardSet.equals(handsCardSet);
+            TrickNode nextBestNode = bestNodes[nodeIndex + 1];
             for (int i = 0; i < trick.size(); ++i) {
-                Card card = trick.get(i);
-                if (!card.equals(bestNode.next.get(i))) {
+                Card card = trick.getCard(i);
+                if (!card.equals(nextBestNode.getCard(i))) {
                     expected = false;
                     break;
                 }
@@ -128,7 +131,7 @@ public class TrickList {
         }
 
         int indx = trick.size();
-        Card res = bestNode.get(indx);
+        Card res = bestNode.getCard(indx);
         return res;
     }
 
@@ -145,9 +148,15 @@ public class TrickList {
             turn =  (turn + 1) % NOP;
         }
 
-        if (lengths[0] == lengths[1] && lengths[0] == lengths[2]) {
+        int diff = lengths[1] - lengths[0];
+        if (diff == 0) {
+            diff = lengths[2] - lengths[0];
+        }
+
+        if (diff == 0) {
             // looks like just an unexpected move with the same cards
             TrickNode newRoot = new TrickNode(trick, hands);
+            this.targetTricks = targetBot.getTricks();
             return;
         }
 
@@ -160,6 +169,15 @@ public class TrickList {
         hand0.add(Bot.playerBid.drops);
         hand0.remove(trick.cards2CardSet());
         hand0.remove(gameManager().discarded);
+
+        if (hand0.equals(gameManager().declarerHand)) {
+            // no drop search, all cards are known
+            hands[0] = hand0;
+            targetBot.myHand = hand0.clone();
+            TrickNode newRoot = new TrickNode(trick, hands);
+            return;
+        }
+
         CardSet dropCandidates = hand0.clone();
         Card.Suit trumpSuit = gameManager().getMinBid().getTrump();
         if (trumpSuit != null) {
@@ -170,6 +188,9 @@ public class TrickList {
             Card.Suit suit0 = card0.getSuit();
             dropCandidates.remove(card0);
             CardSet hand = dropCandidates;
+            if (diff == 1) {
+                hand = new CardSet(card0);
+            }
             for (Card card1 : hand) {
                 Card.Suit suit1 = card1.getSuit();
                 printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
@@ -183,8 +204,11 @@ public class TrickList {
                 }
                 // do analysis
                 TrickList trickList = new TrickList(targetBot, trick, hands);
-                int diff = compare(bestNodes[0], TrickList.bestNodes[0], 0);
-                if (diff < 0 || diff == 0 && maxSize > _maxSize) {
+                int _diff = -1;
+                if (bestNodes[0] != null) {
+                    _diff = targetBot.compare(bestNodes[0].trickData, TrickList.bestNodes[0].trickData, 0);
+                }
+                if (_diff < 0 || _diff == 0 && maxSize > _maxSize) {
                     drops.clear();
                     drops.add(card0);
                     drops.add(card1);
@@ -199,25 +223,21 @@ public class TrickList {
         Bot.playerBid.drops.clear();
         Bot.playerBid.drops.add(drops);
         hand0.remove(drops);
-        targetBot.myHand = hand0;   // replace on the newly found cards
+        targetBot.myHand = hand0;   // replace for the newly found cards
         System.arraycopy(bestNodes, 0, TrickList.bestNodes, 0, bestNodes.length);
         printf(DEBUG_LOG, "list rebuilt after %s\n", trick);
     }
 
-    // minimax criteria, pass to targetBot
-    private int compare(BaseTrick bestNode, BaseTrick probe, int index) {
-        if (bestNode == null) {
+    // minimax criteria, delegate to targetBot
+    private int compare(int bestSoFarIndex, int probeIndex, int turn) {
+        if (bestSoFarIndex == 0) {
             return -1;
         }
-        if (probe == null) {
+        if (probeIndex == 0) {
             return 1;
         }
-        return targetBot.compare(bestNode, probe, index);
+        return targetBot.compare(getTrickData(bestSoFarIndex), getTrickData(probeIndex), turn);
     }
-
-int testNum = 6;
-String test = null;
-//String test = "[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♥9XA, ♣X";
 
     public class TrickNode extends Trick {
         CardSet[] hands = new CardSet[NOP];
@@ -234,57 +254,54 @@ String test = null;
         }
 
         // single-threaded
-        private BaseTrick buildSubList(CardList cards) {
+        private int buildSubList(CardList cards) {
             if (this.hands[0].size() <= 0) {
-                if (this.getNumber() < 9) {
-                    throw new RuntimeException("empty hands for trick #" + this.getNumber());
-                }
-                return null;
+                return 0;
             }
-            int localCount = 0;
-            int trickData = this.trickData;
+            long trickData = this.trickData;
             int trickNum = this.number;
             Card.Suit startingSuit = this.startingSuit;
             Card topCard = this.topCard;
 
             this.clear();
-            BaseTrick bestNode0 = null;
+            int bestNode0 = 0;
             CardSet.CardIterator it0 = this.getBuildIterator(cards);
             while (it0.hasNext()) {
                 Card card0 = it0.next();
                 this.add(card0);
-                BaseTrick bestNode1 = null;
+                int bestNode1 = 0;
                 CardSet.CardIterator it1 = this.getBuildIterator(cards);
                 while (it1.hasNext()) {
                     Card card1 = it1.next();
                     this.add(card1);
-                    BaseTrick bestNode2 = null;
+                    int bestNode2 = 0;
                     CardSet.CardIterator it2 = this.getBuildIterator(cards);
                     while (it2.hasNext()) {
                         Card card2 = it2.next();
                         this.add(card2);
-                        BaseTrick probe = new BaseTrick(this);
-                        ++localCount;
-                        BaseTrick old;
-                        if ((old = this.addPosition(probe)) == null) {
-                            probe.next = this.buildSubList(null);
+                        int probeIndex = allocTrick(this.getTrickData());
+                        long probeData = this.getTrickData();
+                        int oldIndex;
+                        int nextIndex = 0;
+                        if ((oldIndex = this.addPosition(probeIndex)) == 0) {
+                            nextIndex = this.buildSubList(null);
                         } else {
                             ++similar;
-                            probe.next = old.next;
+                            nextIndex = getNextIndex(oldIndex);
                         }
-                        if (probe.next != null) {
-                            int futureTricks = probe.next.getFutureTricks();
-                            if (probe.next.getTop() == 0) {
+                        probeData = setNextIndex(probeData, nextIndex);
+                        if (nextIndex != 0) {
+                            long nextTrickData = getTrickData(nextIndex);
+                            int futureTricks = getFutureTricks(nextTrickData);
+                            if (getTop(nextTrickData) == 0) {
                                 ++futureTricks;
                             }
-                            if (futureTricks < 0) {
-                                throw new RuntimeException("futureTricks!");
-                            }
-                            probe.setFutureTricks(futureTricks);
+                            probeData = setFutureTricks(probeData, futureTricks);
                         }
-                        probe.setDone();
-                        if (compare(bestNode2, probe, 2) < 0) {
-                            bestNode2 = probe;
+                        probeData = setDone(probeData);
+                        setTrickData(probeIndex, probeData);
+                        if (compare(bestNode2, probeIndex, 2) < 0) {
+                            bestNode2 = probeIndex;
                         }
                         Card c = this.removeLast();   // remove 2
                     }
@@ -304,15 +321,12 @@ String test = null;
             this.number = trickNum;
             this.startingSuit = startingSuit;
             this.topCard = topCard;
-            if (maxLocalCount < localCount) {
-                maxLocalCount = localCount;
-            }
             return bestNode0;
         }
 
         // multi-threaded
-        private BaseTrick buildSubList() {
-            final BaseTrick[] bestTrickNode0 = {null};
+        private int buildSubList() {
+            final int[] bestTrickNode0 = {0};
             List<Thread> workers = new ArrayList<>();
             CardSet.CardIterator it0 = getBuildIterator(new CardList());
             while (it0.hasNext()) {
@@ -321,10 +335,10 @@ String test = null;
                 Thread worker = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        trickNode.next = trickNode.buildSubList(new CardList(Arrays.asList(card0)));
+                        trickNode.setNextIndex(trickNode.buildSubList(new CardList(Arrays.asList(card0))));
                         synchronized (this) {
-                            if (compare(bestTrickNode0[0], trickNode.next, 0) < 0) {
-                                bestTrickNode0[0] = trickNode.next;
+                            if (compare(bestTrickNode0[0], trickNode.getNextIndex(), 0) < 0) {
+                                bestTrickNode0[0] = trickNode.getNextIndex();
                             }
                         }
                     }
@@ -349,24 +363,23 @@ String test = null;
             }
             return targetBot.getIterator(this);
         }
-        private BaseTrick buildList(CardList cards) {
-/*  debugging
-            return buildSubList(cards);    // single-threaded
-/*/
-            // no sense to use multithreaded version when 1st trick cards are known
-            if (cards.isEmpty()) {
-                return buildSubList();         // multi-threaded
+        private int buildList(CardList cards) {
+            if (MULTI_THREADED) {
+                // no sense to use multithreaded version when some trick cards are known
+                if (cards.isEmpty()) {
+                    return buildSubList();          // multi-threaded
+                } else {
+                    return buildSubList(cards);     // single-threaded
+                }
             } else {
-                return buildSubList(cards); // single-threaded
+                return buildSubList(cards);
             }
-//*/
         }
 
         // create root and list of tricks
         private TrickNode(Trick trick, CardSet... hands) {
             similar = 0;
-            BaseTrick.count = 0;
-            BaseTrick.deleted = 0;
+            BaseTrick.clearTrickPool();
             this.setTop((trick.getStartedBy() - myNum + NOP) % NOP);
             this.setStartedBy(this.getTop());
             this.minBid = trick.minBid;
@@ -375,29 +388,30 @@ String test = null;
             printf("analyzing: %s\n", CardSet.toString(hands));
 
             start = System.currentTimeMillis();
-            BaseTrick next = buildList(trick.cards2List());
-            this.setPastTricks(next.getPastTricks());
-            this.setFutureTricks(next.getFutureTricks());
+            int nextIndex = buildList(trick.cards2List());
+            long nextTrickData = getTrickData(nextIndex);
+            int pastTricks = getPastTricks(nextTrickData);
+            this.setPastTricks(pastTricks);
+            this.setFutureTricks(getFutureTricks(nextTrickData));
             StringBuilder sb = new StringBuilder();
             String sep = "[";
             int k = 0;
             bestNodes[k].init(this);
-            while (next != null) {
+            while (nextIndex != 0) {
+                nextTrickData = getTrickData(nextIndex);
                 TrickNode trickNode = bestNodes[k];
                 TrickNode nextTrickNode = bestNodes[++k];
                 nextTrickNode.init(trickNode);
                 nextTrickNode.clear();
-                int pastTricks = nextTrickNode.getPastTricks();
+                pastTricks = nextTrickNode.getPastTricks();
                 nextTrickNode.setPastTricks(0);
                 for (int i = 0; i < NOP; ++i) {
-                    nextTrickNode.add(next.get(i));
+                    nextTrickNode.add(getCard(nextTrickData, i));
                 }
                 nextTrickNode.setPastTricks(pastTricks);
-                trickNode.next = nextTrickNode; // to be cast later, todo: remove
-                trickNode = nextTrickNode;
-                sb.append(sep).append(trickNode);
+                sb.append(sep).append(nextTrickNode);
                 sep = ", ";
-                next = next.next;
+                nextIndex = getNextIndex(nextTrickData);
             }
             bestNodes[0].setFutureTricks(this.getFutureTricks() + targetBot.getTricks());
             long dur = System.currentTimeMillis() - start;
@@ -409,19 +423,19 @@ String test = null;
                 printf("declarer: %d tricks\n", getEstimate());
             }
 
-            positions.clear();
+            if (maxPositions < positions.size()) {
+                maxPositions = positions.size();
+            }
             if (maxListBuildTime < dur) {
                 maxListBuildTime = dur;
             }
             if (maxSimilar < similar) {
                 maxSimilar = similar;
             }
-            if (maxBaseCount < BaseTrick.count) {
-                maxBaseCount = BaseTrick.count;
+            if (maxPoolCount < nextPoolIndex) {
+                maxPoolCount = nextPoolIndex;
             }
-            if (maxBaseDeleted < BaseTrick.deleted) {
-                maxBaseDeleted = BaseTrick.deleted;
-            }
+            positions.clear();
             nodeIndex = 0;
         }
 
@@ -434,14 +448,14 @@ String test = null;
             this.topCard = that.topCard;
             this.number = that.number;
             init(that.hands);
-            this.next = that.next;
+            this.setNextIndex(that.getNextIndex());
         }
 
         TrickNode(TrickNode that) {
             super(that);
             this.number = that.number;
             init(that.hands);
-            this.next = that.next;
+            this.setNextIndex(that.getNextIndex());
         }
 
         private void init(CardSet... hands) {
@@ -451,32 +465,38 @@ String test = null;
                 CardSet hand = hands[i];
                 this.hands[i] = hand.clone();
             }
-            ++nodeCount;
         }
 
-        public BaseTrick addPosition(BaseTrick trick) {
+        public int addPosition(int probeIndex) {
             int bitmap = CardSet.union(hands).getBitmap();
             if (bitmap == 0) {
-                return null;
+                return 0;
             }
-            long key = ((long) this.getTop() << 32) | (bitmap & 0x0ffffffffL);
-            BaseTrick res;
+            long key = ((long)this.getTop() << 32) | (bitmap & 0x0ffffffffL);
+            int res;
             synchronized (positions) {
-//                res = positions.putIfAbsent(key, this);   missing on Android
                 res = positions.get(key);
-                if (res == null) {
-                    positions.put(key, trick);
-                    return null;
+                if (res == 0) {
+                    positions.put(key, probeIndex);
+                    return 0;
                 }
             }
 
-            synchronized (res) {
-                while (!res.isDone()) {
+            Thread thread = Thread.currentThread();
+            synchronized (thread)
+            {
+                int count = 0;
+                while (!isDone(res)) {
+                    if (++count > 100) {
+                        println("still waiting...");
+                        count = 0;
+                    }
                     try {
-                        res.wait(50);
+                        thread.wait(50);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
+                    res = positions.get(key);
                 }
             }
             return res;
@@ -512,7 +532,7 @@ String test = null;
                 this.topCard = null;
                 int top = -1;
                 for (int i = 0; i < size(); ++i) {
-                    Card card = get(i);
+                    Card card = getCard(i);
                     Card.Suit suit = card.getSuit();
                     turn = ++turn % NOP;
                     if (startingSuit == null) {

@@ -30,10 +30,22 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Config.Queueable {
-    public static final String ANSI_HEAD = "\u001B";
-    public static final String ANSI_TAIL = "m";
-    public static final String ANSI_RED = ANSI_HEAD + "[31" + ANSI_TAIL;
-    public static final String ANSI_RESET = ANSI_HEAD + "[0" + ANSI_TAIL;
+    public static final boolean COLORED_LOG = false;
+
+    static String ansi_head = "\u001B";
+    static String ansi_tail = "m";
+    static String ansi_red = ansi_head + "[31" + ansi_tail;
+    static String ansi_reset = ansi_head + "[0" + ansi_tail;
+    static {
+        if (!COLORED_LOG) {
+            ansi_head = ansi_tail = ansi_red = ansi_reset = "";
+        }
+    }
+
+    public static final String ANSI_HEAD = ansi_head;
+    public static final String ANSI_TAIL = ansi_tail;
+    public static final String ANSI_RED = ansi_red;
+    public static final String ANSI_RESET = ansi_reset;
 
 //    public static String ANSI_RED = "\u001B[31m";
 //    public static String ANSI_RESET = "\u001B[0m";
@@ -194,6 +206,10 @@ public class Card implements Comparable<Card>, Config.Queueable {
 
     public static Card fromValue(int value) {
         return cards[value];
+    }
+
+    public static Card fromValue(long value) {
+        return cards[(int)value];
     }
 
     public static Card fromName(String cardName) {

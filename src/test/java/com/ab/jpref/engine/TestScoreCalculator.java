@@ -33,11 +33,13 @@ public class TestScoreCalculator {
     public static final int NOP = Config.NOP;
     static final Config config = Config.getInstance();
     final int TEST_POOL_SIZE = 20;
+    public static GameManager gameManager;
 
     @BeforeClass
     public static void initClass() {
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
+        gameManager = new GameManager(config, null);
     }
 
     @Test

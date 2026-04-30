@@ -22,18 +22,14 @@ package com.ab.util;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
-import com.ab.jpref.engine.GameManager;
 
 import java.io.*;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class Util {
     public static final String PROJECT_NAME = Config.PROJECT_NAME;
@@ -86,52 +82,6 @@ public class Util {
     public String getDataDirectory() {
         throw new RuntimeException("stub!");
     }
-
-/*
-    public String getDataDirectory() {
-        String parent;
-        if (os == Util.OS.windows) {
-            String userHome = System.getProperty("user.home");
-            File f = new File(userHome, Config.PROJECT_NAME);
-            f.mkdirs();
-            parent = f.getAbsolutePath();
-        } else {
-            try {
-                parent = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        File dir = new File(parent);
-        dir.mkdirs();
-        return dir.getAbsolutePath();
-    }
-*/
-/*
-    public String getDataDirectory() {
-        return getDataFile().getAbsolutePath();
-    }
-
-    public File getDataFile() {
-        File file;
-        if (os == Util.OS.windows) {
-            String userHome = System.getProperty("user.home");
-            file = new File(userHome, PROJECT_NAME);
-            if (!file.exists()) {
-                file.mkdirs();
-            }
-        } else {
-            try {
-                file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-                file = new File(file.getParent());
-                file.mkdirs();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return file;
-    }
-*/
 
     public void getList(InputStream is, LineHandler lineHandler) throws IOException {
         final String[] charMap = {

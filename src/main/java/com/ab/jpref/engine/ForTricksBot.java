@@ -271,14 +271,37 @@ public class ForTricksBot extends Bot {
     }
 
     @Override
-    protected int compare(BaseTrick bestSoFar, BaseTrick probe, int turn) {
-        int num = (probe.getStartedBy() + turn) % NOP;   // who played last
-        int bestSoFarTricks = bestSoFar.getPastTricks() + bestSoFar.getFutureTricks();
-        int probeTricks = probe.getPastTricks() + probe.getFutureTricks();
-        int diff = bestSoFarTricks - probeTricks;
-        if (num == 0) {
+    protected int compare(long bestSoFarTrickData, long probeTrickData, int turn) {
+        int num = (BaseTrick.getStartedBy(probeTrickData) + turn) % NOP;   // who played last
+
+        int bestSoFarPastTricks = BaseTrick.getPastTricks(bestSoFarTrickData);
+        int bestSoFarFutureTricks = BaseTrick.getFutureTricks(bestSoFarTrickData);
+        int bestSoFarTricks = bestSoFarPastTricks + bestSoFarFutureTricks;
+
+        int probePastTricks = BaseTrick.getPastTricks(probeTrickData);
+        int probeFutureTricks = BaseTrick.getFutureTricks(probeTrickData);
+        int probeTricks = probePastTricks + probeFutureTricks;
+
+        int diff = 10 * (bestSoFarTricks - probeTricks);
+        if (diff != 0) {
+            if (num == 0) {
+                return diff;
+            }
+            return -diff;
+        }
+        diff = bestSoFarPastTricks - probePastTricks;
+        if (diff != 0) {
+            if (num == 0) {
+                return diff;
+            }
+            return -diff;
+        }
+        int _bestSoFarTop = BaseTrick.getTop(bestSoFarTrickData);
+        int _probeTop = BaseTrick.getTop(probeTrickData);
+        if (_bestSoFarTop == 0 && _probeTop != 0 ||
+            _bestSoFarTop != 0 && _probeTop == 0) {
             return diff;
         }
-        return -diff;
+        return diff;
     }
 }

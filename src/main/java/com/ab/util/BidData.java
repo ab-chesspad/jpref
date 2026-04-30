@@ -18,7 +18,7 @@ package com.ab.util;
  * Created: 9/3/2025
  *
  * Load bid data generated from utyatsky1, utyatsky2 and tricks-src.
- * Complete
+ * Complete with my own data
  */
 
 import com.ab.jpref.config.Config;

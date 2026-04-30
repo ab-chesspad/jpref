@@ -22,6 +22,7 @@ package com.ab.util;
 import java.io.PrintStream;
 
 public class Logger {
+    public static boolean DEBUG_LOG = true;
     private static LogHolder logHolder = new LogHolder() {};
     private static PrintStream out;
 
@@ -61,6 +62,9 @@ public class Logger {
     public static void printf(String format, Object... args) {
         PrintStream out = getOutput();
         out.printf(format, args);
+        if (DEBUG_LOG && out != System.out) {
+            System.out.printf(format, args);
+        }
     }
 
     public static void println(int msg) {

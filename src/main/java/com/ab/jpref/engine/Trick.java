@@ -37,7 +37,7 @@ public class Trick extends BaseTrick {
     }
 
     public Trick(Trick that) {
-        super(that);
+        this.trickData = that.trickData;
         this.startingSuit = that.startingSuit;
         this.trumpSuit = that.trumpSuit;
         this.minBid = that.minBid;
@@ -159,6 +159,12 @@ public class Trick extends BaseTrick {
             if (declarerHand != null) {
                 if (discardingPlayer == gameManager.declarerNumber) {
                     declarerHand.remove(remove);
+                    if (targetBot != null) {
+                        targetBot.myHand.remove(remove);
+                    }
+                    if (Bot.playerBid != null) {
+                        Bot.playerBid.drops.remove(remove);     // we may need them to recalc declarer's drops
+                    }
                 }
             }
             if (trumpSuit != null && !card.getSuit().equals(trumpSuit)) {
@@ -209,7 +215,7 @@ public class Trick extends BaseTrick {
     public CardList cards2List() {
         CardList cardList = new CardList();
         for (int i = 0; i < size(); ++i) {
-            cardList.add(get(i));
+            cardList.add(getCard(i));
         }
         return cardList;
     }
@@ -217,7 +223,7 @@ public class Trick extends BaseTrick {
     public CardSet cards2CardSet() {
         CardSet cardSet = new CardSet();
         for (int i = 0; i < size(); ++i) {
-            cardSet.add(get(i));
+            cardSet.add(getCard(i));
         }
         return cardSet;
     }
@@ -235,7 +241,7 @@ public class Trick extends BaseTrick {
         for (int j = 0; j < this.size(); ++j) {
             Player player = gameManager.players[(this.getStartedBy() + j) % gameManager.players.length];
             sb.append(sep).append(player.getName()).append(": ")
-                .append(this.get(j).toColorString());
+                .append(this.getCard(j).toColorString());
             sep = ", ";
         }
         return new String(sb);

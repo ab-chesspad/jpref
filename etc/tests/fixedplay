@@ -1,18 +1,23 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
-list build duration: 4 sec, positions 434226, similar 3,122,481
-list build duration: 5 sec, positions 434226, similar 3,122,173
-list build duration: 4 sec, positions 434226, similar 3,119,174
+list build duration: 3 sec, positions 434226, similar 3,122,481
 [♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
 deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
 
+deal: ♠7 ♣8X ♦7JQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK  ♣9QK♦9A ♥7J  ♦X8  1 -> 6♦ 6
 
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
+
+list build duration: 1 sec, positions 124190, similar 930,028
+[♥AQX, ♥JK ♦7, ♣QAJ, ♥79 ♦8, ♣K87, ♣9X ♦9, ♦AX ♠A, ♠J ♦J ♠8, ♦Q ♠9Q, ♦K ♠XK]
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
+
 deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
 
+deal: ♠9JK ♣A ♦89JQK ♥A  ♠8QA ♣78J ♦X ♥9JK  ♠7X ♣9QK ♦7A ♥7XQ  ♣X ♥8  1 -> 7♦ 6
+
 [♥A8K, ♦AXK, ♣KQJ, ♣978, ♠9X7, ♣X ♦Q ♥Q, ♣A ♦J ♥J, ♦7 ♥X9, ♦8 ♠A ♥7, ♦9 ♠J8]
-deal: ♠Q ♣7XQA ♦789X ♥8  ♠7JA ♣8J ♦JQK ♥XK  ♠89 ♣9K ♦A ♥79JQA  ♠XK  2 -> Misère 1 # не ловится
+deal: ♠Q ♣7XQA ♦789X ♥8  ♠7JA ♣8J ♦JQK ♥XK  ♠89 ♣9K ♦A ♥79JQA  ♠XK  2 -> Misère 1 # ловится
 
 deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
 

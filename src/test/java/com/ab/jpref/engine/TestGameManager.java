@@ -41,10 +41,10 @@ public class TestGameManager {
     }
 
     private void printStatistics(int count) {
-        printf("done %d tests, maxTreeBuildTime %d msec, maxSimilar %,d\n", count,
-            TrickList.maxListBuildTime, TrickList.maxSimilar);
-        printf("maxBaseCount %,d, maxBaseDeleted %,d, maxLocalCount %d\n",
-            TrickList.maxBaseCount, TrickList.maxBaseDeleted, TrickList.maxLocalCount);
+        printf("done %d tests, maxTreeBuildTime %d msec, maxSimilar %,d",
+            count, TrickList.maxListBuildTime, TrickList.maxSimilar);
+        printf(", maxPositions %,d, maxPoolCount %,d\n",
+            TrickList.maxPositions, TrickList.maxPoolCount);
     }
 
     private void printTricks() {

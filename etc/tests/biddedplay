@@ -1,5 +1,8 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
+declarer Боря: 6♦
+deal: ♠7X ♣9QK ♦7A ♥7XQ  ♠9JK ♣A ♦89JQK ♥A  ♠8QA ♣78J ♦X ♥9JK  ♣X ♥8  0 -> 6♦ 6
+
 declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
 ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79XK ♥78  ♠9JKA ♣9JK ♦Q ♥JQ  
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится

@@ -100,8 +100,8 @@ public class GameManager {
     Bid minBid = Bid.BID_6S;
     Player declarer;
     public int declarerNumber;
-    CardSet declarerHand;   // with talon
-    CardSet initialDeclarerHand;   // with talon
+    CardSet declarerHand;           // with talon, as defenders know it
+    CardSet initialDeclarerHand;    // with talon
     public int elderHand;
     boolean cardsRevealed;
     public boolean replayMode;

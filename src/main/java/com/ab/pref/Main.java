@@ -19,14 +19,14 @@
  */
 package com.ab.pref;
 
-import com.ab.jpref.config.Config;
-import static com.ab.jpref.config.Config.NOP;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.HumanPlayer;
 import com.ab.pref.config.Metrics;
 import com.ab.pref.config.PConfig;
 import static com.ab.pref.config.PConfig.Host;
+import static com.ab.pref.config.PConfig.NOP;
 import com.ab.util.Logger;
+
 import static com.ab.util.Util.currMethodName;
 
 import javax.swing.*;
@@ -59,12 +59,12 @@ public class Main implements Logger.LogHolder, Host {
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
             SHOW_ALL = false;
+            Logger.DEBUG_LOG = false;
         }
     }
 
     public static Container mainContainer;
     public static JFrame mainFrame;
-    public static MainPanel mainPanel;
 
     static final PUtil pUtil = PUtil.getInstance();
     static Rectangle mainRectangle;
@@ -75,8 +75,6 @@ public class Main implements Logger.LogHolder, Host {
     private long logStartDate;
 
     String GUID;
-    GameManager gameManager;
-    Thread gameThread;
 
     static InputStream testInputStream;
 
@@ -84,24 +82,10 @@ public class Main implements Logger.LogHolder, Host {
      * @param args optional [fixed-games-file]
      */
     public static void main(String[] args) {
-
-/* failed attempt to handle signal
-        Signal.handle(new Signal("SIGINT"),  // SIGINT
-                signal -> System.out.println("Interrupted by Ctrl+C"));
-//*/
-
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(() -> new Main(args));
     }
-
-/* failed attempt to handle signal
-    @Override
-    protected void finalize() {
-        System.out.println("finalize() 1");
-//        saveConfig();
-    }
-//*/
 
     public Main(String[] args) {
         // we need it to upload log files
@@ -115,9 +99,10 @@ public class Main implements Logger.LogHolder, Host {
    output to System.out will be ugly and useless
 //*/
         Logger.setHolder(this);
-        String version = Config.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
-        Logger.printf("%s %s, options 0x%x\n", Config.PROJECT_NAME, version, specialOption());
-        Logger.println(String.format("running on %s", pUtil.getOS()));
+        String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
+        Logger.printf("%s %s, options 0x%x\n", PConfig.PROJECT_NAME, version, specialOption());
+        Logger.println(String.format("running on %s, %d cores\n", pUtil.getOS(),
+            Runtime.getRuntime().availableProcessors()));
 
         if (args.length > 0) {
             String testFileName = args[0];
@@ -144,22 +129,6 @@ public class Main implements Logger.LogHolder, Host {
             }
         });
 
-/* failed attempt to handle signal
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    System.out.println("Shutting down ...");
-                    Thread.sleep(200);
-                    //some cleaning up code...
-//                    saveConfig();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    e.printStackTrace();
-                }
-            }
-        });
-//*/
-
         mainFrame.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -169,7 +138,6 @@ public class Main implements Logger.LogHolder, Host {
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
                 PConfig.getInstance().mainRectangle.set(mainRectangle);
                 Metrics.getInstance().recalculateSizes();
-                setMainPanel();
             }
 
             @Override
@@ -182,52 +150,52 @@ public class Main implements Logger.LogHolder, Host {
             }
         });
 
-/* failed attempt to handle signal
-        mainFrame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(Window e) {
-
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    System.out.println("Shutting down ...");
+                    Thread.sleep(50);
+                    saveConfig();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    e.printStackTrace();
+                }
             }
         });
-*/
 
         mainContainer = mainFrame.getContentPane();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.X_AXIS));
 
         mainFrame.setState(Frame.NORMAL);
-        mainFrame.setTitle(Config.PROJECT_NAME);
+        mainFrame.setTitle(PConfig.PROJECT_NAME);
         mainFrame.setVisible(true);
+
+        MainPanel mainPanel = new MainPanel(this);
+        mainContainer.add(mainPanel);
+
+        GameManager gameManager = new GameManager(PConfig.getInstance(), mainPanel);
+        new Thread(() -> {
+            try {
+                while (true) {
+                    gameManager.runGame(testInputStream, 0);
+                    Logger.println("game ended!");
+                }
+            } catch (HumanPlayer.PrefExceptionRerun e) {
+                // ignore
+            }
+        }).start();
     }
 
+    boolean saved = false;
+
     private void saveConfig() {
+        if (saved) {
+            return;
+        }
         mainRectangle.height += insets.top;
         PConfig.getInstance().serialize();
         closeLog();
-    }
-
-    void setMainPanel() {
-        if (mainPanel == null) {
-            mainPanel = new MainPanel(this);
-            mainContainer.add(mainPanel);
-        }
-
-        if (gameManager == null) {
-            gameManager = new GameManager(PConfig.getInstance(), mainPanel);
-            if (gameThread == null) {
-                gameThread = new Thread(() -> {
-                    try {
-                        while (true) {
-                            gameManager.runGame(testInputStream, 0);
-                            Logger.println("game ended!");
-                        }
-                    } catch (HumanPlayer.PrefExceptionRerun e) {
-                        // ignore
-                    }
-                });
-                gameThread.start();
-                Logger.printf(DEBUG_LOG, "gameManager started\n");
-            }
-        }
+        saved = false;
     }
 
     private GraphicsDevice getGraphicsDevice() {
@@ -289,7 +257,7 @@ public class Main implements Logger.LogHolder, Host {
         String dataDir = pUtil.getDataDirectory();
         File logDir = new File(dataDir, "logs");
         logDir.mkdir();
-        int deleteTimeout = Config.getInstance().deleteLogsAfter.get();
+        int deleteTimeout = PConfig.getInstance().deleteLogsAfter.get();
         Calendar c = new GregorianCalendar();
         c.add(Calendar.HOUR, -24 * deleteTimeout);
         long threshold = c.getTimeInMillis();

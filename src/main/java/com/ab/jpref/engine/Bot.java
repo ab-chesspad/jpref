@@ -110,7 +110,7 @@ public class Bot extends Player {
     }
 
     // minimax criteria, stab to be overridden in MisereBot and ForTricksBot
-    protected int compare(BaseTrick bestSoFar, BaseTrick probe, int index) {
+    protected int compare(long bestSoFarTrickData, long probeTrickData, int index) {
         throw new RuntimeException("stub!");
     }
 
