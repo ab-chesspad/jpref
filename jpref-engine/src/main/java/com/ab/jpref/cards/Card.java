@@ -1,0 +1,302 @@
+/*  This file is part of JPref.
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see [http://www.gnu.org/licenses/].
+ *
+ * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
+ *
+ * Created: 12/22/2024
+ *
+ * Use only cards from Card[] cards,
+ * to reduce memory fragmentation, critical on Android
+ */
+
+package com.ab.jpref.cards;
+
+import com.ab.config.Config;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public class Card implements Comparable<Card>, Config.Queueable {
+    public static final boolean COLORED_LOG = false;
+
+    static String ansi_head = "\u001B";
+    static String ansi_tail = "m";
+    static String ansi_red = ansi_head + "[31" + ansi_tail;
+    static String ansi_reset = ansi_head + "[0" + ansi_tail;
+    static {
+        if (!COLORED_LOG) {
+            ansi_head = ansi_tail = ansi_red = ansi_reset = "";
+        }
+    }
+
+    public static final String ANSI_HEAD = ansi_head;
+    public static final String ANSI_TAIL = ansi_tail;
+    public static final String ANSI_RED = ansi_red;
+    public static final String ANSI_RESET = ansi_reset;
+
+//    public static String ANSI_RED = "\u001B[31m";
+//    public static String ANSI_RESET = "\u001B[0m";
+
+    public static final int TOTAL_SUITS = Suit.values().length;
+    public static final int TOTAL_RANKS = Rank.values().length - 1;
+    public static final Card[] cards = new Card[TOTAL_SUITS * TOTAL_RANKS];
+    public static final Map<Integer, Card> cardMap = new HashMap<>();
+
+    public enum Suit {
+        SPADE('♠', 0),
+        CLUB('♣', 1),
+        DIAMOND('♦', 2),
+        HEART('♥', 3);
+
+        public char getCode() {
+            return code;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        private final char code;
+        private final int value;
+
+        Suit(char code, int value) {
+            this.code = code;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+/*  IntelliJ debugger does not handle ansi colors, so I make a special method for logging output
+            if (this.equals(DIAMOND) || this.equals(HEART)) {
+                return ANSI_RED + String.valueOf(code) + ANSI_RESET;
+            }
+//*/
+            return String.valueOf(code);
+        }
+
+        public String toColorString() {
+/*  IntelliJ debugger does not handle ansi colors, so I make a special method for logging output */
+            if (this.equals(DIAMOND) || this.equals(HEART)) {
+                return ANSI_RED + code + ANSI_RESET;
+            }
+            return String.valueOf(code);
+        }
+
+        public static Suit fromCode(char code) {
+            for (Suit r : values()) {
+                if (r.code == code) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException(String.format("value for suit '%c' (0x%x)", code, (int)code));
+        }
+
+        public static Suit fromValue(int value) {
+            for (Suit r : values()) {
+                if (r.value == value) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException(String.format("value for suit %d (0x%x)", value, value));
+        }
+
+        public static Suit code(char unicode) {
+            for (Suit r : values()) {
+                if (r.code == unicode) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException(String.valueOf(unicode));
+        }
+    }
+
+    public enum Rank {
+        SIX("6", 6),      // fictitious card to start all-pass
+        SEVEN("7", 7),
+        EIGHT("8", 8),
+        NINE("9", 9),
+        TEN("X", 10),
+        JACK("J", 11),
+        QUEEN("Q", 12),
+        KING("K", 13),
+        ACE("A", 14);
+
+        public final String name;
+        private final int value;
+
+        Rank(String name, int value) {
+            this.name = name;
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+
+        public static Rank fromName(char name) {
+            for (Rank r : values()) {
+                if (r.name.equalsIgnoreCase("" + name)) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException("" + name);
+        }
+
+        public static Rank fromName(String name) {
+            for (Rank r : values()) {
+                if (r.name.equalsIgnoreCase(name)) {
+                    return r;
+                }
+            }
+            throw new IllegalArgumentException(name);
+        }
+
+        public static Rank fromValue(int value) {
+            return values()[value - SIX.value];
+        }
+
+        public int compare(Rank o) {
+            // compare for sorting
+            if (o == null) return 1;
+            return this.value - o.value;
+        }
+
+        public static final int MASK = (Integer.highestOneBit(values().length - 1) << 1) - 1;
+    }
+
+    private final Suit suit;
+    private final Rank rank;
+
+    static {
+        int i = -1;
+        int m = 1;
+        for (Suit suit : Suit.values()) {
+            for (int j = 0; j < TOTAL_RANKS; ++j) {
+                Rank rank = Rank.values()[j + 1];
+                Card card = new Card(suit, rank);
+                cardMap.put(m, card);
+                m <<= 1;
+                cards[++i] = card;
+            }
+        }
+    }
+
+    private Card(Suit suit, Rank rank) {
+        this.suit = suit;
+        this.rank = rank;
+    }
+
+    public static Card fromValue(int value) {
+        return cards[value];
+    }
+
+    public static Card fromValue(long value) {
+        return cards[(int)value];
+    }
+
+    public static Card fromName(String cardName) {
+        Suit suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(0)));
+        Rank rank = Rank.fromName(Character.toLowerCase(cardName.charAt(1)));
+        return fromValues(suit, rank);
+    }
+
+    public static Card fromValues(Suit suit, Rank rank) {
+        int suitNum = suit.value;
+        int rankNum = rank.value - Rank.SEVEN.value;
+        return cards[suitNum * TOTAL_RANKS + rankNum];
+    }
+
+    public Suit getSuit() {
+        return suit;
+    }
+
+    public Rank getRank() {
+        return rank;
+    }
+
+    public int toInt() {
+        return suit.value * 8 + rank.value - Rank.SEVEN.value;
+    }
+
+    @Override
+    public int compareTo(Card o) {
+        // compare for sorting
+        if (o == null) return 1;
+
+        if (suit.compareTo(o.suit) == 0) {
+            return rank.compareTo(o.rank);
+        } else {
+            return suit.compareTo(o.suit);
+        }
+    }
+
+    public int compareInTrick(Card o) {
+        if (o == null) {
+            return 1;
+        }
+        if (suit.compareTo(o.suit) == 0) {
+            return rank.compareTo(o.rank);
+        } else {
+            return 1;
+        }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+
+        if (obj == null) {
+            return false;
+        }
+
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+
+        Card card = (Card) obj;
+
+        return Objects.equals(card.rank, rank) &&
+                Objects.equals(card.suit, suit);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(suit, rank);
+    }
+
+    @Override
+    public String toString() {
+        return suit.toString() + rank.toString();
+    }
+
+    public String toColorString() {
+        Suit suit = this.getSuit();
+        String s;
+        if (suit.equals(Suit.DIAMOND) || suit.equals(Suit.HEART)) {
+            s = Card.ANSI_RED + suit + rank + Card.ANSI_RESET;
+        } else {
+            s = "" + suit + rank;
+        }
+        return s;
+    }
+}
