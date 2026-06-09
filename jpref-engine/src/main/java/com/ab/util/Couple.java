@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -30,10 +30,6 @@ public class Couple<T> implements Cloneable, Serializable {
     public Couple(T first, T second) {
         this.first = first;
         this.second = second;
-    }
-
-    public Couple<T> clone() {
-        return new Couple<>(first, second);
     }
 
     // possibly use for config

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,15 +22,15 @@ package com.ab.jpref.gui;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
-import com.ab.config.Config.Bid;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.config.Config.Bid;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.GameManager.RoundStage;
 import com.ab.jpref.engine.Trick;
 import com.ab.jpref.gui.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
-import com.ab.config.I18n;
+import com.ab.jpref.config.I18n;
 import com.ab.util.Logger;
 
 import javax.swing.*;
@@ -39,7 +39,6 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RasterFormatException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 
 class MainPanelLayout {
     public static final boolean DEBUG_LOG = false;
@@ -60,7 +59,6 @@ class MainPanelLayout {
     final HandVisualData[] handVisualData = new HandVisualData[4];
     BufferedImage scaledDeckImage, scaledBackImage;
     GameManager gameManager;
-    int panelWidth, panelHeight;
     final JLabel[] jLabels = new JLabel[4];
 
     public final Object lock = new Object();
@@ -204,7 +202,7 @@ class MainPanelLayout {
                     mainPanel.isStage(RoundStage.showTalon) ||
                     mainPanel.isStage(RoundStage.selectWhistOption) ||
                     mainPanel.isStage(RoundStage.drop) ||
-                    mainPanel.isStage(RoundStage.play.declareRound) ||
+                    mainPanel.isStage(RoundStage.declareRound) ||
                     mainPanel.isStage(RoundStage.responseOnDeclaration)) {
                     Bid bid = player.getBid();
                     if (!Bid.BID_UNDEFINED.equals(bid)) {
@@ -232,17 +230,9 @@ class MainPanelLayout {
                 handVisualData[i].player = player;
                 handVisualData[i].hand = jLabel;
                 handVisualData[i].allCards.clear();
-                handVisualData[i].totalSuits = 0;
-                try {
-                    Iterator<CardSet> suitIterator = players.get(i).getMyHand().suitIterator();
-                    while (suitIterator.hasNext()) {
-                        CardSet cardList = suitIterator.next();
-                        ++handVisualData[i].totalSuits;
-                        handVisualData[i].allCards.addAll(cardList.toCardList());
-                    }
-                } catch (NullPointerException e) {
-                    throw new RuntimeException(e);
-                }
+                int bitmap = player.getMyHand().getBitmap();
+                handVisualData[i].allCards.addAll(CardSet.toCardList(bitmap));
+                handVisualData[i].totalSuits = CardSet.suitCount(bitmap);
                 handVisualData[i].showFaces = mainPanel.showCards(i);
             }
             int i = 3;
@@ -328,10 +318,9 @@ class MainPanelLayout {
 
     // text should be translated already
     void showMessage(String text) {
-//        UIManager.put("OptionPane.minimumSize", new Dimension(panelWidth - 20,panelHeight / 5));
         String msg = "<html><b>" + I18n.m(text) + "</b></html>";
         JLabel label = new JLabel(msg);
-        int fontSize = panelHeight / 50;
+        int fontSize = metrics.panelHeight / 50;
         if (fontSize < 15) {
             fontSize = 15;
         }

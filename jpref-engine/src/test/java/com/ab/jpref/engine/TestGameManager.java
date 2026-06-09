@@ -6,9 +6,13 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.CardList;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
+
+import com.ab.jpref.trickpool.TrickPool;
+import com.ab.util.Logger;
+import com.ab.util.SimpleLongIntMap;
 import com.ab.util.Util;
 import static com.ab.util.Util.DEAL_MARK;
 import static com.ab.util.Util.currMethodName;
@@ -16,11 +20,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 
 public class TestGameManager {
-    public static final String TEST_DIR = "../etc/tests/";
     public static final int NOP = Config.NOP;
 
     static final Config config = Config.getInstance();
@@ -29,6 +31,7 @@ public class TestGameManager {
 
     @Before
     public void initClass() {
+        TrickList.setTrickPool(new TrickPool());
         gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
@@ -42,10 +45,9 @@ public class TestGameManager {
     }
 
     private void printStatistics(int count) {
-        printf("done %d tests, maxTreeBuildTime %d msec, maxSimilar %,d",
-            count, TrickList.maxListBuildTime, TrickList.maxSimilar);
-        printf(", maxPositions %,d, maxPoolCount %,d\n",
-            TrickList.maxPositions, TrickList.maxPoolCount);
+        SimpleLongIntMap.printStatistics();
+        printf("done %d tests, maxTreeBuildTime %d msec, maxSimilar %,d, maxPoolCount %,d\n", count,
+            TrickList.maxListBuildTime, TrickList.maxSimilar, TrickList.maxPoolCount);
     }
 
     private void printTricks() {
@@ -57,15 +59,26 @@ public class TestGameManager {
         println();
     }
 
+    private InputStream getInputStream(String testFileName) {
+        String path = "../etc/tests/" + testFileName;
+        File f = new File(path);
+        Logger.println(f.getAbsolutePath());
+        try {
+            return new FileInputStream(path);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     // enforce bid but not drop
     public void testFixedBid() throws IOException {
         println("running: " + currMethodName());
-        final String testFileName = TEST_DIR + "fixedbid";
-        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
+        final InputStream testInputStream = getInputStream("fixedbid");
+        gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
 
-        util.getList(testFileName,
+        util.getList(testInputStream,
             (res, tokens) -> {
 /*
                 if (count[0] > 0) {
@@ -94,8 +107,7 @@ public class TestGameManager {
                     _deck.verifyDeck();
                     CardList _talonCards = new CardList(_deck.subList(30, 32));
 //                    Bot.debugDrop = new CardList(_talonCards);
-                    int tot = 1;
-                    for (int declarerNum = 1; declarerNum < NOP; ++declarerNum) {
+                    for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                         printf("declarer #%d\n", declarerNum);
                         int elderHand = (_elderHand + declarerNum) % NOP;
                         CardList deck = new CardList();
@@ -145,11 +157,11 @@ if (++count[0] > 0) {
     // enforce bid and drop
     public void testPlay() throws IOException {
         println("running: " + currMethodName());
-        final String testFileName = TEST_DIR + "fixedplay";
-        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
+        final InputStream testInputStream = getInputStream("fixedplay");
+        gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
 
-        util.getList(testFileName,
+        util.getList(testInputStream,
             (res, tokens) -> {
 /*
                 if (count[0] > 0) {
@@ -178,7 +190,6 @@ if (++count[0] > 0) {
                     _deck.verifyDeck();
                     CardList _talonCards = new CardList(_deck.subList(30, 32));
                     Bot.debugDrop = new CardList(_talonCards);
-                    int tot = 1;
                     for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                         printf("declarer #%d\n", declarerNum);
                         int elderHand = (_elderHand + declarerNum) % NOP;
@@ -229,10 +240,11 @@ if (++count[0] > 0) {
     // let players bid and play the highest bid
     public void testBiddedPlay() throws IOException {
         println("running: " + currMethodName());
-        final String testFileName = TEST_DIR + "biddedplay";
-        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
-        util.getList(testFileName,
+        final InputStream testInputStream = getInputStream("biddedplay");
+        gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
+
+        util.getList(testInputStream,
             (res, tokens) -> {
                 if (!tokens.get(0).startsWith(DEAL_MARK)) {
                     return;     // ignore
@@ -247,7 +259,6 @@ if (++count[0] > 0) {
                 }
                 _deck.verifyDeck();
                 CardList _talonCards = new CardList(_deck.subList(30, 32));
-                int tot = 1;
                 for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                     printf("declarer #%d\n", declarerNum);
                     int elderHand = (_elderHand + declarerNum) % NOP;
@@ -284,10 +295,11 @@ if (++count[0] > 0) {
     @Test
     public void testMisere() throws IOException {
         println("running: " + currMethodName());
-        final String testFileName = TEST_DIR + "misereplay";
-        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
-        util.getList(testFileName,
+        final InputStream testInputStream = getInputStream("misereplay");
+        gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
+
+        util.getList(testInputStream,
             (res, tokens) -> {
                 if (!tokens.get(0).startsWith(DEAL_MARK)) {
                     return;     // ignore
@@ -348,10 +360,11 @@ if (++count[0] > 0) {
     @Test
     public void testAllPass() throws IOException {
         println("running: " + currMethodName());
-        final String testFileName = TEST_DIR + "allpassplay";
-        gameManager.testInputStream = new FileInputStream(testFileName);
         final int[] count = {0};
-        util.getList(testFileName,
+
+        final InputStream testInputStream = getInputStream("allpassplay");
+        gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
+        util.getList(testInputStream,
                 (res, tokens) -> {
                     if (!tokens.get(0).startsWith(DEAL_MARK)) {
                         return;     // ignore

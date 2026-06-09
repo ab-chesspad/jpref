@@ -53,10 +53,6 @@ public class Pair<F, S> implements Cloneable, Serializable {
         return (first == null ? 0 : first.hashCode()) ^ (second == null ? 0 : second.hashCode());
     }
 
-    public Pair<F, S> clone() {
-        return new Pair<>(first, second);
-    }
-
     // possibly use for config
     @Override
     public String toString() {

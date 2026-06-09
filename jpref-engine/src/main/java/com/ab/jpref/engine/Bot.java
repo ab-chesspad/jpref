@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,11 +22,9 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config.Bid;
+import com.ab.jpref.config.Config.Bid;
 import com.ab.util.BidData;
 import com.ab.util.BidData.PlayerBid;
-
-import java.util.*;
 
 public class Bot extends Player {
     public static CardList debugDrop = null;
@@ -58,10 +56,10 @@ public class Bot extends Player {
     }
 
     protected Bot(CardSet... hands) {
-        this.myHand = hands[0].clone();
+        this.myHand = new CardSet(hands[0]);
         if (hands.length > 1) {
-            this.leftHand = hands[1].clone();
-            this.rightHand = hands[2].clone();
+            this.leftHand = new CardSet(hands[1]);
+            this.rightHand = new CardSet(hands[2]);
         }
     }
 
@@ -109,12 +107,14 @@ public class Bot extends Player {
         throw new RuntimeException("stub!");
     }
 
-    // minimax criteria, stab to be overridden in MisereBot and ForTricksBot
+    // minimax criteria, stub to be overridden in MisereBot and ForTricksBot
     protected int compare(long bestSoFarTrickData, long probeTrickData, int index) {
         throw new RuntimeException("stub!");
     }
 
-    CardSet.CardIterator getIterator(TrickList.TrickNode trickNode) {
+    public static final long BACKWARD_FLAG = 0x100000000L;
+
+    long bm4Iteration(TrickList.TrickNode trickNode) {
         throw new RuntimeException("stub!");
     }
 
@@ -192,9 +192,10 @@ public class Bot extends Player {
         // ♠7 ♦9XK   ♣A ♥9JK   ♠9Q ♦8 ♥7
         // todo: test-2 plays ♠Q, but the best move is ♥7
 
-        Iterator<CardSet> suitIterator = myHand.suitIterator();
-        while (suitIterator.hasNext()) {
-            CardSet cardSet = suitIterator.next();
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
+            // todo: use bitmaps only
+            CardSet cardSet = new CardSet(bitset);
             Card.Suit suit = cardSet.first().getSuit();
             anycard = cardSet.last();
             Card theirMin = CardSet.min(leftHand.list(suit), rightHand.list(suit));
@@ -326,26 +327,27 @@ public class Bot extends Player {
         CardSet.ListData noProblemList = null;
         Card res;
 
-        Iterator<CardSet> suitIterator = myHand.suitIterator();
-        while (suitIterator.hasNext()) {
-            CardSet cardList = suitIterator.next();
-            Card.Suit suit = cardList.first().getSuit();
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
+            // todo: use bitmaps only
+            CardSet cardSet = new CardSet(bitset);
+            Card.Suit suit = cardSet.first().getSuit();
             Card theirMin = CardSet.min(leftHand.list(suit), rightHand.list(suit));
             if (theirMin == null) {
                 continue;
             }
-            CardSet.ListData listData = cardList.getUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
+            CardSet.ListData listData = cardSet.getUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
             if (listData.maxMeStart == listData.maxTheyStart) {
                 // ok1stMove, no problem
-                // select the cardList with the most unwanted tricks
+                // select the cardSet1 with the most unwanted tricks
                 if (noProblemList == null || noProblemList.maxMeStart < listData.maxMeStart) {
                     noProblemList = listData;
                 } else if (noProblemList.maxMeStart == listData.maxMeStart) {
-                    if (noProblemList.thisSuit.size() > cardList.size()) {
-                        // select the shortest cardList
+                    if (noProblemList.thisSuit.size() > cardSet.size()) {
+                        // select the shortest cardSet1
                         noProblemList = listData;
-                    } else if (noProblemList.thisSuit.last().getRank().compare(cardList.last().getRank()) < 0) {
-                        // select the cardList with the card of the highest rank
+                    } else if (noProblemList.thisSuit.last().getRank().compare(cardSet.last().getRank()) < 0) {
+                        // select the cardSet1 with the card of the highest rank
                         noProblemList = listData;
                     }
                 }
@@ -391,10 +393,10 @@ public class Bot extends Player {
             }
             if (found) {
                 // drop any other:
-                Iterator<CardSet> suitIterator1 = myHand.suitIterator(probe.first().getSuit());
-                if (suitIterator1.hasNext()) {
-                    CardSet cardList1 = suitIterator1.next();
-                    return cardList1.last();
+                int bitmap = myHand.getBitmap() & ~probe.getBitmap();
+                Card card = CardSet.last(bitmap);
+                if (card != null) {
+                    return card;
                 }
             }
         }

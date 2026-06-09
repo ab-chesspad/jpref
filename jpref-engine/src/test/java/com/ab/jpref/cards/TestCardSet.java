@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,23 +21,249 @@
 package com.ab.jpref.cards;
 
 
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 import com.ab.util.Util;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.InputMismatchException;
-import java.util.Iterator;
 
 public class TestCardSet {
     public static final int NOP = Config.NOP;
     static final Util util = Util.getInstance();
 
     @Test
-    public void testMisere() {
+    public void testIterations() {
+        String[] sources = {
+            "♠78K ♣QA ♦7X ♥89QKA",
+            "♥K",
+            "♥A",
+            "♣9",
+            "♣79Q ♦8XJ",
+            "♠79Q ♦8XJ ♥89QK",
+        };
+
+        CardSet cardSet;
+        Card card;
+        for (String source : sources) {
+            Logger.println(source);
+            CardList cardList = util.toCardList(source);
+            cardSet = new CardSet(cardList);
+            System.out.println(cardSet.toColorString());
+            Assert.assertEquals(source, cardSet.toString());
+
+            int index = -1;
+            int bit = 0;
+            while ((bit = CardSet.next(cardSet.bitmap, bit)) != 0) {
+                card = Card.get(bit);
+                Assert.assertEquals(cardList.get(++index), card);
+                Logger.printf("%d: %s\n", index, card.toColorString());
+            }
+            Assert.assertTrue(cardList.size() == ++index);
+
+            Logger.println("\nbackward");
+            index = cardList.size();
+            bit = 0;
+            while ((bit = CardSet.prev(cardSet.bitmap, bit)) != 0) {
+                card = Card.get(bit);
+                Assert.assertEquals(cardList.get(--index), card);
+                Logger.printf("%d: %s\n", index, card.toColorString());
+            }
+            Assert.assertTrue(index == 0);
+        }
+        Logger.println("done");
+    }
+
+    @Test
+    public void testSuitIterations() {
+        String[] sources = {
+            "♥K",
+            "♥A",
+            "♠78K ♣QA ♦7X ♥89QKA",
+            "♣9",
+            "♣79Q ♦8XJ",
+            "♠79Q ♥89QK",
+        };
+
+        CardSet cardSet;
+        Card card = null;
+        for (String source : sources) {
+            CardList cardList = util.toCardList(source);
+            cardSet = new CardSet(cardList);
+            System.out.println(cardSet.toColorString());
+            Assert.assertEquals(source, cardSet.toString());
+
+            Logger.println("forward");
+            int index = -1;
+            int bitset = 0;
+            while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
+                int bit = 0;
+                while ((bit = CardSet.next(bitset, bit)) != 0) {
+                    card = Card.get(bit);
+                    Assert.assertEquals(cardList.get(++index), card);
+                    Logger.printf("%d: %s\n", index, card.toColorString());
+                }
+                if (index < cardList.size() - 1) {
+                    Assert.assertFalse(cardList.get(index + 1).getSuit().equals(card.getSuit()));
+                }
+            }
+            Assert.assertTrue(cardList.size() == ++index);
+
+            Logger.println("\nbackward");
+            index = cardList.size();
+            bitset = 0;
+            while ((bitset = CardSet.bm4PrevSuit(cardSet.getBitmap(), bitset)) != 0) {
+                int bit = 0;
+                while ((bit = CardSet.prev(bitset, bit)) != 0) {
+                    card = Card.get(bit);
+                    Assert.assertEquals(cardList.get(--index), card);
+                    Logger.printf("%d: %s\n", index, card.toColorString());
+                }
+                if (index > 0) {
+                    Assert.assertFalse(cardList.get(index - 1).getSuit().equals(card.getSuit()));
+                }
+            }
+            Assert.assertTrue(index == 0);
+            Logger.println("====");
+        }
+        Logger.println("done");
+    }
+
+    @Test
+    public void testIterate4BuildForward() {
+        String[] sources = {
+            // hands -> list
+            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
+            "♥9JA  ♣89J  ♣Q ♥XQ -> ♥9JA",
+            "♠78XQ ♣89J ♦7J ♥8  ♣7QKA ♦9A ♥9JKA  ♠9JA ♣X ♦XQK ♥7XQ -> ♠7XQ ♣8J ♦7J ♥8",
+            "♣9JK  ♣8  ♣A -> ♣9",
+            "♣8XK  ♣Q  ♣9 -> ♣8XK",
+            "♣7XQ  ♣K  ♣A -> ♣7",
+            "♥9JKA  ♣89J ♥8  ♣Q ♥7XQ -> ♥9JK",
+            "♠79QK  ♠8X ♣79J  ♠JA ♣8A -> ♠79Q",
+            "♠8XQA  ♦789X  ♠79JK -> ♠8XQA",
+            "♣7JQ  ♣K  ♣A -> ♣7",
+            "♣8JQ  ♣9A  ♣K -> ♣8J",
+            "♣78JQ  ♣9K  ♣A -> ♣7J",
+            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
+            "♥7XQ  ♠78QA  ♥9A ♦8 -> ♥7X",
+            "♥7XQ  ♠78QA  ♥9K ♦8 -> ♥7X",
+            "♣7XQ  ♠78QA  ♣9K ♥8 -> ♣7X",
+            "♣7XQA  ♠78QA  ♣9K ♥8 -> ♣7XA",
+            "♣8XQA  ♠78QA  ♣9K ♥8 -> ♣8XA",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split(" : | -> ");
+            CardList res = util.toCardList(parts[1]);
+            String[] _parts = parts[0].split("  ");
+            CardSet[] hands = new CardSet[NOP];
+            for (int i = 0; i < _parts.length; ++i) {
+                hands[i] = new CardSet(util.toCardList(_parts[i]));
+            }
+            CardSet union = hands[1].union(hands[2]);
+            int bitmap = CardSet.bm4buildForward(hands[0].bitmap, union.getBitmap());
+            int i = -1;
+            int bit = 0;
+            while ((bit = CardSet.next(bitmap, bit)) != 0) {
+                Card card = Card.get(bit);
+                Assert.assertEquals(res.get(++i), card);
+            }
+            Assert.assertEquals(res.size(), ++i);
+        }
+    }
+
+    @Test
+    public void testIterate4BuildBackward() {
+        String[] sources = {
+            // hands -> list
+            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7QA",
+            "♠8XQA  ♦789X  ♠79JK -> ♠8XQA",
+            "♣7JQ  ♣K  ♣A -> ♣Q",
+            "♠79QK  ♠8X ♣79J  ♠JA ♣8A -> ♠79K",
+            "♣8JQ  ♣9A  ♣K -> ♣8Q",
+            "♣78JQ  ♣9K  ♣A -> ♣8Q",
+            "♥7XQ  ♠78QA  ♥9A ♦8 -> ♥7Q",
+            "♥7XQ  ♠78QA  ♥9K ♦8 -> ♥7Q",
+            "♣7XQ  ♠78QA  ♣9K ♥8 -> ♣7Q",
+            "♣7XQA  ♠78QA  ♣9K ♥8 -> ♣7QA",
+            "♣8XQA  ♠78QA  ♣9K ♥8 -> ♣8QA",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split(" : | -> ");
+            CardList res = util.toCardList(parts[1]);
+            String[] _parts = parts[0].split("  ");
+            CardSet[] hands = new CardSet[NOP];
+            for (int i = 0; i < _parts.length; ++i) {
+                hands[i] = new CardSet(util.toCardList(_parts[i]));
+            }
+            CardSet union = hands[1].union(hands[2]);
+            int bitmap = CardSet.bm4buildBackward(hands[0].bitmap, union.getBitmap());
+            int i = res.size();
+            int bit = 0;
+            while ((bit = CardSet.prev(bitmap, bit)) != 0) {
+                Card card = Card.get(bit);
+                Assert.assertEquals(res.get(--i), card);
+            }
+            Assert.assertEquals(0, i);
+        }
+    }
+
+    @Test
+    public void testIterate4BuildForwardWithOthers() {
+        String[] sources = {
+            // hands -> list
+            "♣79JQ  ♣8K  ♣A -> ♣9",
+            "♠9A  ♠XJK  . -> ♠9A",
+            "♠9A ♣QK ♦9 ♥89A  ♠XJK ♦78QK ♥X  ♣XA ♦XA ♥7JQK -> ♠9A ♣Q ♦9 ♥8A",
+            "♦Q  ♦78A  ♦9XJK -> ♦Q",
+            "♣7KA  ♣9JQ  . -> ♣7K",
+            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7K ♦Q ♥8",
+            "♠79QK  ♠JA  ♠8X -> ♠Q",
+            "♠79QK  .  ♠8X -> ♠79Q",
+            "♠79QK  ♣8A  ♠8X ♣79J -> ♠79Q",
+            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠Q",
+            "♦78Q  ♦J  ♦XKA -> ♦7Q",
+            "♣JK ♦78Q ♥A  ♦J ♥78XJQ  ♠Q ♦XKA ♥9K -> ♣J ♦7Q ♥A",
+            "♣79JK  ♣8XQA  . -> ♣9",
+            "♣8XQA  ♣79JK  . -> ♣8",
+            "♣7XK  ♣89JA  . -> ♣X",
+            "♣89JA  ♣7XK  . -> ♣8",
+            "♠8XQA  ♦789X  ♠79K ♣8 -> ♠8XA",
+            "♣8K  ♣79JQ  ♣A -> ♣8",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split(" : | -> ");
+            CardList res = util.toCardList(parts[1]);
+            String[] _parts = parts[0].split("  ");
+            CardSet[] hands = new CardSet[NOP];
+            for (int i = 0; i < _parts.length; ++i) {
+                if (".".equals(_parts[i])) {
+                    hands[i] = new CardSet();
+                } else {
+                    hands[i] = new CardSet(util.toCardList(_parts[i]));
+                }
+            }
+            int bitmap = CardSet.bm4build(hands[0].bitmap, hands[1].getBitmap(), hands[2].getBitmap());
+            int i = -1;
+            int bit = 0;
+            while ((bit = CardSet.next(bitmap, bit)) != 0) {
+                Card card = Card.get(bit);
+                Assert.assertEquals(res.get(++i), card);
+            }
+            Assert.assertEquals(res.size(), ++i);
+        }
+    }
+
+    @Test
+    public void testClean4Misere() {
         String[] sources = {
             "♥8 : 0",
             "♥89QKA : 0",
@@ -64,349 +290,6 @@ public class TestCardSet {
                 Assert.assertTrue(expected.equals("!"));
             }
         }
-    }
-
-    @Test
-    public void testBuildIterator() {
-        String[] sources = {
-            // hands -> list
-            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
-            "♥9JA  ♣89J  ♣Q ♥XQ -> ♥9JA",
-            "♠78XQ ♣89J ♦7J ♥8  ♣7QKA ♦9A ♥9JKA  ♠9JA ♣X ♦XQK ♥7XQ -> ♠7XQ ♣8J ♦7J ♥8",
-            "♣9JK  ♣8  ♣A -> ♣9",
-            "♣8XK  ♣Q  ♣9 -> ♣8XK",
-            "♣7XQ  ♣K  ♣A -> ♣7",
-            "♥9JKA  ♣89J ♥8  ♣Q ♥7XQ -> ♥9JK",
-            "♠79QK  ♠8X ♣79J  ♠JA ♣8A -> ♠79Q",
-            "♠8XQA  ♦789X  ♠79JK -> ♠8XQA",
-            "♣7JQ  ♣K  ♣A -> ♣7",
-            "♣8JQ  ♣9A  ♣K -> ♣8J",
-            "♣78JQ  ♣9K  ♣A -> ♣7J",
-            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
-            "♥7XQ  ♠78QA  ♥9A ♦8 -> ♥7X",
-            "♥7XQ  ♠78QA  ♥9K ♦8 -> ♥7X",
-            "♣7XQ  ♠78QA  ♣9K ♥8 -> ♣7X",
-            "♣7XQA  ♠78QA  ♣9K ♥8 -> ♣7XA",
-            "♣8XQA  ♠78QA  ♣9K ♥8 -> ♣8XA",
-        };
-
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" : | -> ");
-            String[] _parts = parts[0].split("  ");
-            CardSet[] hands = new CardSet[NOP];
-            for (int i = 0; i < _parts.length; ++i) {
-                hands[i] = new CardSet(util.toCardList(_parts[i]));
-            }
-            CardSet union = hands[1].union(hands[2]);
-            CardSet.CardIterator it = hands[0].buildIterator(union);
-            Assert.assertEquals(parts[1], it.toString());
-        }
-    }
-
-    @Test
-    public void testBuildReverseIterator() {
-        String[] sources = {
-            // hands -> list
-            "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7QA",
-            "♠8XQA  ♦789X  ♠79JK -> ♠8XQA",
-            "♣7JQ  ♣K  ♣A -> ♣Q",
-            "♠79QK  ♠8X ♣79J  ♠JA ♣8A -> ♠79K",
-            "♣8JQ  ♣9A  ♣K -> ♣8Q",
-            "♣78JQ  ♣9K  ♣A -> ♣8Q",
-            "♥7XQ  ♠78QA  ♥9A ♦8 -> ♥7Q",
-            "♥7XQ  ♠78QA  ♥9K ♦8 -> ♥7Q",
-            "♣7XQ  ♠78QA  ♣9K ♥8 -> ♣7Q",
-            "♣7XQA  ♠78QA  ♣9K ♥8 -> ♣7QA",
-            "♣8XQA  ♠78QA  ♣9K ♥8 -> ♣8QA",
-        };
-
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" : | -> ");
-            String[] _parts = parts[0].split("  ");
-            CardSet[] hands = new CardSet[NOP];
-            for (int i = 0; i < _parts.length; ++i) {
-                hands[i] = new CardSet(util.toCardList(_parts[i]));
-            }
-            CardSet union = hands[1].union(hands[2]);
-            CardSet.CardIterator it = hands[0].buildReverseIterator(union);
-            CardSet res = new CardSet();
-            while (it.hasNext()) {
-                res.add(it.next());
-            }
-            Assert.assertEquals(parts[1], res.toString());
-        }
-    }
-
-    @Test
-    public void testBuildIteratorWithOthers() {
-        String[] sources = {
-            "♣79JQ  ♣8K  ♣A -> ♣9",
-            // self, friend, foe -> list
-            "♥7XQ  ♥8A  ♥9JK -> ♥XQ",   // todo: ♥7XQ
-//            "♥7XQ  ♥8A  ♥9JK -> ♥7XQ",
-            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK -> ♠J ♣8 ♥XQ",
-//            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK -> ♠J ♣8 ♥7XQ",
-            "♠79QK  ♠JA  ♠8X -> ♠Q",
-            "♠89QA  ♠7X  ♠JK -> ♠8QA",
-            "♠9A  ♠XJK  . -> ♠9A",
-            "♠9A ♣QK ♦9 ♥89A  ♠XJK ♦78QK ♥X  ♣XA ♦XA ♥7JQK -> ♠9A ♣Q ♦9 ♥8A",
-            "♦Q  ♦78A  ♦9XJK -> ♦Q",
-            "♣7KA  ♣9JQ  . -> ♣7K",
-            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7K ♦Q ♥8",
-            "♠79QK  ♠JA  ♠8X -> ♠Q",
-            "♠79QK  .  ♠8X -> ♠79Q",
-            "♠79QK  ♣8A  ♠8X ♣79J -> ♠79Q",
-            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠Q",
-            "♦78Q  ♦J  ♦XKA -> ♦7Q",
-            "♣JK ♦78Q ♥A  ♦J ♥78XJQ  ♠Q ♦XKA ♥9K -> ♣J ♦7Q ♥A",
-            "♣79JK  ♣8XQA  . -> ♣9",
-            "♣8XQA  ♣79JK  . -> ♣8",
-            "♣7XK  ♣89JA  . -> ♣X",
-            "♣89JA  ♣7XK  . -> ♣8",
-            "♠8XQA  ♦789X  ♠79K ♣8 -> ♠8XA",
-            "♣8K  ♣79JQ  ♣A -> ♣8",
-        };
-
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" : | -> ");
-            String[] _parts = parts[0].split("  ");
-            CardSet[] hands = new CardSet[NOP];
-            for (int i = 0; i < _parts.length; ++i) {
-                if (".".equals(_parts[i])) {
-                    hands[i] = new CardSet();
-                } else {
-                    hands[i] = new CardSet(util.toCardList(_parts[i]));
-                }
-            }
-            CardSet.CardIterator it = hands[0].buildIterator(hands[1], hands[2]);
-            Assert.assertEquals(parts[1], it.toString());
-        }
-    }
-
-    @Test
-    public void testBuildReverseIteratorWithOthers() {
-        String[] sources = {
-            // self, friend, foe -> reverse list
-            "♠79QK  ♠JA  ♠8X -> ♠Q",
-            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠Q",
-            "♣79JQ  ♣8K  ♣A -> ♣9",
-            "♠9A  ♠XJK  . -> ♠A9",
-            "♠9A ♣QK ♦9 ♥89A  ♠XJK ♦78QK ♥X  ♣XA ♦XA ♥7JQK -> ♥A8 ♦9 ♣Q ♠A9",
-            "♦Q  ♦78A  ♦9XJK -> ♦Q",
-            "♣7KA  ♣9JQ  . -> ♣K7",
-            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♥8 ♦Q ♣K7 ♠J",
-            "♠79QK  .  ♠8X -> ♠Q97",
-            "♠79QK  ♣8A  ♠8X ♣79J -> ♠Q97",
-            "♦78Q  ♦J  ♦XKA -> ♦Q7",
-            "♣JK ♦78Q ♥A  ♦J ♥78XJQ  ♠Q ♦XKA ♥9K -> ♥A ♦Q7 ♣J",
-            "♣79JK  ♣8XQA  . -> ♣9",
-            "♣8XQA  ♣79JK  . -> ♣8",
-            "♣7XK  ♣89JA  . -> ♣X",
-            "♣89JA  ♣7XK  . -> ♣8",
-            "♠8XQA  ♦789X  ♠79K ♣8 -> ♠AX8",
-            "♣8K  ♣79JQ  ♣A -> ♣8",
-            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK -> ♥QX ♣8 ♠J",     // todo: ♥QX7 ♣8 ♠J
-//            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK -> ♥QX7 ♣AJ9 ♠AQ",
-            "♣89JA  ♣7XK  . -> ♣8",
-            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠Q",
-            "♠8XQA  ♦789X  ♠79K ♣8 -> ♠AX8",
-            "♣8K  ♣79JQ  ♣A -> ♣8",
-            "♣79JQ  ♣8K  ♣A -> ♣9",
-        };
-
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" : | -> ");
-            String[] _parts = parts[0].split("  ");
-            CardSet[] hands = new CardSet[NOP];
-            for (int i = 0; i < _parts.length; ++i) {
-                if (".".equals(_parts[i])) {
-                    hands[i] = new CardSet();
-                } else {
-                    hands[i] = new CardSet(util.toCardList(_parts[i]));
-                }
-            }
-            CardList res = util.toCardList(parts[1]);
-            CardSet.CardIterator it = hands[0].buildReverseIterator(hands[1], hands[2]);
-            CardList cardList = new CardList();
-            while (it.hasNext()) {
-//                Card c0 = res.removeFirst();
-                Card c1 = it.next();
-                cardList.add(c1);
-            }
-            Assert.assertEquals(parts[1], cardList.toString());
-        }
-    }
-
-    @Test
-    @Ignore("used to test various CardSet operations")
-    public void test_1() {
-        String[] sources = {
-            "♠78K ♣QA ♦7X ♥89QKA",
-            "♣9",
-            "♣79Q ♦8XJ",
-        };
-
-        String sep;
-        CardSet cardSet;
-        Card card;
-        int i;
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" ");
-            CardList cardList = util.toCardList(source);
-            cardSet = new CardSet(cardList);
-            System.out.println(cardSet.toColorString());
-            Assert.assertEquals(source, cardSet.toString());
-
-            Iterator<Card> iterator = cardSet.reverseIterator();
-            while (iterator.hasNext()) {
-                card = iterator.next();
-                System.out.println(card);
-            }
-            Logger.println("done");
-        }
-
-    }
-
-    @Test
-    @Ignore("used to test various CardSet operations")
-    public void test() {
-        String[] sources = {
-//            "♥KA",
-//            "♠7",
-//            "♣QA",
-            "♠X ♣89XJ ♦9KA ♥7JQKA",
-            "♠KA ♣7JQA ♦XJQKA ♥A",
-            "♠KA ♣7JQA ♦XJQKA",
-            "♣7JQA ♦XJQKA ♥7",
-//            "♥89K",
-            "♥89KA",
-            "♠78K ♣QA ♦7X ♥89QK",
-            "♣9",
-            "♣79Q ♦8XJ",
-        };
-
-        String sep;
-        CardSet cardSet;
-        Card card, c;
-        int i;
-
-        card = Card.fromName("♦A");
-        int v = card.toInt();
-        c = Card.fromValue(v);
-        Assert.assertEquals(c, card);
-
-        for (String source : sources) {
-            Logger.println(source);
-            String[] parts = source.split(" ");
-            CardList cardList = util.toCardList(source);
-            cardSet = new CardSet(cardList);
-            System.out.println(cardSet.toColorString());
-            Assert.assertEquals(source, cardSet.toString());
-
-            CardList list = cardSet.list().toCardList();
-            System.out.println(list.toColorString());
-
-            list = cardSet.list(cardSet.first().getSuit()).toCardList();
-            System.out.println(list.toColorString());
-            list = cardSet.list(Card.Suit.HEART).toCardList();
-            System.out.println(list.toColorString());
-
-            card = cardSet.last();
-            card = cardSet.first();
-
-//            CardSet set = cardSet.list(Card.Suit.fromCode('♣'));
-            CardSet set = new CardSet(cardSet);
-            set.remove(set.list(Card.Suit.fromCode('♣')));
-
-/*
-            boolean b = set.equiv(new Card("♣J"), new Card("♣X"));
-            set.remove(new Card("♣X"));
-            boolean b1 = set.equiv(new Card("♣J"), new Card("♣8"));
-
-            set = cardSet.list(Card.Suit.fromCode('♥'));
-            b = set.equiv(new Card("♥J"), new Card("♥A"));
-            set.remove(new Card("♥Q"));
-            b1 = set.equiv(new Card("♥J"), new Card("♥A"));
-*/
-
-            card = cardSet.prev(Card.fromName("♠7"));
-            card = cardSet.prev(Card.fromName("♦X"));
-            card = cardSet.prev(Card.fromName("♦7"));
-            card = cardSet.list(Card.Suit.DIAMOND).prev(Card.fromName("♦7"));
-
-            card = cardSet.list(Card.Suit.DIAMOND).next(Card.fromName("♦X"));
-
-            card = cardSet.last();
-            card = cardSet.list(Card.Suit.DIAMOND).last();
-
-            card = cardSet.anyCard();
-            card = cardSet.anyCard(Card.Suit.CLUB);
-            card = cardSet.anyCard(Card.Suit.HEART);
-            card = cardSet.anyCard(Card.Suit.SPADE);
-
-            card = cardSet.next(Card.fromName("♥Q"));
-            card = cardSet.list(Card.Suit.DIAMOND).next(Card.fromName("♦X"));
-
-            c = cardSet.first();
-
-            i = -1;
-//            Iterator<CardList> suitIterator = cardSet.suitIterator(Card.Suit.DIAMOND);
-            Iterator<CardSet> suitIterator = cardSet.suitIterator();
-            while (suitIterator.hasNext()) {
-                CardSet cardList1 = suitIterator.next();
-                Assert.assertEquals(parts[++i], cardList1.toString());
-            }
-            Assert.assertEquals(parts.length - 1, i);
-
-            c = cardSet.anyCard(null);
-            System.out.printf("any %s\n", c.toColorString());
-            c = cardSet.anyCard(Card.Suit.SPADE);
-            System.out.printf("any ♠ %s\n", c);
-//            Assert.assertNotNull(c);
-            c = cardSet.anyCard(Card.Suit.DIAMOND);
-            System.out.printf("any ♦ %s\n", c.toColorString());
-//            Assert.assertEquals(Card.Suit.DIAMOND, c.getSuit());
-            c = cardSet.anyCard(Card.Suit.CLUB);
-            System.out.printf("any ♣ %s\n", c.toColorString());
-//            Assert.assertEquals(Card.Suit.CLUB, c.getSuit());
-
-            System.out.println(cardSet.toColorString());
-            sep = "";
-            i = -1;
-            CardSet.CardIterator iterator = cardSet.iterator();
-            while (iterator.hasNext()) {
-                card = iterator.next();
-                System.out.print(sep + card.toColorString());
-                Assert.assertEquals(cardList.get(++i), card);
-                int val = card.toInt();
-                c = Card.fromValue(val);
-                Assert.assertEquals(c, card);
-                sep = ", ";
-//                if (i == 2) {
-//                    iterator.remove();
-//                }
-            }
-            System.out.println();
-
-            i = 2;
-            Card c1 = cardSet.get(i);
-            c = cardSet.remove(i);
-            Assert.assertEquals(c1, c);
-            Assert.assertEquals(cardList.get(i), c);
-
-            c = cardSet.last();
-            Assert.assertEquals(cardList.last(), c);
-            c1 = cardSet.removeLast();
-            Assert.assertEquals(c1, c);
-            Assert.assertEquals(cardList.last(), c1);
-
-        }
- //*/
     }
 
     @Test
@@ -444,7 +327,6 @@ public class TestCardSet {
                 continue;
             }
             Card firstCard = Card.fromName("♠" + parts[4]);
-            // first card depends on calling Iterator or reverseIterator
             Assert.assertEquals("minMeStart", firstCard, p.second);
         }
     }

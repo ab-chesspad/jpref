@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -20,8 +20,7 @@
 
 package com.ab.util;
 
-import com.ab.config.Config;
-import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Player;
 
 import java.util.HashMap;

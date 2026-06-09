@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,10 +22,10 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
-import com.ab.config.Config.Bid;
-import static com.ab.config.Config.NOP;
-import static com.ab.config.Config.ROUND_SIZE;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.config.Config.Bid;
+import static com.ab.jpref.config.Config.NOP;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 import com.ab.util.ScoreCalculator;
@@ -153,7 +153,7 @@ public class GameManager {
     // whisters do not know the declarer's drops
     public Player getDeclarerForDefender() {
         Bot fictitiousBot = new Bot(this.declarer);
-        fictitiousBot.myHand = declarerHand.clone();
+        fictitiousBot.myHand = new CardSet(declarerHand);
         return fictitiousBot;
     }
 
@@ -292,7 +292,7 @@ public class GameManager {
             talonCards.clear();
         }
         this.talonCards.clear();
-        this.declarerHand = this.declarer.myHand.clone();
+        this.declarerHand = new CardSet(this.declarer.myHand);
         printf("declarer %s, round %s, %s\n",
             this.declarer.getName(), this.declarer.getBid(), this.declarer.toColorString());
     }
@@ -347,8 +347,8 @@ public class GameManager {
                     }
                 }
                 declarer.takeTalon(talonCards);
-                declarerHand = declarer.myHand.clone();
-                initialDeclarerHand = declarerHand.clone();
+                declarerHand = new CardSet(declarer.myHand);
+                initialDeclarerHand = new CardSet(declarerHand);
                 roundState.set(RoundStage.drop);
                 sleep(10);
                 Bid bid = declarer.drop();
@@ -519,16 +519,16 @@ public class GameManager {
         int declarerNum = declarer.getNumber();
         Player left = players[(declarerNum + 1) % NOP];
         Player right = players[(declarerNum + 2) % NOP];
-        declarer.leftHand = left.myHand.clone();
-        declarer.rightHand = right.myHand.clone();
+        declarer.leftHand = new CardSet(left.myHand);
+        declarer.rightHand = new CardSet(right.myHand);
         if (Bot.targetBot != null) {
             Bot.targetBot.leftHand = declarer.leftHand;
             Bot.targetBot.rightHand = declarer.rightHand;
         }
-        left.rightHand = declarerHand.clone();
-        left.leftHand = right.myHand.clone();
-        right.leftHand = declarerHand.clone();
-        right.rightHand = left.myHand.clone();
+        left.rightHand = new CardSet(declarerHand);
+        left.leftHand = new CardSet(right.myHand);
+        right.leftHand = new CardSet(declarerHand);
+        right.rightHand = new CardSet(left.myHand);
     }
 
     private void updateFromAvatars() {
@@ -834,12 +834,11 @@ public class GameManager {
         RoundStage roundStage;
 
         public synchronized RoundStage set(RoundStage state) {
-            RoundStage q = null;
             printf(DEBUG_LOG, "set %s -> %s\n", Thread.currentThread().getName(), state);
             this.roundStage = state;
 
             if (GameManager.instance.eventObserver == null) {
-                return q;     // running in test
+                return null;     // running in test
             }
 
             GameManager.instance.eventObserver.update(state);
@@ -861,9 +860,5 @@ public class GameManager {
     public interface EventObserver {
         void setSelectedPlayer(Player player);
         void update(RoundStage roundStage);
-    }
-
-    public interface PlayerFactory {
-        Player[] getPlayers();
     }
 }

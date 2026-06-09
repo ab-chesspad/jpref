@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ package com.ab.util;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -68,17 +68,6 @@ public class Util {
         }
         return os;
     }
-
-    public InputStream openInputStream(String path) throws FileNotFoundException {
-        String dir = getDataDirectory();
-        return new FileInputStream(new File(dir, path));
-    }
-
-    public OutputStream openOutputStream(String path) throws FileNotFoundException {
-        String dir = getDataDirectory();
-        return new FileOutputStream(new File(dir, path));
-    }
-
     public String getDataDirectory() {
         throw new RuntimeException("stub!");
     }

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,10 +21,13 @@ package com.ab.jpref.gui;
 
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.HumanPlayer;
+import com.ab.jpref.engine.TrickList;
 import com.ab.jpref.gui.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
 import static com.ab.jpref.gui.config.PConfig.Host;
 import static com.ab.jpref.gui.config.PConfig.NOP;
+
+import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.Logger;
 
 import static com.ab.util.Util.currMethodName;
@@ -43,7 +46,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Main implements Logger.LogHolder, Host {
-    static final boolean release = false;
+    static final boolean release = true;
     static boolean DEBUG_LOG = true;
     public static boolean SHOW_ALL = true;
     public static final String LOG_EXT = ".log";
@@ -88,6 +91,7 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     public Main(String[] args) {
+        TrickList.setTrickPool(new TrickPool());
         // we need it to upload log files
         GUID = PConfig.getInstance().GUID.get();
         if (GUID == null) {
@@ -150,18 +154,16 @@ public class Main implements Logger.LogHolder, Host {
             }
         });
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    System.out.println("Shutting down ...");
-                    Thread.sleep(50);
-                    saveConfig();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    e.printStackTrace();
-                }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                System.out.println("Shutting down ...");
+                Thread.sleep(50);
+                saveConfig();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                e.printStackTrace();
             }
-        });
+        }));
 
         mainContainer = mainFrame.getContentPane();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.X_AXIS));

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -37,8 +37,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class PUtil extends Util {
-    public static boolean DEBUG = true;
-
     private static PUtil instance;
 
     public static PUtil getInstance() {
@@ -92,17 +90,6 @@ public class PUtil extends Util {
         g.drawImage(original, 0, 0, newWidth, newHeight, null);
         g.dispose();
         return scaledImage;
-
-/*
-        BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
-        double scale = (double) newWidth / original.getWidth(null);
-        double scaleH = (double) newHeight / original.getHeight(null);
-        AffineTransform scaleInstance = AffineTransform.getScaleInstance(scale, scale);
-        AffineTransformOp scaleOp
-                = new AffineTransformOp(scaleInstance, AffineTransformOp.TYPE_BILINEAR);
-        scaleOp.filter(original, scaledImage);
-        return scaledImage;
-*/
     }
 
     // return result file name

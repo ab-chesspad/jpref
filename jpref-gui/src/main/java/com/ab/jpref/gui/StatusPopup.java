@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.gui.widgets.ButtonPanel;
 import com.ab.jpref.gui.widgets.PButton;
 import com.ab.jpref.gui.widgets.PLabel;
-import static com.ab.config.I18n.m;
+import static com.ab.jpref.config.I18n.m;
 import com.ab.util.Logger;
 import com.ab.util.Point;
 import static com.ab.util.Util.currMethodName;
@@ -58,7 +58,6 @@ public class StatusPopup extends JDialog {
 
     static final double centerYOffset = .4;         // relative to cardW size
     static final int strokeWidth = 2;
-    static final double scoreFontSize = .4;         // relative to cardW size
     static final double panelHeight = .7;           // left, right, pool, dump points, relative to cardW
 
     static final double centerCircleRadius = 1;     // relative to cardW size
@@ -69,7 +68,9 @@ public class StatusPopup extends JDialog {
 
     static StatusPopup instance;
 
-    private final PUtil pUtil = PUtil.getInstance();
+    private final Metrics metrics = Metrics.getInstance();
+
+    //    private final PUtil pUtil = PUtil.getInstance();
     final Host host;
     final ButtonPanel buttonPanel;
     final ScoresMetrics scoresMetrics = new ScoresMetrics();
@@ -84,7 +85,14 @@ public class StatusPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = PConfig.getInstance().scoresPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle = (Rectangle)PConfig.getInstance().mainRectangle.get().clone();
+            Rectangle mainRectangle = PConfig.getInstance().mainRectangle.get();
+            popupRectangle.width = (int) (mainRectangle.width - 2 * metrics.cardW - 4 * metrics.yMargin);
+            popupRectangle.height = (int)(mainRectangle.height - 2 * metrics.cardH - 4 * metrics.yMargin);
+            popupRectangle.x = mainRectangle.x +
+                (mainRectangle.width - popupRectangle.width) / 2;
+            popupRectangle.y = mainRectangle.y +
+                (mainRectangle.height - popupRectangle.height) / 2;
+            Logger.printf(DEBUG_LOG, "statuc popup %s\n", popupRectangle);
         }
         if (popupRectangle.y < 10) {
             popupRectangle.y = 10;
@@ -106,7 +114,6 @@ public class StatusPopup extends JDialog {
                 popupRectangle = StatusPopup.instance.getBounds();
                 PConfig.getInstance().scoresPopupRectangle.set(popupRectangle);
             }
-
         });
 
         buttonPanel = createButtonPanel();
@@ -130,7 +137,6 @@ public class StatusPopup extends JDialog {
 
     private class ScoresPanel extends JPanel {
         final private PlayerArea[] playerAreas = new PlayerArea[MainPanel.Alignment.values().length];
-        private final Metrics metrics = Metrics.getInstance();
 
         ScoresPanel() {
             setLayout(null);
@@ -372,7 +378,6 @@ public class StatusPopup extends JDialog {
             String text = "" + PConfig.getInstance().poolSize.get();
             FontMetrics fontMetrics = g2d.getFontMetrics(font);
             int _width = fontMetrics.stringWidth(text);
-            int _height = fontMetrics.getHeight();
             int x = scoresMetrics.p0.getX() - _width / 2 - metrics.xMargin;
             int y = scoresMetrics.p0.getY() + fontMetrics.getDescent() + metrics.yMargin;
             g2d.setColor(poolSizeColor);

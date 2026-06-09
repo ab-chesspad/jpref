@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.gui.MainPanel;
 import com.ab.jpref.gui.PUtil;
 import com.ab.jpref.gui.config.Metrics;
-import com.ab.config.I18n;
+import com.ab.jpref.config.I18n;
 
 import javax.swing.*;
 import java.awt.*;

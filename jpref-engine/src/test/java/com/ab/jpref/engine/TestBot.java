@@ -8,19 +8,19 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 import org.junit.*;
 
-import java.io.IOException;
+import java.io.*;
 
 import static com.ab.util.Logger.println;
 import static com.ab.util.Util.currMethodName;
 
 public class TestBot {
-    public static final String TEST_DIR = "../etc/tests/";
     public static final int NOP = Config.NOP;
     static final Config config = Config.getInstance();
     static final Util util = Util.getInstance();
@@ -28,6 +28,7 @@ public class TestBot {
 
     @BeforeClass
     public static void initClass() {
+        TrickList.setTrickPool(new TrickPool());
         gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
@@ -39,11 +40,22 @@ public class TestBot {
 
     }
 
+    private InputStream getInputStream(String testFileName) {
+        String path = "../etc/tests/" + testFileName;
+        File f = new File(path);
+        Logger.println(f.getAbsolutePath());
+        try {
+            return new FileInputStream(path);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     public void testGetMaxBid() throws IOException {
         println("running: " + currMethodName());
         GameManager.DEBUG_LOG = false;  // suppress thread status logging
-        util.getList(TEST_DIR + "get-max-bid",
+        util.getList(getInputStream("get-max-bid"),
             (res, tokens) -> {
                 CardSet cards = new CardSet();
                 int i;
@@ -72,7 +84,7 @@ public class TestBot {
     @Test
     public void testDeclareGame() throws IOException {
         println("running: " + currMethodName());
-        util.getList(TEST_DIR + "declare-game",
+        util.getList(getInputStream("declare-game"),
             (res, tokens) -> {
                 String[] parts = res.split(", ");
                 Card drop0 = Card.fromName(parts[0]);
@@ -101,7 +113,7 @@ public class TestBot {
                 Bot bot = new Bot(0);
                 bot.clear();
                 CardSet cardSet = new CardSet(hand);
-                bot.myHand = cardSet.clone();
+                bot.myHand = new CardSet(cardSet);
                 bot.bid = minBid;
                 bot.declareRound(minBid, _elderHand);
                 Config.Bid bid = bot.getBid();
@@ -116,7 +128,7 @@ public class TestBot {
 
     @Test
     @Ignore("test MisereBot later")
-    public void testMove() throws IOException {
+    public void testMove() {
         println("running: " + currMethodName());
         String[] sources = {
             // hands, bid, 1st move, 0th player tricks
@@ -144,7 +156,7 @@ public class TestBot {
             trick.minBid = bid;
             trick.trumpSuit = bid.getTrump();
             trick.setNumber(10 - size);
-            if (parts[2] != ".") {
+            if (!parts[2].equals(".")) {
                 CardList trickCards = util.toCardList(parts[2]);
                 for (Card card : trickCards) {
                     for (int j = 0; j < NOP; ++j) {
@@ -164,7 +176,7 @@ public class TestBot {
             } else {
                 targetBot = new ForTricksBot(hands);
             }
-            targetBot.trick = trick;
+            Bot.trick = trick;
             Card card = targetBot.play(trick);
             Card expected = Card.fromName(parts[3]);
             Assert.assertEquals("wrong card", expected, card);

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -20,21 +20,19 @@
 package com.ab.jpref.gui;
 
 import com.ab.jpref.cards.CardSet;
-import static com.ab.config.Config.Bid;
-import static com.ab.config.Config.ROUND_SIZE;
-import static com.ab.config.Config.NOP;
 import com.ab.jpref.engine.*;
-import com.ab.jpref.gui.config.PConfig.Host;
 import com.ab.jpref.gui.config.Metrics;
+import com.ab.jpref.gui.config.PConfig;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
-import com.ab.jpref.gui.config.PConfig;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.util.Date;
+
+import static com.ab.jpref.config.Config.*;
+import static com.ab.jpref.gui.config.PConfig.Host;
 
 // convenience GUI program to test intermediate positions for TrickList search
 // add/modify sources using hands from either a breakpoint in buildSubList(CardList cards)
@@ -109,12 +107,25 @@ public class TestPosition implements Host {
 
     @Override
     public int specialOption() {
-        return Host.SPECIAL_OPTION_SHOW_CARDS;
+        int res = 0;
+        boolean allHuman = true;
+        for (int i = 0; i < NOP; ++i) {
+            if (GameManager.BOTS[i]) {
+                allHuman = false;
+                break;
+            }
+        }
+
+        if (allHuman) {
+            res |= Host.SPECIAL_OPTION_MANUAL;
+        }
+        res |= Host.SPECIAL_OPTION_SHOW_CARDS;
+        return res;
     }
 
     @Override
     public long buildDate() {
-        return new Date().getTime();
+        return 0;
     }
 
     class TestGameManager extends GameManager {
@@ -139,7 +150,6 @@ public class TestPosition implements Host {
     void runTests() {
         final String[] sources = {
             // hands, bid, [elderHand]
-            "♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♠9 ♦789JQA ♥9JK : 6♣",
             "♠7 ♣9QK ♦7JQK ♥8X ♦X8  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK : 6♦ : 1",
             "♣9K ♦QK  ♣XA ♥7A  ♣7 ♥9QK : 6♦",
             "♣9QK ♦78XJQK  ♠9XA ♣8XA ♥7JA  ♠QK ♣7J ♦9A ♥9QK : 6♦",
@@ -178,7 +188,7 @@ public class TestPosition implements Host {
                         // assuming needed drop
                         gameManager.getRoundState().set(GameManager.RoundStage.drop);
                         Bid _bid = gameManager.getPlayers()[0].drop();
-                        Logger.println(_bid);
+                        Logger.println(_bid.toString());
 //                        hands[0] = gameManager.getPlayers()[0].getMyHand();
                         BidData.PlayerBid playerBid = forTricksBot.getDrop(elderHand);
                         forTricksBot.drop(playerBid.drops);

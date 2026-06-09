@@ -1,7 +1,7 @@
 package com.ab.util;
 
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config.Bid;
+import com.ab.jpref.config.Config.Bid;
 import org.junit.Assert;
 import org.junit.Test;
 

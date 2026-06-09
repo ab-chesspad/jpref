@@ -1,5 +1,5 @@
 #!/bin/bash
 
 mvn -f pom-data.xml clean package -Dmaven.test.skip=true -Dmaven.site.skip=true -Dmaven.javadoc.skip=true
-java -jar target/jdoc.jar
+java -jar target/jprefdata.jar
 rm target/*.jar

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -29,18 +29,18 @@
  * game - the set of rounds until the end (until all players have the pre-agreed score in their pools);
  *
  */
-package com.ab.config;
+package com.ab.jpref.config;
 
 import com.ab.jpref.cards.Card;
 import com.ab.util.Couple;
 import com.ab.util.Tuple;
-import com.ab.util.Util;
 
 import java.io.*;
 
 public class Config implements Serializable {
+    private static final long serialVersionUID = 8L;
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.0.7";
+    public static final String VERSION = "0.0." + serialVersionUID;
 
     public final Property<Boolean> release = new Property<>("", true);
 
@@ -93,8 +93,6 @@ public class Config implements Serializable {
     public static final int ROUND_SIZE = 10;    // total tricks == initial hand size
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
     public static final char NO_TRUMP = '-';
-
-    static final Util util = Util.getInstance();
 
     protected static Config instance;
 

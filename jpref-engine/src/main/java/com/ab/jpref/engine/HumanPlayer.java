@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -62,7 +62,6 @@ public class HumanPlayer extends Player {
         restartCommand = null;
     }
 
-    @Override
     public void clearQueue() {
         accept(Config.Bid.BID_PASS);
         util.sleep(10);
@@ -110,7 +109,7 @@ public class HumanPlayer extends Player {
 
     public void drop(CardSet drop) {
         super.drop(drop);
-        this.drop = drop.clone();
+        this.drop = new CardSet(drop);
     }
 
     @Override

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
 import java.util.*;
@@ -61,9 +61,6 @@ public abstract class Player {
     public void accept(Config.Queueable q) {}
 
     // to be implemented in a subclass (human player)
-    public void clearQueue() {}
-
-    // to be implemented in a subclass (human player)
     public void abortThread(GameManager.RestartCommand restartCommand) {}
 
     // to be implemented in a subclass e.g. human player
@@ -85,16 +82,12 @@ public abstract class Player {
 
     public Player() {}
 
-    public Player(Collection<Card> cards) {
-        setHand(cards);
-    }
-
     public Player(Player other) {
         if (other != null) {
             bid = other.bid;
-            myHand = other.myHand.clone();
-            leftHand = other.leftHand.clone();
-            rightHand = other.rightHand.clone();
+            myHand = new CardSet(other.myHand);
+            leftHand = new CardSet(other.leftHand);
+            rightHand = new CardSet(other.rightHand);
         }
         tricks = 0;
 
@@ -247,13 +240,6 @@ public abstract class Player {
         public final int[] points = new int[PlayerPoints.values().length];
 
         public RoundResults() {
-        }
-
-        public RoundResults(int poolPonts, int dumpPoints, int leftPoints, int rightPoints) {
-            points[PlayerPoints.poolPoints.ordinal()] = poolPonts;
-            points[PlayerPoints.dumpPoints.ordinal()] = dumpPoints;
-            points[PlayerPoints.leftPoints.ordinal()] = leftPoints;
-            points[PlayerPoints.rightPoints.ordinal()] = rightPoints;
         }
 
         public int getPoints(PlayerPoints location) {

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
-import static com.ab.config.Config.ROUND_SIZE;
+import com.ab.jpref.config.Config;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 import com.ab.util.BidData.PlayerBid;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -101,14 +101,17 @@ public class MisereBot extends Bot {
     // return the highest one
     private int getEval4Misere(CardSet cardSet) {
         int eval = 0;
-        Iterator<CardSet> suitIterator = cardSet.suitIterator();
-        while(suitIterator.hasNext()) {
-            CardSet cards = suitIterator.next();
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
+            // todo: use bitmaps only
+            CardSet cards = new CardSet(bitset);
             if (cards.isClean4Misere()) {
                 continue;
             }
             StringBuilder sb = new StringBuilder();
-            for (Card card : cards) {
+            int bit = 0;
+            while ((bit = CardSet.next(cards.getBitmap(), bit)) != 0) {
+                Card card = Card.get(bit);
                 sb.append(card.getRank().toString());
             }
             Integer res = misereTable.get(sb.toString());
@@ -129,13 +132,18 @@ public class MisereBot extends Bot {
             return true;
         }
         CardSet talonCandidates = myHand.complement();
-        CardSet myHand = this.myHand.clone();
+        CardSet myHand = new CardSet(this.myHand);
         List<PlayerBid> playerBids = new ArrayList<>();
-        for (Card card0 : talonCandidates) {
+        int bit0 = 0;
+        while ((bit0 = CardSet.next(talonCandidates.getBitmap(), bit0)) != 0) {
+            Card card0 = Card.get(bit0);
             myHand.add(card0);
             PlayerBid playerBid = new PlayerBid(Config.Bid.BID_MISERE);
             playerBid.value = Integer.MAX_VALUE;    // will be used as probability
-            for (Card card1 : myHand) {
+
+            int bit1 = 0;
+            while ((bit1 = CardSet.next(myHand.getBitmap(), bit1)) != 0) {
+                Card card1 = Card.get(bit1);
                 myHand.remove(card1);
                 eval = getEval4Misere(myHand);
                 myHand.add(card1);
@@ -187,16 +195,15 @@ public class MisereBot extends Bot {
         Logger.printf(DEBUG_LOG, "getDrop(%d), %s\n", elderHand, this.myHand.toColorString());
 
         playerBid.value = Integer.MAX_VALUE;    // will be used as probability
-        CardSet myHand = this.myHand;
-        myHand = myHand.clone();
+        CardSet myHand = new CardSet(this.myHand);
+        int bit0 = 0;
 probes:
-        for (Card card0 : myHand) {
+        while ((bit0 = CardSet.next(myHand.getBitmap(), bit0)) != 0) {
+            Card card0 = Card.get(bit0);
             myHand.remove(card0);
-            CardSet hand = myHand;
-            if (drop == 1) {
-                hand = new CardSet(card0);
-            }
-            for (Card card1 : hand) {
+            int bit1 = 0;
+            while ((bit1 = CardSet.next(myHand.getBitmap(), bit1)) != 0) {
+                Card card1 = Card.get(bit1);
                 myHand.remove(card1);
                 int eval = getEval4Misere(myHand);
                 Logger.printf(DEBUG_LOG, "%s, %s -> %s: %d\n",
@@ -219,12 +226,13 @@ probes:
 
     public void getHoles(int declarerNum) {
         holes.clear();
-        CardSet myHand = this.myHand.clone();
-        CardSet leftHand = this.leftHand.clone();
-        CardSet rightHand = this.rightHand.clone();
-        Iterator<CardSet> suitIterator = myHand.suitIterator();
-        while(suitIterator.hasNext()) {
-            CardSet cardSet = suitIterator.next();
+        CardSet myHand = new CardSet(this.myHand);
+        CardSet leftHand = new CardSet(this.leftHand);
+        CardSet rightHand = new CardSet(this.rightHand);
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
+            // todo: use bitmaps only
+            CardSet cardSet = new CardSet(bitset);
             Card.Suit suit = cardSet.first().getSuit();
             CardSet.ListData listData = cardSet.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
             if (listData.maxTheyStart > 0) {
@@ -265,12 +273,12 @@ probes:
     HandResults misereTricks(int elderHand) {
         HandResults handResults = new HandResults();
         handResults.expect = 0;
-        Iterator<CardSet> suitIterator = myHand.suitIterator();
-        while (suitIterator.hasNext()) {
-            CardSet cardList = suitIterator.next();
-            Card.Suit suit = cardList.first().getSuit();
-            boolean meStart = false;
-            CardSet.ListData listData = cardList.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), 2);
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
+            // todo: use bitmaps only
+            CardSet cardSet = new CardSet(bitset);
+            Card.Suit suit = cardSet.first().getSuit();
+            CardSet.ListData listData = cardSet.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit), 2);
             handResults.allListData[suit.getValue()] = listData;
             int tricks = listData.maxTheyStart;   // only one can be > 0
             if (listData.maxMeStart > 0 || listData.maxTheyStart > 0) {
@@ -421,23 +429,28 @@ probes:
     }
 
     @Override
-    CardSet.CardIterator getIterator(TrickList.TrickNode trickNode) {
+    long bm4Iteration(TrickList.TrickNode trickNode) {
         int num = trickNode.getTurn();
         if (num == 0) {
-            return playForTree(trickNode).iterator();
+            return CardSet.bit(play4Build(trickNode));
         }
-        CardSet cardSet = trickNode.hands[num].list(trickNode.startingSuit);
-        if (cardSet.isEmpty()) {
-            cardSet = trickNode.hands[num].list();
+        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
+        if (bitmap == 0) {
+            bitmap = trickNode.hands[num].getBitmap();
         }
         int n1 = (num + 1) % NOP;
         int n2 = (num + 2) % NOP;
-        CardSet others = CardSet.union(trickNode.hands[n1], trickNode.hands[n2]);
-        others.add(trickNode.cards2CardSet());
-        return cardSet.buildReverseIterator(others);
+        int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
+        for (int i = 0; i < trickNode.size(); ++i) {
+            Card card = trickNode.getCard(i);
+            int bit = 1 << CardSet.offset(card);
+            others |= bit;
+        }
+        long res = (long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL;
+        return res | BACKWARD_FLAG;
     }
 
-    synchronized CardSet playForTree(TrickList.TrickNode trickNode) {
+    private Card play4Build(TrickList.TrickNode trickNode) {
         MisereBot misereBot = getMisereBot(trickNode);
         Bot.trick = trickNode;
         misereBot.getHoles(0);
@@ -446,7 +459,7 @@ probes:
             throw new RuntimeException(String.format("err: card %s does not belong to %s",
                 card.toColorString(), misereBot.myHand.toColorString()));
         }
-        return new CardSet(card);
+        return card;
     }
 
     @Override
@@ -479,6 +492,8 @@ probes:
         if (_bestSoFarTop == 0 && _probeTop != 0 ||
             _bestSoFarTop != 0 && _probeTop == 0) {
             return diff;
+        } else {
+            // todo
         }
         return diff;
     }

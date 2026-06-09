@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 import com.ab.util.ScoreCalculator;
 import org.junit.Assert;
@@ -32,14 +32,11 @@ import org.junit.Test;
 public class TestScoreCalculator {
     public static final int NOP = Config.NOP;
     static final Config config = Config.getInstance();
-    final int TEST_POOL_SIZE = 20;
-    public static GameManager gameManager;
 
     @BeforeClass
     public static void initClass() {
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
-        gameManager = new GameManager(config, null);
     }
 
     @Test

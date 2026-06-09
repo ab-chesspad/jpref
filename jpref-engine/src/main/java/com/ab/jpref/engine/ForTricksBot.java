@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.BidData;
 import com.ab.util.BidData.PlayerBid;
 import com.ab.util.Pair;
@@ -49,10 +49,12 @@ public class ForTricksBot extends Bot {
             return maxPlayerBid;
         }
         CardSet talonCandidates = myHand.complement();
-        CardSet myHand = this.myHand.clone();
+        CardSet myHand = new CardSet(this.myHand);
         List<PlayerBid> playerBids = new ArrayList<>();
 
-        for (Card card0 : talonCandidates) {
+        int bit0 = 0;
+        while ((bit0 = CardSet.next(talonCandidates.getBitmap(), bit0)) != 0) {
+            Card card0 = Card.get(bit0);
             myHand.add(card0);
             // 11 cards
             PlayerBid playerBid = BidData.getBid(myHand, minBid, elderHand);
@@ -237,37 +239,44 @@ public class ForTricksBot extends Bot {
     }
 
     @Override
-    CardSet.CardIterator getIterator(TrickList.TrickNode trickNode) {
+    long bm4Iteration(TrickList.TrickNode trickNode) {
         int num = trickNode.getTurn();
-        CardSet cardSet = trickNode.hands[num].list(trickNode.startingSuit);
-        if (cardSet.isEmpty() && trickNode.trumpSuit != null) {
-            cardSet = trickNode.hands[num].list(trickNode.trumpSuit);
+        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
+        if (bitmap == 0 && trickNode.trumpSuit != null) {
+            bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.trumpSuit);
         }
-        if (cardSet.isEmpty()) {
-            cardSet = trickNode.hands[num].list();
+        if (bitmap == 0) {
+            bitmap = trickNode.hands[num].getBitmap();
         }
+
         int n1 = (num + 1) % NOP;
         int n2 = (num + 2) % NOP;
         int declarerNumber = 0; // when building TrickList
         if (num == declarerNumber) {
-            CardSet others = CardSet.union(trickNode.hands[n1], trickNode.hands[n2]);
-            others.add(trickNode.cards2CardSet());
-            return cardSet.buildIterator(others);
+            // todo: refactor
+            int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
+            for (int i = 0; i < trickNode.size(); ++i) {
+                Card card = trickNode.getCard(i);
+                int bit = 1 << CardSet.offset(card);
+                others |= bit;
+            }
+            return (long)CardSet.bm4buildForward(bitmap, others) & 0x0ffffffffL;
         }
+
         int friend = n1;
         int foe = n2;
         if (n1 == declarerNumber) {
             friend = n2;
             foe = n1;
         }
-        CardSet foeHand = trickNode.hands[foe].clone();
-        foeHand.add(trickNode.cards2CardSet());      // ??
-        /*  declarer started trick: ♦Q ♣9, remaining hands: ♦9A  ..  ♦XK
-            ♦X or ♦K are equivalent when declarer has ♦9A
-            so, adding ♦Q back enforces iterator to issue both ♦XK
-         */
-        return cardSet.buildReverseIterator(trickNode.hands[friend], foeHand);
-//        return cardSet.buildIterator(trickNode.hands[friend], foeHand);
+        int foeHand = trickNode.hands[foe].getBitmap();
+        for (int i = 0; i < trickNode.size(); ++i) {
+            Card card = trickNode.getCard(i);
+            int bit = 1 << CardSet.offset(card);
+            foeHand |= bit;
+        }
+        long res = (long)CardSet.bm4build(bitmap, trickNode.hands[friend].getBitmap(), foeHand) & 0x0ffffffffL;
+        return res | BACKWARD_FLAG;
     }
 
     @Override
@@ -301,6 +310,8 @@ public class ForTricksBot extends Bot {
         if (_bestSoFarTop == 0 && _probeTop != 0 ||
             _bestSoFarTop != 0 && _probeTop == 0) {
             return diff;
+        } else {
+            // todo
         }
         return diff;
     }

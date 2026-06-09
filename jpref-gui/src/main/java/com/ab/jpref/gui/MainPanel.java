@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 package com.ab.jpref.gui;
 
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
-import com.ab.config.Config.Bid;
-import static com.ab.config.Config.NOP;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.config.Config.Bid;
+import static com.ab.jpref.config.Config.NOP;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.Card.Suit;
@@ -40,7 +40,7 @@ import com.ab.jpref.gui.config.SettingsPopup;
 import com.ab.jpref.gui.widgets.ButtonPanel;
 import com.ab.jpref.gui.widgets.PButton;
 import com.ab.util.Logger;
-import static com.ab.config.I18n.m;
+import static com.ab.jpref.config.I18n.m;
 import static com.ab.util.Util.currMethodName;
 
 import javax.swing.*;
@@ -122,8 +122,6 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
     boolean reportReady;
     HumanPlayer currentPlayer;
     Bid currentBid;
-
-    private int animDelay;
 
     public MainPanel(Host host) {
         this.host = host;

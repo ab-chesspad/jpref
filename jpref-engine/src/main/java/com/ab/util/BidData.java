@@ -1,5 +1,5 @@
 package com.ab.util;
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@ package com.ab.util;
  * Complete with my own data
  */
 
-import com.ab.config.Config;
-import com.ab.config.Config.Bid;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.config.Config.Bid;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.Card.Rank;
@@ -112,37 +112,27 @@ public class BidData {
 
     public BidData() {}
 
-    public OneBid set(OneBid oneBid, int hand, boolean withBidding) {
-        int index = 0;
-        if (withBidding) {
-            index = NOP;
-        }
-        index += hand;
-        OneBid old = allBids[index];
-        allBids[index] = oneBid;
-        return old;
-    }
-
-    // get pair for each suit
+    // get pairs for all suits
     public static List<Pair<String, Integer>> toSuitChunks(CardSet hand, int turn) {
         List<Pair<String, Integer>> pairs = new ArrayList<>();
-        Iterator<CardSet> suitIterator = hand.suitIterator();
-        while (suitIterator.hasNext()) {
-            CardSet cardSet = suitIterator.next();
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(hand.getBitmap(), bitset)) != 0) {
             StringBuilder sb = new StringBuilder();
-            Iterator<Card> cardIterator = cardSet.reverseIterator();
-            while (cardIterator.hasNext()) {
-                int rank = cardIterator.next().getRank().getValue();
-                String s = String.format("%X", rank);
-                sb.append(s);
+            Suit suit = null;
+            int bit = 0;
+            while ((bit = CardSet.prev(bitset, bit)) != 0) {
+                int rank = Card.get(bit).getRank().getValue();
+                suit = Card.get(bit).getSuit();
+                sb.append(String.format("%X", rank));
             }
             String chunk = new String(sb);
             Pair<String, Integer> pair = searchTricks(chunk, turn);
             // append suit code to be able to locate real suits after sorting
-            chunk = pair.first + cardSet.first().getSuit().toString();
+            chunk = pair.first + suit.toString();
             pair.first = chunk;
             pairs.add(pair);
         }
+
         // sort in descending order
         Collections.sort(pairs, (p0, p1) -> {
             int diff = p1.first.substring(0, p1.first.length() - 1).compareTo(p0.first.substring(0, p0.first.length() - 1));
@@ -177,7 +167,7 @@ public class BidData {
     // called with 11 (getMaxBid) or 12 (declareRound) cards
     public static PlayerBid getBid(CardSet hand, Bid minBid, int elderHand) {
         PlayerBid playerBid;
-        hand = hand.clone();
+        hand = new CardSet(hand);
         List<Card> added = new ArrayList<>();
         List<Pair<String, Integer>> pairs = toSuitChunks(hand, elderHand);
 
@@ -243,7 +233,7 @@ public class BidData {
             }
             Config.Bid bid = playerBid.toBid();
             if (minBid.compareTo(bid) <= 0) {
-                CardSet handCopy = hand.clone();
+                CardSet handCopy = new CardSet(hand);
                 for (int i = 0; i < oneBid.drops.length; ++i) {
                     String handChunk = pairs.get(oneBid.drops[i]).first;
                     Suit suit = getSuit(handChunk);
@@ -261,17 +251,19 @@ public class BidData {
         playerBid = new PlayerBid(value);
 
         // find 1 or 2 drops
-        CardSet handCopy = hand.clone();
+        CardSet handCopy = new CardSet(hand);
         // brute force:
         int maxTricks = 0;
         List<Pair<String, Integer>> bestPairs = pairs;
-        CardSet bestHand = handCopy.clone();
+        CardSet bestHand = new CardSet(handCopy);
         // search starting from the least valuable suits, so for cases with the same
         // number of tricks, we drop the least valuable cards
         for (int i = pairs.size() - 1; i >= 0; --i) {
             String handChunk = pairs.get(i).first;
             Suit suit = getSuit(handChunk);
-            for (Card d0 : handCopy.list(suit)) {
+            int bit0 = 0;
+            while ((bit0 = CardSet.next(handCopy.list(suit).getBitmap(), bit0)) != 0) {
+                Card d0 = Card.get(bit0);
                 handCopy.remove(d0);
                 List<Pair<String, Integer>> pairs0 = toSuitChunks(handCopy, elderHand);
                 if (added.size() == 1) {
@@ -282,13 +274,15 @@ public class BidData {
                     if (maxTricks < tricks) {
                         maxTricks = tricks;
                         bestPairs = pairs0;
-                        bestHand = handCopy.clone();
+                        bestHand = new CardSet(handCopy);
                     }
                 } else {
                     for (int j = pairs0.size() - 1; j >= 0; --j) {
                         String handChunk0 = pairs0.get(j).first;
                         Suit suit0 = getSuit(handChunk0);
-                        for (Card d1 : handCopy.list(suit0)) {
+                        int bit1 = 0;
+                        while ((bit1 = CardSet.next(handCopy.list(suit0).getBitmap(), bit1)) != 0) {
+                            Card d1 = Card.get(bit1);
                             handCopy.remove(d1);
                             List<Pair<String, Integer>> pairs1 = toSuitChunks(handCopy, elderHand);
                             int tricks = 0;
@@ -298,7 +292,7 @@ public class BidData {
                             if (maxTricks < tricks) {
                                 maxTricks = tricks;
                                 bestPairs = pairs1;
-                                bestHand = handCopy.clone();
+                                bestHand = new CardSet(handCopy);
                             }
                             handCopy.add(d1);
                         }
@@ -359,7 +353,7 @@ public class BidData {
             int minSuit = minBid.getValue() % 10;
             int bidSuit = playerBid.value % 10;
             if (bidSuit < minSuit) {
-                handCopy = hand.clone();
+                handCopy = new CardSet(hand);
                 // should we challenge previously found drops?
                 handCopy.remove(playerBid.drops);
                 pairs = toSuitChunks(handCopy, elderHand);

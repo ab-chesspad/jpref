@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ import com.ab.jpref.cards.Card;
 import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import static com.ab.jpref.engine.Bot.targetBot;
 
 public class Trick extends BaseTrick {
@@ -47,14 +47,6 @@ public class Trick extends BaseTrick {
 
     public int getNumber() {
         return number;
-    }
-
-    public void incrementNumber() {
-        setNumber(getNumber() + 1);
-    }
-
-    public void decrementNumber() {
-        setNumber(getNumber() - 1);
     }
 
     public void setNumber(int number) {

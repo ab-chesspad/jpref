@@ -1,13 +1,13 @@
 package com.ab.jpref.gui.config;
 
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.jpref.gui.MainPanel;
 import com.ab.jpref.gui.config.PConfig.Host;
 import com.ab.jpref.gui.PUtil;
 import com.ab.jpref.gui.widgets.ButtonPanel;
 import com.ab.jpref.gui.widgets.PButton;
-import com.ab.config.I18n;
-import static com.ab.config.I18n.m;
+import com.ab.jpref.config.I18n;
+import static com.ab.jpref.config.I18n.m;
 import com.ab.util.Logger;
 import com.ab.util.Tuple;
 import static com.ab.util.Util.currMethodName;

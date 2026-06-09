@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ import com.ab.jpref.gui.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.gui.config.PConfig.Host;
 import com.ab.util.Logger;
-import static com.ab.config.I18n.m;
+import static com.ab.jpref.config.I18n.m;
 
 import javax.swing.*;
 import java.awt.*;

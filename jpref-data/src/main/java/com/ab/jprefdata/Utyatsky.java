@@ -1,6 +1,6 @@
 package com.ab.jprefdata;
 
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
 import com.ab.util.Pair;

@@ -1,4 +1,4 @@
-/*  This file is part of jpref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -37,15 +37,12 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-import static com.ab.config.Config.Bid;
-import static com.ab.config.Config.ROUND_SIZE;
-import static com.ab.config.I18n.m;
+import static com.ab.jpref.config.Config.Bid;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
+import static com.ab.jpref.config.I18n.m;
 
 public class OfferPopup extends JDialog {
-    final Host host;
-
     private final PUtil pUtil = PUtil.getInstance();
-    final PConfig pConfig;
     final GameManager gameManager;
     final OfferPopup popupInstance;
 
@@ -59,8 +56,6 @@ public class OfferPopup extends JDialog {
 
     public OfferPopup(Host host) {
         super(host.mainFrame(), false);
-        this.host = host;
-        pConfig = PConfig.getInstance();
         popupInstance = this;
 
         gameManager = GameManager.getInstance();
@@ -180,17 +175,14 @@ public class OfferPopup extends JDialog {
 
             return jLabel;
         });
-        jList.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent event) {
-                if (!event.getValueIsAdjusting()) {
-                    int index = jList.getSelectedIndex();
-                    if (index >= (ROUND_SIZE - maxTricks) && index <= (ROUND_SIZE - minTricks)) {
-                        selectedIndex = index;
-                        okButton.setEnabled(true);
-                    } else {
-                        jList.setSelectedIndex(selectedIndex);
-                    }
+        jList.addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting()) {
+                int index = jList.getSelectedIndex();
+                if (index >= (ROUND_SIZE - maxTricks) && index <= (ROUND_SIZE - minTricks)) {
+                    selectedIndex = index;
+                    okButton.setEnabled(true);
+                } else {
+                    jList.setSelectedIndex(selectedIndex);
                 }
             }
         });

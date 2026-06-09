@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 package com.ab.jpref.cards;
 
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -52,8 +52,6 @@ public class Card implements Comparable<Card>, Config.Queueable {
 
     public static final int TOTAL_SUITS = Suit.values().length;
     public static final int TOTAL_RANKS = Rank.values().length - 1;
-    public static final Card[] cards = new Card[TOTAL_SUITS * TOTAL_RANKS];
-    public static final Map<Integer, Card> cardMap = new HashMap<>();
 
     public enum Suit {
         SPADE('♠', 0),
@@ -185,6 +183,9 @@ public class Card implements Comparable<Card>, Config.Queueable {
     private final Suit suit;
     private final Rank rank;
 
+    private static final Card[] cards = new Card[TOTAL_SUITS * TOTAL_RANKS];
+    private static final Map<Integer, Card> cardMap = new HashMap<>();
+
     static {
         int i = -1;
         int m = 1;
@@ -199,17 +200,17 @@ public class Card implements Comparable<Card>, Config.Queueable {
         }
     }
 
-    private Card(Suit suit, Rank rank) {
+    public static Card get(int bit) {
+        return cardMap.get(bit);
+    }
+
+    Card(Suit suit, Rank rank) {
         this.suit = suit;
         this.rank = rank;
     }
 
     public static Card fromValue(int value) {
         return cards[value];
-    }
-
-    public static Card fromValue(long value) {
-        return cards[(int)value];
     }
 
     public static Card fromName(String cardName) {

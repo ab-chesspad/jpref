@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  *
  * Created: 1/2025/2025
  */
-package com.ab.config;
+package com.ab.jpref.config;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

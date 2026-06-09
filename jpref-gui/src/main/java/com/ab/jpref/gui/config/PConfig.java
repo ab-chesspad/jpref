@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -19,13 +19,12 @@
  */
 package com.ab.jpref.gui.config;
 
-import com.ab.config.Config;
+import com.ab.jpref.config.Config;
 import com.ab.util.Couple;
 import com.ab.jpref.gui.PUtil;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.*;
 import java.util.Locale;
 
 public class PConfig extends Config {
@@ -92,9 +91,16 @@ public class PConfig extends Config {
     }
 
     public static void refresh() {
+        PConfig _instance = (PConfig)instance;
         instance = PConfig.unserialize();
         if (instance == null) {
             instance = new PConfig();
+        }
+        if (_instance != null) {
+            ((PConfig)instance).mainRectangle.set(_instance.mainRectangle.get());
+            ((PConfig)instance).scoresPopupRectangle.set(_instance.scoresPopupRectangle.get());
+            ((PConfig)instance).settingsPopupRectangle.set(_instance.settingsPopupRectangle.get());
+            ((PConfig)instance).helpPopupRectangle.set(_instance.helpPopupRectangle.get());
         }
     }
 

@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -39,9 +39,5 @@ public class Tuple<T> implements Cloneable, Serializable {
 
     public void setValue(int i, T value) {
         values[i] = value;
-    }
-
-    public Tuple<T> clone() {
-        return new Tuple<>(this.values);
     }
 }

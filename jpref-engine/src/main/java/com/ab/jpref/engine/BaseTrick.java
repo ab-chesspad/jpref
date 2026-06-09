@@ -1,4 +1,4 @@
-/*  This file is part of JPref.
+/*  This file is part of JPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -17,74 +17,47 @@
  *
  * Created: 2/13/2026
  *
- * Android memory management sucks.
- * Trick pool used to avoid excessive fragmentation
  */
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
-import com.ab.util.Pair;
-
-import static com.ab.config.Config.NOP;
-import static com.ab.config.Config.ROUND_SIZE;
+import static com.ab.jpref.config.Config.NOP;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 
 public class BaseTrick {
-    public static final int TRICK_POOL_SIZE = 7000000;
     public static final int MAX_TRICK_CARDS = 3;
     public static final int NULL_DATA = 0;
     private static final int CARD_MASK = Card.TOTAL_SUITS * Card.TOTAL_RANKS - 1;
-    private static final int _CARD_MASK_LEN = 5;  // bits needed to store 0-31 card values
-    /*
-        private static int _CARD_MASK_LEN = 0;
-        static {
-            int mask = CARD_MASK;
-            while (mask != 0) {
-                ++_CARD_MASK_LEN;
-                mask >>>= 1;
-            }
-        }
-    */
-    private static final int CARD_MASK_LEN = _CARD_MASK_LEN;     // 5
-    private static final int FULL_CARD_MASK = (1 << _CARD_MASK_LEN * MAX_TRICK_CARDS) - 1;
+    private static final int CARD_MASK_LEN = 5;         // bits needed to store 0-31 card values
 
-    private static final int TOTAL_CARDS_MASK = 0x03;    // up to 3 cards in the trick
+    private static final int TOTAL_CARDS_MASK = 0x03;   // up to 3 cards in the trick
     private static final int TOTAL_CARDS_MASK_LEN = 2;
     private static final int TOTAL_CARDS_SHIFT = CARD_MASK_LEN * MAX_TRICK_CARDS;           // 15
 
-    public static final int TRICKS_MASK = 0x0f;   // 0-10 tricks
-    public static final int TRICKS_MASK_LEN = 4;
-    public static final int FUTURE_TRICKS_SHIFT = TOTAL_CARDS_SHIFT + TOTAL_CARDS_MASK_LEN; // 17
-    public static final int PAST_TRICKS_SHIFT = FUTURE_TRICKS_SHIFT + TRICKS_MASK_LEN;      // 21
+    private static final int TRICKS_MASK = 0x0f;        // 0-10 tricks
+    private static final int TRICKS_MASK_LEN = 4;
+    private static final int FUTURE_TRICKS_SHIFT = TOTAL_CARDS_SHIFT + TOTAL_CARDS_MASK_LEN; // 17
+    private static final int PAST_TRICKS_SHIFT = FUTURE_TRICKS_SHIFT + TRICKS_MASK_LEN;      // 21
 
     private static final int STARTED_BY_MASK = 0x03;    // 0 - 2
     private static final int STARTED_BY_LEN = 2;
     private static final int STARTED_BY_SHIFT = PAST_TRICKS_SHIFT + TRICKS_MASK_LEN;        // 25
 
-    private static final int TOP_MASK = 0x03;    // 0 - 2
+    private static final int TOP_MASK = 0x03;           // 0 - 2
     private static final int TOP_LEN = 2;
     private static final int TOP_SHIFT = STARTED_BY_SHIFT + STARTED_BY_LEN;                 // 27
 
-    private static int index_mask_len = 0;
-    static {
-        int mask = TRICK_POOL_SIZE;
-        while (mask != 0) {
-            ++index_mask_len;
-            mask >>>= 1;
-        }
-    }
-    private static final int INDEX_MASK_LEN = index_mask_len;                               // 23
+    private static final int INDEX_MASK_LEN = 24;                                           // 24
     private static final int INDEX_MASK = (1 << INDEX_MASK_LEN) - 1;
-    private static final int INDEX_SHIFT = TOP_SHIFT + TOP_LEN;                             // 29
+    private static final int INDEX_SHIFT = TOP_SHIFT + TOP_LEN;                             // 30
 
-    public static final int TOTAL_USED_BITS = INDEX_SHIFT + INDEX_MASK_LEN;                 // 52
+    public static final int TOTAL_USED_BITS = INDEX_SHIFT + INDEX_MASK_LEN;                 // 53
 
-    public static long FORECAST_DONE_BIT = (1L << 63);                                      // 63
-
-    private static final long[] trickPool = new long[TRICK_POOL_SIZE];
-    public static int nextPoolIndex;
+    private static final long FORECAST_DONE_BIT = (1L << 63);                                     // 63
 
     long trickData = 0;
 
+    // debug-only fields: call refresh() in the debugger when needed
     int _nextIndex;
     int _pastTricks;
     int _futureTricks;
@@ -122,26 +95,6 @@ public class BaseTrick {
     }
 */
 
-    public static synchronized long getTrickData(int index) {
-        return trickPool[index];
-    }
-
-    public static synchronized void setTrickData(int index, long trickData) {
-        trickPool[index] = trickData;
-    }
-
-    public static synchronized int allocTrick(long trickData) {
-        if (nextPoolIndex >= TRICK_POOL_SIZE) {
-            throw new RuntimeException("exceeded trick pool size " + TRICK_POOL_SIZE);
-        }
-        trickPool[++nextPoolIndex] = trickData;
-        return nextPoolIndex;
-    }
-
-    public static void clearTrickPool() {
-        nextPoolIndex = 0;
-    }
-
     public static Card getCard(long trickData, int i) {
         if (i >= size(trickData)) {
             return null;
@@ -158,31 +111,13 @@ public class BaseTrick {
         return (trickData & FORECAST_DONE_BIT) != 0;
     }
 
-    public static boolean isDone(int index) {
-        return (trickPool[index] & FORECAST_DONE_BIT) != 0;
-    }
-
     public static long setDone(long trickData) {
         trickData |= FORECAST_DONE_BIT;
         return trickData;
     }
 
-    public static long setPastTricks(long trickData, int pastTricks) {
-        if (pastTricks < 0 || pastTricks > ROUND_SIZE) {
-            throw new RuntimeException(String.format("invalid pastTricks %d", pastTricks));
-        }
-        int mask = TRICKS_MASK << PAST_TRICKS_SHIFT;
-        trickData &= ~mask;
-        trickData |= pastTricks << PAST_TRICKS_SHIFT;
-        return trickData;
-    }
-
     public static int getPastTricks(long trickData) {
         return (int)((trickData >>> PAST_TRICKS_SHIFT) & TRICKS_MASK);
-    }
-
-    public static long updatePastTricks(long trickData, int diff) {
-        return setPastTricks(trickData, getPastTricks(trickData) + diff);
     }
 
     static long setFutureTricks(long trickData, int futureTricks) {
@@ -199,24 +134,12 @@ public class BaseTrick {
         return (int)((trickData >>> FUTURE_TRICKS_SHIFT) & TRICKS_MASK);
     }
 
-    public static long updateFutureTricks(long trickData, int diff) {
-        return setFutureTricks(trickData, getFutureTricks(trickData) + diff);
-    }
-
     public static int getStartedBy(long trickData) {
         int res = (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
         if (res > 9) {
             res = res - 16;
         }
         return res;
-    }
-
-    public static long setStartedBy(long trickData, int number) {
-        number &= STARTED_BY_MASK;
-        int mask = STARTED_BY_MASK << STARTED_BY_SHIFT;
-        trickData &= ~mask;
-        trickData |= number << STARTED_BY_SHIFT;
-        return trickData;
     }
 
     public static int getTop(long trickData) {
@@ -227,24 +150,8 @@ public class BaseTrick {
         return res;
     }
 
-    public static long setTop(long trickData, int top) {
-        top &= TOP_MASK;
-        int mask = TOP_MASK << TOP_SHIFT;
-        trickData &= ~mask;
-        trickData |= top << TOP_SHIFT;
-        return trickData;
-    }
-
-    public static int getTurn(long trickData) {
-        return (getStartedBy(trickData) + size(trickData)) % NOP;
-    }
-
     public static long incrementSize(long trickData) {
         return updateSize(trickData, 1);
-    }
-
-    public static long decrementSize(long trickData) {
-        return updateSize(trickData, -1);
     }
 
     private static long updateSize(long trickData, int diff) {
@@ -254,7 +161,7 @@ public class BaseTrick {
         }
         int mask = TOTAL_CARDS_MASK << TOTAL_CARDS_SHIFT;
         trickData &= ~mask;
-        trickData |= size << TOTAL_CARDS_SHIFT;
+        trickData |= (long)size << TOTAL_CARDS_SHIFT;
         return trickData;
     }
 
@@ -263,54 +170,25 @@ public class BaseTrick {
         int totalCards = size(trickData);
         int mask = CARD_MASK << CARD_MASK_LEN * totalCards;
         trickData &= ~mask;
-        trickData |= val << CARD_MASK_LEN * totalCards;
+        trickData |= (long)val << CARD_MASK_LEN * totalCards;
         trickData = incrementSize(trickData);
         return trickData;
     }
 
     public int getNextIndex() {
-        int res = (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
-        return res;
-    }
-
-    public void setNextIndex(int nextIndex) {
-        if (nextIndex >= TRICK_POOL_SIZE) {
-            throw new RuntimeException(String.format("exceeding trick pool capacity: %d", nextIndex));
-        }
-        nextIndex &= INDEX_MASK;
-        long mask = INDEX_MASK << INDEX_SHIFT;
-        trickData &= ~mask;
-        trickData |= (long)nextIndex << INDEX_SHIFT;
-        refresh();
+        return (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
     }
 
     public static long setNextIndex(long trickData, int nextIndex) {
         nextIndex &= INDEX_MASK;
-        long mask = INDEX_MASK << INDEX_SHIFT;
+        long mask = (long)INDEX_MASK << INDEX_SHIFT;
         trickData &= ~mask;
         trickData |= (long)nextIndex << INDEX_SHIFT;
         return trickData;
     }
 
     public static int getNextIndex(long trickData) {
-        int res = (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
-        return res;
-    }
-
-    public static int getNextIndex(int index) {
-        long trickData = getTrickData(index);
-        int res = (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
-        return res;
-    }
-
-    public static Pair<Long, Card> removeLast(long trickData) {
-        int totalCards = size(trickData);
-        if (totalCards == 0) {
-            throw new RuntimeException("removing card from empty trick");
-        }
-        Card card = getCard(trickData,totalCards - 1);
-        trickData = decrementSize(trickData);
-        return new Pair<>(trickData, card);
+        return (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
     }
 
     public static String toString(long trickData) {
@@ -337,12 +215,10 @@ public class BaseTrick {
 
     public void setTrickData(long trickData) {
         this.trickData = trickData;
-        refresh();
     }
 
     public void clear() {
         trickData = 0;
-        refresh();
     }
 
     public Card getCard(int i) {
@@ -376,22 +252,21 @@ public class BaseTrick {
         }
         int mask = TOTAL_CARDS_MASK << TOTAL_CARDS_SHIFT;
         trickData &= ~mask;
-        trickData |= size << TOTAL_CARDS_SHIFT;
+        trickData |= (long)size << TOTAL_CARDS_SHIFT;
     }
 
     synchronized boolean isDone() {
         return (trickData & FORECAST_DONE_BIT) != 0;
     }
 
+    // for testing
     synchronized void setDone() {
         trickData |= FORECAST_DONE_BIT;
-        refresh();
     }
 
     // for testing
     synchronized void clearDone() {
         trickData &= ~FORECAST_DONE_BIT;
-        refresh();
         notifyAll();
     }
 
@@ -402,7 +277,6 @@ public class BaseTrick {
         int mask = TRICKS_MASK << PAST_TRICKS_SHIFT;
         trickData &= ~mask;
         trickData |= pastTricks << PAST_TRICKS_SHIFT;
-        refresh();
     }
 
     public int getPastTricks() {
@@ -420,7 +294,6 @@ public class BaseTrick {
         int mask = TRICKS_MASK << FUTURE_TRICKS_SHIFT;
         trickData &= ~mask;
         trickData |= futureTricks << FUTURE_TRICKS_SHIFT;
-        refresh();
     }
 
     int getFutureTricks() {
@@ -444,7 +317,6 @@ public class BaseTrick {
         int mask = STARTED_BY_MASK << STARTED_BY_SHIFT;
         trickData &= ~mask;
         trickData |= number << STARTED_BY_SHIFT;
-        refresh();
     }
 
     public int getTop() {
@@ -460,7 +332,6 @@ public class BaseTrick {
         int mask = TOP_MASK << TOP_SHIFT;
         trickData &= ~mask;
         trickData |= top << TOP_SHIFT;
-        refresh();
     }
 
     public int getTurn() {
@@ -472,9 +343,8 @@ public class BaseTrick {
         int totalCards = size();
         int mask = CARD_MASK << CARD_MASK_LEN * totalCards;
         trickData &= ~mask;
-        trickData |= val << CARD_MASK_LEN * totalCards;
+        trickData |= (long)val << CARD_MASK_LEN * totalCards;
         incrementSize();
-        refresh();
     }
 
     public Card removeLast() {
@@ -484,7 +354,6 @@ public class BaseTrick {
         }
         Card card = getCard(totalCards - 1);
         decrementSize();
-        refresh();
         return card;
     }
 
