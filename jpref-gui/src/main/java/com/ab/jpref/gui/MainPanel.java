@@ -46,6 +46,7 @@ import static com.ab.util.Util.currMethodName;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 
 public class MainPanel extends JPanel implements GameManager.EventObserver {
     public static final boolean DEBUG_LOG = false;
@@ -520,9 +521,14 @@ public class MainPanel extends JPanel implements GameManager.EventObserver {
     }
 
     private void submitLog() {
-        String res = pUtil.submitLog(host.getLogFileName());
-        String text = String.format(m("The file %s has been uploaded"), res);
-        mainPanelLayout.showMessage(text);
+        String filename = host.getLogFileName();
+        String res = pUtil.submitLog(filename);
+        File f = new File(filename);
+        filename = f.getName();
+        if (res.startsWith(filename)) {
+            res = filename + " " + m(res.substring(filename.length() + 1));
+        }
+        mainPanelLayout.showMessage(res);
     }
 
     private void createButtonPanels() {

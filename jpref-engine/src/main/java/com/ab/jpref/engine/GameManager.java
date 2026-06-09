@@ -836,9 +836,10 @@ public class GameManager {
         public synchronized RoundStage set(RoundStage state) {
             printf(DEBUG_LOG, "set %s -> %s\n", Thread.currentThread().getName(), state);
             this.roundStage = state;
+            RoundStage q = null;
 
             if (GameManager.instance.eventObserver == null) {
-                return null;     // running in test
+                return q;     // running in test
             }
 
             GameManager.instance.eventObserver.update(state);
