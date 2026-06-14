@@ -43,7 +43,7 @@ public class TrickPool implements TrickList.TrickPool {
     }
 
     @Override
-    public synchronized int alloc(long trickData) {
+    public int alloc(long trickData) {
         if (nextPoolIndex >= trickPool.length) {
             throw new RuntimeException("exceeded trick pool size " + trickPool.length);
         }
@@ -52,17 +52,17 @@ public class TrickPool implements TrickList.TrickPool {
     }
 
     @Override
-    public synchronized void set(int index, long trickData) {
+    public void set(int index, long trickData) {
         trickPool[index] = trickData;
     }
 
     @Override
-    public synchronized long get(int index) {
+    public long get(int index) {
         return trickPool[index];
     }
 
     @Override
-    public synchronized int size() {
+    public int size() {
         return nextPoolIndex;
     }
 

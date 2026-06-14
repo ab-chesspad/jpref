@@ -18,6 +18,7 @@ import static com.ab.util.Util.DEAL_MARK;
 import static com.ab.util.Util.currMethodName;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -411,4 +412,31 @@ if (++count[0] > 0) {
         }
     }
 
+    @Test
+    @Ignore("postpone for android code")
+    public void testAndroidGame() {
+        println("running: " + currMethodName());
+        final int[] count = {0};
+        InputStream testInputStream;
+
+        String path = "../DPref/app/src/main/assets/tests/fixedplay";
+        File f = new File(path);
+        Logger.println(f.getAbsolutePath());
+        try {
+            testInputStream = new FileInputStream(path);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            gameManager.runGame(testInputStream, 0);
+            String t = util.info();
+            String text = t + "\n" + String.format("maxBuildTime=%,d msec, maxPositions=%,d, maxMapSize=%,d\n",
+                TrickList.maxListBuildTime, TrickList.maxPositions, SimpleLongIntMap.maxSize);
+            println(text);
+        } catch (HumanPlayer.PrefExceptionRerun e) {
+            // ignore
+        }
+
+    }
 }

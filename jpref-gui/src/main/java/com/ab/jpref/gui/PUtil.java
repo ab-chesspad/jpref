@@ -156,12 +156,17 @@ public class PUtil extends Util {
             } while (len > 0);
             res = sb.toString();
             System.out.println(res);
-            res = fileName;
+            if (res.startsWith(GUID)) {
+                res = res.substring(GUID.length() + 1);
+            }
         } catch(IOException e) {
             res = e.toString();
         } finally {
             try {
                 os.close();
+                if (is == null) {
+                    throw new IOException("log submission error");
+                }
                 is.close();
             } catch(IOException e){
                 // ignore

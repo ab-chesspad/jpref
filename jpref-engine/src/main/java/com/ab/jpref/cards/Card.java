@@ -213,6 +213,10 @@ public class Card implements Comparable<Card>, Config.Queueable {
         return cards[value];
     }
 
+    public static Card fromValue(long value) {
+        return cards[(int)value];
+    }
+
     public static Card fromName(String cardName) {
         Suit suit = Suit.fromCode(Character.toLowerCase(cardName.charAt(0)));
         Rank rank = Rank.fromName(Character.toLowerCase(cardName.charAt(1)));

@@ -37,7 +37,6 @@ import java.util.*;
 
 public class TrickList {
     public static final boolean DEBUG_LOG = false;
-    public static final boolean MULTI_THREADED = false;
     public static final boolean PRINT_BEST_PATH = true;    // for debug
 
     static final TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
@@ -258,7 +257,6 @@ public class TrickList {
             this.setFutureTricks(futureTricks);
         }
 
-        // single-threaded
         private int buildSubList(CardList cards) {
             if (this.hands[0].size() <= 0) {
                 return 0;
@@ -269,6 +267,19 @@ public class TrickList {
             Card topCard = this.topCard;
 
             this.clear();
+
+            // alpha-beta style cutoffs: T = pastTricks + futureTricks is always in [pastTricks, pastTricks + remaining];
+            // reaching either bound uniquely fixes (pastTricks, futureTricks), so once bestNodeX hits the bound
+            // favored at that level, no sibling can ever replace it.
+            int pastTricks = this.getPastTricks();
+            int remaining = this.hands[0].size();   // tricks left to play, including this one
+            int maxTricks = pastTricks + remaining;
+            long lowExtreme = setFutureTricks(this.trickData, 0);
+            long highExtreme = setFutureTricks(this.trickData, remaining);
+            boolean dir0 = targetBot.compare(lowExtreme, highExtreme, 0) < 0;
+            boolean dir1 = targetBot.compare(lowExtreme, highExtreme, 1) < 0;
+            boolean dir2 = targetBot.compare(lowExtreme, highExtreme, 2) < 0;
+
             int bestNode0 = 0;
             long bm0 = this.bm4Iteration(cards);
             int bit0 = 0;
@@ -308,22 +319,42 @@ public class TrickList {
                             }
                             probeData = setFutureTricks(probeData, futureTricks);
                         }
-                        probeData = setDone(probeData);
                         trickPool.set(probeIndex, probeData);
                         if (compare(bestNode2, probeIndex, 2) < 0) {
                             bestNode2 = probeIndex;
                         }
                         Card c = this.removeLast();   // remove 2
+                        if (bestNode2 != 0) {
+                            long d = trickPool.get(bestNode2);
+                            int t = getPastTricks(d) + getFutureTricks(d);
+                            if (dir2 ? t == maxTricks : t == pastTricks) {
+                                break;
+                            }
+                        }
                     }
                     if (compare(bestNode1, bestNode2, 1) < 0) {
                         bestNode1 = bestNode2;
                     }
                     Card c = this.removeLast();   // remove 1
+                    if (bestNode1 != 0) {
+                        long d = trickPool.get(bestNode1);
+                        int t = getPastTricks(d) + getFutureTricks(d);
+                        if (dir1 ? t == maxTricks : t == pastTricks) {
+                            break;
+                        }
+                    }
                 }
                 if (compare(bestNode0, bestNode1, 0) < 0) {
                     bestNode0 = bestNode1;
                 }
                 Card c = this.removeLast();   // remove 0
+                if (bestNode0 != 0) {
+                    long d = trickPool.get(bestNode0);
+                    int t = getPastTricks(d) + getFutureTricks(d);
+                    if (dir0 ? t == maxTricks : t == pastTricks) {
+                        break;
+                    }
+                }
             }
             // restore this:
             this.setTrickData(trickData);
@@ -334,58 +365,12 @@ public class TrickList {
             return bestNode0;
         }
 
-        // multi-threaded
-        private int buildSubList() {
-            final int[] bestTrickNode0 = {0};
-            List<Thread> workers = new ArrayList<>();
-            long bm0 = this.bm4Iteration(null);
-            int bit0 = 0;
-            while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
-                final Card card0 = Card.get(bit0);
-                final TrickNode trickNode = new TrickNode(this);
-                Thread worker = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int next = trickNode.buildSubList(new CardList(Arrays.asList(card0)));
-                        synchronized (this) {
-                            if (compare(bestTrickNode0[0], next, 0) < 0) {
-                                bestTrickNode0[0] = next;
-                            }
-                        }
-                    }
-                });
-                workers.add(worker);
-                worker.start();
-            }
-            try {
-                for (Thread worker : workers) {
-                    worker.join();
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            return bestTrickNode0[0];
-        }
-
         private long bm4Iteration(CardList cards) {
             if (cards != null && !cards.isEmpty()) {
                 Card card = cards.removeFirst();
                 return CardSet.bit(card);
             }
             return targetBot.bm4Iteration(this);
-        }
-
-        private int buildList(CardList cards) {
-            if (MULTI_THREADED) {
-                // no sense to use multithreaded version when some trick cards are known
-                if (cards.isEmpty()) {
-                    return buildSubList();          // multi-threaded
-                } else {
-                    return buildSubList(cards);     // single-threaded
-                }
-            } else {
-                return buildSubList(cards);         // single-threaded
-            }
         }
 
         // create root and list of tricks
@@ -400,7 +385,7 @@ public class TrickList {
             printf("analyzing: %s\n", CardSet.toString(hands));
 
             start = System.currentTimeMillis();
-            int nextIndex = buildList(trick.cards2List());
+            int nextIndex = buildSubList(trick.cards2List());
             long nextTrickData = trickPool.get(nextIndex);
             int pastTricks = getPastTricks(nextTrickData);
             this.setPastTricks(pastTricks);
@@ -427,8 +412,8 @@ public class TrickList {
             }
             bestNodes[0].setFutureTricks(this.getFutureTricks() + targetBot.getTricks());
             long dur = System.currentTimeMillis() - start;
-            printf("list build duration: %d sec, positions %d, similar %,d\n",
-                (dur + 500) / 1000, positions.size(), similar);
+            printf("list build duration: %,d msec, positions %,d, similar %,d\n",
+                dur, positions.size(), similar);
             if (PRINT_BEST_PATH) {
                 sb.append("]");
                 println(sb);
@@ -484,31 +469,9 @@ public class TrickList {
                 return 0;
             }
             long key = ((long)this.getTop() << 32) | (bitmap & 0x0ffffffffL);
-            int res;
-            synchronized (positions) {
-                res = positions.get(key);
-                if (res == 0) {
-                    positions.put(key, probeIndex);
-                    return 0;
-                }
-            }
-
-            Thread thread = Thread.currentThread();
-            synchronized (thread)
-            {
-                int count = 0;
-                while (!isDone(trickPool.get(res))) {
-                    if (++count > 100) {
-                        println("still waiting...");
-                        count = 0;
-                    }
-                    try {
-                        thread.wait(50);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    res = positions.get(key);
-                }
+            int res = positions.get(key);
+            if (res == 0) {
+                positions.put(key, probeIndex);
             }
             return res;
         }

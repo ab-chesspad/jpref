@@ -64,10 +64,8 @@ public class BaseTrick {
     int _startedBy;
     int _turn;
     int _top;
-    boolean _done;
 
     public void refresh() {
-        _done = isDone();
         _pastTricks = getPastTricks();
         _futureTricks = getFutureTricks();
         _startedBy = getStartedBy();
@@ -105,15 +103,6 @@ public class BaseTrick {
 
     public static int size(long trickData) {
         return (int)(trickData >>> TOTAL_CARDS_SHIFT) & TOTAL_CARDS_MASK;
-    }
-
-    public static boolean isDone(long trickData) {
-        return (trickData & FORECAST_DONE_BIT) != 0;
-    }
-
-    public static long setDone(long trickData) {
-        trickData |= FORECAST_DONE_BIT;
-        return trickData;
     }
 
     public static int getPastTricks(long trickData) {
@@ -253,21 +242,6 @@ public class BaseTrick {
         int mask = TOTAL_CARDS_MASK << TOTAL_CARDS_SHIFT;
         trickData &= ~mask;
         trickData |= (long)size << TOTAL_CARDS_SHIFT;
-    }
-
-    synchronized boolean isDone() {
-        return (trickData & FORECAST_DONE_BIT) != 0;
-    }
-
-    // for testing
-    synchronized void setDone() {
-        trickData |= FORECAST_DONE_BIT;
-    }
-
-    // for testing
-    synchronized void clearDone() {
-        trickData &= ~FORECAST_DONE_BIT;
-        notifyAll();
     }
 
     public void setPastTricks(int pastTricks) {

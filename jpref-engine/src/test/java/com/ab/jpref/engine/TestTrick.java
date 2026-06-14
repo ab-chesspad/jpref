@@ -73,9 +73,6 @@ public class TestTrick {
             Assert.assertEquals(trick.toString(), parts[0]);
             Assert.assertEquals(trick.toString(), baseTrick.toString());
             baseTrick.trickData = trick.trickData;
-            baseTrick.setDone();
-            Assert.assertTrue(baseTrick.isDone());
-            baseTrick.clearDone();
             baseTrick.setFutureTricks(futureTricks);
             Assert.assertEquals(futureTricks, baseTrick.getFutureTricks());
             if (futureTricks < 8) {
@@ -94,7 +91,6 @@ public class TestTrick {
             System.out.println(baseTrick.toColorString());
             c = baseTrick.removeLast();
             System.out.println(baseTrick.toColorString());
-            Assert.assertFalse(baseTrick.isDone());
         }
     }
 

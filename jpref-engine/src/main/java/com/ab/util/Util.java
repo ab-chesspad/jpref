@@ -72,6 +72,33 @@ public class Util {
         throw new RuntimeException("stub!");
     }
 
+    public String info() {
+        String[] command = {"cat", "/proc/cpuinfo"};
+        String cpuInfo = "?";
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            BufferedReader stdInput = new BufferedReader(new
+                    InputStreamReader(process.getInputStream()));
+            String line = null;
+            while ((line = stdInput.readLine()) != null) {
+                if (line.startsWith("model name")) {
+                    int index = line.indexOf(": ");
+                    cpuInfo = line.substring(index + 2);
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            // ignore
+        }
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        String res = String.format("%s, #=%d\n", cpuInfo, cores);
+        res += String.format("totalMemory=%,dMB, freeMemory=%,dMB",
+            Runtime.getRuntime().totalMemory() / 1000000,
+            Runtime.getRuntime().freeMemory() / 1000000);
+        return res;
+    }
+
     public void getList(InputStream is, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
             Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
