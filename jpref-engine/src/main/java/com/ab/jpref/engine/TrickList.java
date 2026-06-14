@@ -268,6 +268,7 @@ public class TrickList {
 
             this.clear();
 
+/* remove Claude suggested pruning, no speed gain
             // alpha-beta style cutoffs: T = pastTricks + futureTricks is always in [pastTricks, pastTricks + remaining];
             // reaching either bound uniquely fixes (pastTricks, futureTricks), so once bestNodeX hits the bound
             // favored at that level, no sibling can ever replace it.
@@ -279,7 +280,7 @@ public class TrickList {
             boolean dir0 = targetBot.compare(lowExtreme, highExtreme, 0) < 0;
             boolean dir1 = targetBot.compare(lowExtreme, highExtreme, 1) < 0;
             boolean dir2 = targetBot.compare(lowExtreme, highExtreme, 2) < 0;
-
+*/
             int bestNode0 = 0;
             long bm0 = this.bm4Iteration(cards);
             int bit0 = 0;
@@ -307,7 +308,6 @@ public class TrickList {
                         } else {
                             ++similar;
                             long oldData = trickPool.get(oldIndex);
-//                            nextIndex = getNextIndex(oldIndex);
                             nextIndex = getNextIndex(oldData);
                         }
                         probeData = setNextIndex(probeData, nextIndex);
@@ -327,9 +327,11 @@ public class TrickList {
                         if (bestNode2 != 0) {
                             long d = trickPool.get(bestNode2);
                             int t = getPastTricks(d) + getFutureTricks(d);
+/*
                             if (dir2 ? t == maxTricks : t == pastTricks) {
                                 break;
                             }
+*/
                         }
                     }
                     if (compare(bestNode1, bestNode2, 1) < 0) {
@@ -339,9 +341,11 @@ public class TrickList {
                     if (bestNode1 != 0) {
                         long d = trickPool.get(bestNode1);
                         int t = getPastTricks(d) + getFutureTricks(d);
+/*
                         if (dir1 ? t == maxTricks : t == pastTricks) {
                             break;
                         }
+*/
                     }
                 }
                 if (compare(bestNode0, bestNode1, 0) < 0) {
@@ -351,9 +355,11 @@ public class TrickList {
                 if (bestNode0 != 0) {
                     long d = trickPool.get(bestNode0);
                     int t = getPastTricks(d) + getFutureTricks(d);
+/*
                     if (dir0 ? t == maxTricks : t == pastTricks) {
                         break;
                     }
+*/
                 }
             }
             // restore this:
