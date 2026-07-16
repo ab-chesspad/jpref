@@ -19,29 +19,48 @@
  */
 package com.ab.jpref.gui.widgets;
 
-import com.ab.jpref.gui.config.Metrics;
-
 import javax.swing.*;
 import java.awt.*;
 
-public class PLabel extends javax.swing.JLabel {
-    public static final double fontFactor = .4;    // relative to cardW
+public class PLabel extends JLabel {
+    public static final double fontFactor = .4;    // relative to height
     protected final double rotation;
+
+    private static Font font;
+    private static int minSize = Integer.MAX_VALUE;
 
     public PLabel(double rotation) {
         setOpaque(false);
         this.rotation = rotation;
     }
 
+    public static void initRecalc() {
+        PLabel.font = null;
+        minSize = Integer.MAX_VALUE;
+    }
+
     // not width and height but edge points
     public void setPBounds(int x0, int y0, int x1, int y1) {
-        super.setBounds(x0, y0, x1 - x0, y1 - y0);
-        Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW * fontFactor));
-        this.setFont(font );
+        int w = x1 - x0;
+        int h = y1 - y0;
+        super.setBounds(x0, y0, w, h);
+        int size = w;
+        if (rotation == 0) {
+            size = h;
+        }
+        if (minSize > size) {
+            minSize = size;
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
+        if (font == null && minSize != Integer.MAX_VALUE) {
+            font = new Font("Serif", Font.PLAIN, (int)(minSize * fontFactor));
+        }
+        if (font != null) {
+            g.setFont(font);
+        }
         if (rotation == 0) {
             super.paintComponent(g);
             return;
@@ -56,11 +75,11 @@ public class PLabel extends javax.swing.JLabel {
         }
         g2d.setColor(getForeground());
         String text = getText();
-        g2d.setFont(getFont());
+        g2d.setFont(font);
         FontMetrics fontMetrics = g2d.getFontMetrics();
 
-        int x0 =  bounds.width / 2;
-        int y0 =  bounds.height / 2;
+        int x0 = bounds.width / 2;
+        int y0 = bounds.height / 2;
 
 /*  debug, axes and border
         g2d.drawLine( x0, 0, x0, bounds.height);

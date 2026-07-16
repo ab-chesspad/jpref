@@ -1,16 +1,17 @@
 package com.ab.jpref.gui.config;
 
 import com.ab.jpref.config.Config;
-import com.ab.jpref.gui.MainPanel;
-import com.ab.jpref.gui.config.PConfig.Host;
+import com.ab.jpref.config.Metrics;
+import com.ab.jpref.gui.Main;
 import com.ab.jpref.gui.PUtil;
-import com.ab.jpref.gui.widgets.ButtonPanel;
-import com.ab.jpref.gui.widgets.PButton;
 import com.ab.jpref.config.I18n;
+
 import static com.ab.jpref.config.I18n.m;
 import com.ab.util.Logger;
 import com.ab.util.Tuple;
 import static com.ab.util.Util.currMethodName;
+import com.ab.jpref.ui.TableLayout;
+import com.ab.jpref.ui.Host;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -31,15 +32,14 @@ public class SettingsPopup extends JDialog {
     final SettingsPopup popupInstance;
     final BufferedImage lineImage = pUtil.loadImage("buttons/radio.png");
     final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
-//    final ButtonPanel buttonPanel;
+    JButton okButton, cancelButton;
 
     final Host host;
     Rectangle popupRectangle;
 
     public SettingsPopup(Host host) {
-        super(host.mainFrame(), true);
+        super(Main.mainFrame, true);
         this.host = host;
-//        pConfig = PConfig.getInstance();
         pConfig = PConfig.getInstance();
         popupInstance = this;
         setTitle(m(popupTitle));
@@ -47,7 +47,7 @@ public class SettingsPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = pConfig.settingsPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle = (Rectangle)pConfig.mainRectangle.get().clone();
+            popupRectangle = new Rectangle(pConfig.mainRectangle.get());
         }
         this.setBounds(popupRectangle);
         this.setLocation(popupRectangle.x, popupRectangle.y);
@@ -73,19 +73,19 @@ public class SettingsPopup extends JDialog {
         add(scrollPane, BorderLayout.CENTER);
 
         // 2. bottom buttons
-        ButtonPanel buttonPanel = new ButtonPanel(1, 1,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(MainPanel.ButtonCommand.ok, buttonCommand -> save()),
-                new PButton.ButtonHandler(MainPanel.ButtonCommand.cancel, buttonCommand -> cancel())
-            }});
-        add(buttonPanel, BorderLayout.SOUTH);
-
+        JPanel jPanel = new JPanel();
+        okButton = new JButton(m(TableLayout.ButtonCommand.ok.getName()));
+        okButton.addActionListener(actionEvent -> save());
+        jPanel.add(okButton);
+        cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton.addActionListener(actionEvent -> cancel());
+        jPanel.add(cancelButton);
+        add(jPanel, BorderLayout.SOUTH);
         setVisible(true);   // blocks until dialog ends
     }
 
     private void save() {
         pConfig.serialize();
-//        PConfig.refresh();
         popupInstance.dispose();
     }
 
@@ -130,8 +130,8 @@ public class SettingsPopup extends JDialog {
         int size = font.getSize();
         BufferedImage scaledLineImage = pUtil.scale(lineImage, size, size);
         Icon lineIcon = new ImageIcon(scaledLineImage);
-        BufferedImage scaledSelectdLineImage = pUtil.scale(selectedLineImage, size, size);
-        Icon selectedLineIcon = new ImageIcon(scaledSelectdLineImage);
+        BufferedImage scaledSelectedLineImage = pUtil.scale(selectedLineImage, size, size);
+        Icon selectedLineIcon = new ImageIcon(scaledSelectedLineImage);
 
         final String label = property.getLabel();
         final Object propValue = property.get();
@@ -188,6 +188,9 @@ public class SettingsPopup extends JDialog {
                     // in case of changing the language
                     I18n.refresh();
                     popupInstance.setTitle(m(popupTitle));
+                    okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
+                    cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
+
                     Container thisContainer = popupInstance.getContentPane();
                     thisContainer.validate();
                     thisContainer.repaint();

@@ -7,7 +7,7 @@ package com.ab.util;
 import java.io.Serializable;
 import java.util.Objects;
 
-public class Pair<F, S> implements Cloneable, Serializable {
+public class Pair<F, S> implements Serializable {
     public F first;
     public S second;
 

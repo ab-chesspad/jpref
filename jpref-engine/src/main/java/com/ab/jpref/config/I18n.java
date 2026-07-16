@@ -48,11 +48,10 @@ public class I18n {
         instance.loadLanguageMap(lang);
     }
 
-    public String getLang() {
-        return iso639_1_2002_code;
-    }
-
     public String translate(String text) {
+        if (text == null) {
+            return null;
+        }
         String res;
         if ((res = languageMap.get(text.toLowerCase())) == null || res.isEmpty()) {
             res = text;
@@ -61,6 +60,9 @@ public class I18n {
     }
 
     public static String m(Object text) {
+        if (text == null) {
+            return null;
+        }
         I18n instance = getInstance();
         return instance.translate(text.toString());
     }

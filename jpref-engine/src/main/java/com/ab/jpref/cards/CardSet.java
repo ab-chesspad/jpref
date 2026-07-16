@@ -103,7 +103,7 @@ public class CardSet {
         return new CardSet(-1);
     }
 
-    public static CardSet getList(Suit suit) {
+    public static CardSet getDeck(Suit suit) {
         int bits = suitMask(suit);
         return new CardSet(bits);
     }
@@ -122,6 +122,10 @@ public class CardSet {
 
     public int getBitmap() {
         return bitmap;
+    }
+
+    public void setBitmap(int bitmap) {
+        this.bitmap = bitmap;
     }
 
     public static CardSet union(CardSet... cardSets) {
@@ -811,16 +815,13 @@ mainLoop:
         return toColorString(bitmap, color);
     }
 
-    static String toString(int bitmap) {
-        return toColorString(bitmap, false);
-    }
-
     static String toColorString(int bitmap, boolean color) {
         Suit suit = null;
         String sep = "";
         StringBuilder sb = new StringBuilder();
-        while (bitmap != 0) {
-            int bit = bitmap ^ (bitmap & (bitmap - 1));
+        long bm = (long)bitmap & 0x0ffffffffL;
+        int bit = 0;
+        while ((bit = CardSet.next(bm, bit)) != 0) {
             Card c = Card.get(bit);
             bitmap &= ~bit;
             Suit s = c.getSuit();

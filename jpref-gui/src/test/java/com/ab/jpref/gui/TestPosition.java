@@ -20,9 +20,11 @@
 package com.ab.jpref.gui;
 
 import com.ab.jpref.cards.CardSet;
+import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.*;
-import com.ab.jpref.gui.config.Metrics;
+import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
+import com.ab.jpref.gui.config.SettingsPopup;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
 
@@ -32,7 +34,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 
 import static com.ab.jpref.config.Config.*;
-import static com.ab.jpref.gui.config.PConfig.Host;
+import com.ab.jpref.ui.Host;
 
 // convenience GUI program to test intermediate positions for TrickList search
 // add/modify sources using hands from either a breakpoint in buildSubList(CardList cards)
@@ -44,7 +46,8 @@ public class TestPosition implements Host {
         BOTS[1] = false;
         BOTS[2] = false;
     }
-    final PConfig pConfig = PConfig.getInstance();
+    final PConfig config;
+    final Metrics metrics;
     final PUtil pUtil = PUtil.getInstance();
     final TestGameManager gameManager;
     final CardSet[] hands = new CardSet[NOP];
@@ -57,9 +60,13 @@ public class TestPosition implements Host {
 
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(TestPosition::new);
+        throw new RuntimeException("fix gameMan.eventObserver");
     }
 
     public TestPosition() {
+        metrics = Metrics.getInstance();
+        config = PConfig.getInstance();
+
         mainFrame = new JFrame();
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.addComponentListener(new ComponentAdapter() {
@@ -75,7 +82,7 @@ public class TestPosition implements Host {
         });
 
         JFrame.setDefaultLookAndFeelDecorated(true);
-        Rectangle mainRectangle = pConfig.mainRectangle.get();
+        Rectangle mainRectangle = config.mainRectangle.get();
         mainFrame.setBounds(mainRectangle);
         mainContainer = mainFrame.getContentPane();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.X_AXIS));
@@ -101,11 +108,6 @@ public class TestPosition implements Host {
     }
 
     @Override
-    public JFrame mainFrame() {
-        return mainFrame;
-    }
-
-    @Override
     public int specialOption() {
         int res = 0;
         boolean allHuman = true;
@@ -128,9 +130,24 @@ public class TestPosition implements Host {
         return 0;
     }
 
+    @Override
+    public Metrics getMetrics() {
+        return metrics;
+    }
+
+    @Override
+    public Config getConfig() {
+        return config;
+    }
+
+    @Override
+    public String getLogFileName() {
+        return "";
+    }
+
     class TestGameManager extends GameManager {
         TestGameManager() {
-            super(PConfig.getInstance(), mainPanel);
+            super(PConfig.getInstance(), null);
         }
 
         @Override
@@ -142,9 +159,6 @@ public class TestPosition implements Host {
             super.playRoundMisere();
         }
 
-        public RoundState getRoundState() {
-            return GameManager.roundState;
-        }
     }
 
     void runTests() {
@@ -185,12 +199,12 @@ public class TestPosition implements Host {
                     forTricksBot = new ForTricksBot(hands);
                     forTricksBot.setBid(bid);
                     if (hands[0].size() > hands[1].size()) {
-                        // assuming needed drop
-                        gameManager.getRoundState().set(GameManager.RoundStage.drop);
+                        // todo: fix it
+//                        gameManager.getRoundState().set(GameManager.RoundStage.drop);
                         Bid _bid = gameManager.getPlayers()[0].drop();
                         Logger.println(_bid.toString());
 //                        hands[0] = gameManager.getPlayers()[0].getMyHand();
-                        BidData.PlayerBid playerBid = forTricksBot.getDrop(elderHand);
+                        BidData.PlayerBid playerBid = forTricksBot.getDrop(elderHand, hands[0].size() - hands[1].size());
                         forTricksBot.drop(playerBid.drops);
                         hands[0] = forTricksBot.getMyHand();
                     }
@@ -210,5 +224,11 @@ public class TestPosition implements Host {
                 }
             }
         }
+    }
+
+    @Override
+    // temporarily, todo: remove
+    public void updateSettings() {
+        new SettingsPopup(this);
     }
 }

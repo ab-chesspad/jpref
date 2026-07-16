@@ -56,7 +56,8 @@ public class TestTrickList {
             trick.trumpSuit = bid.getTrump();
             trick.setNumber(10 - size);
             TrickList trickList = new TrickList(forTricksBot, trick, hands);
-            int tricks = trickList.root.getPastTricks() + trickList.root.getFutureTricks();
+            int tricks = trickList.getEstimate();
+//            int tricks = trickList.root.getPastTricks() + trickList.root.getFutureTricks();
             Assert.assertEquals("tricks", expectdTricks, tricks);
             Card card = trickList.getCard(trick, hands);
             Logger.println("ok");

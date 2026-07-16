@@ -8,6 +8,7 @@ Continue->Продолжить
 Delete logs after, days -> Удалять логи старше, дней
 Drop->снос
 Game Type->Вид игры
+Help->Описание
 Gentleman->Джентльменский
 Language->Язык
 Last Trick->Последняя взятка
@@ -33,14 +34,12 @@ Settings->Настройки
 Standing->Стоя
 Submit Log->Послать лог
 Table Color->Цвет стола
-file has been uploaded->файл послан
+has been uploaded->файл послан
 What would you like to do?->Что вы хотите делать?
 Whist -> вист
 Whist Type->Вид виста
 Without 3->без трех
 Without Three->без трех
-Your notes->Ваши замечания
 Your Offer->Ваше предложение
 Your Tricks->Ваших взяток
 ½ Whist->½ виста
-

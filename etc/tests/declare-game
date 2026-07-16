@@ -2,7 +2,7 @@
 # 10 or 12 cards
 #♠ ♣ ♦ ♥
 
-♠78QK ♣QKA ♦QA ♥JQA 2 -> ♠7, ♦Q, 6-
+♠78QK ♣QKA ♦QA ♥JQA 2 -> ♦Q, ♦A, 6♠
 
 ♠78XQKA ♣8X ♦9XJK 1 -> ♣X, ♣8, 8♠
 ♠78XQKA ♣8X ♦9XJK 2 -> ♣X, ♣8, 7♠

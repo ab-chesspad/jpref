@@ -19,612 +19,319 @@
  */
 package com.ab.jpref.gui;
 
-import com.ab.jpref.cards.CardSet;
-import com.ab.jpref.config.Config;
-import com.ab.jpref.config.Config.Bid;
-import static com.ab.jpref.config.Config.NOP;
+import static com.ab.jpref.cards.Card.TOTAL_RANKS;
+import static com.ab.jpref.cards.Card.TOTAL_SUITS;
+import static com.ab.jpref.ui.TableLayout.getInstance;
 
 import com.ab.jpref.cards.Card;
-import com.ab.jpref.cards.Card.Suit;
 
-import com.ab.jpref.cards.CardList;
-import com.ab.jpref.engine.*;
-import com.ab.jpref.engine.GameManager.RoundStage;
-
-import com.ab.jpref.gui.config.Metrics;
-import com.ab.jpref.gui.config.PConfig;
-import static com.ab.jpref.gui.config.PConfig.Host;
-import static com.ab.jpref.gui.config.PConfig.Host.SPECIAL_OPTION_SHOW_CARDS;
-import static com.ab.jpref.gui.config.PConfig.Host.SPECIAL_OPTION_MANUAL;
-import com.ab.jpref.gui.config.SettingsPopup;
-import com.ab.jpref.gui.widgets.ButtonPanel;
-import com.ab.jpref.gui.widgets.PButton;
-import com.ab.util.Logger;
 import static com.ab.jpref.config.I18n.m;
-import static com.ab.util.Util.currMethodName;
+import com.ab.jpref.cards.CardList;
+import com.ab.jpref.config.Metrics;
+import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.engine.Player;
+import com.ab.jpref.gui.config.PConfig;
+import com.ab.jpref.ui.TableLayout;
+import com.ab.jpref.ui.Widget;
+import com.ab.util.Couple;
+import com.ab.util.Logger;
+import com.ab.util.Pair;
+
+import com.ab.jpref.ui.Host;
 
 import javax.swing.*;
+import javax.swing.text.html.HTMLEditorKit;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
+import java.awt.image.BufferedImage;
+import java.awt.image.RasterFormatException;
+import java.util.List;
+import java.util.ArrayList;
 
-public class MainPanel extends JPanel implements GameManager.EventObserver {
-    public static final boolean DEBUG_LOG = false;
+public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics> {
+    public static boolean DEBUG_LOG = false;
 
-    public enum Alignment {
-        South,
-        West,
-        East,
-    }
-
-    public enum ButtonCommand {
-        settings("Settings"),
-        comment("Comment"),
-        help("Help"),
-
-        minBid("Min Bid"),
-        misere("Misère"),
-        whist("Whist"),
-        halfWhist("½ Whist"),
-        pass("Pass"),
-        drop("Drop"),
-        without3("Without Three"),
-
-        lying("Lying"),
-        standing("Standing"),
-
-        prevSuit("Previous Suit"),
-        nextSuit("Next Suit"),
-        lesserGame("Lesser Game"),
-        greaterGame("Greater Game"),
-        select("Select"),
-
-        goon("Continue"),
-        newGame("New Game"),
-        showScores("Scores"),
-        lastTrick("Last Trick"),
-        replay("Replay"),
-        submitLog("Submit Log"),
-        yourOffer("Your Offer"),
-
-        ok("OK"),
-        accept("Accept"),
-        cancel("Cancel"),
-        ;
-
-        final String name;
-
-        ButtonCommand(String name) {
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-    }
+    private final Color LBL_BG_COLOR = Color.yellow;
+    private final Color LBL_SELECTED_BG_COLOR = Color.green;
 
     private final PUtil pUtil = PUtil.getInstance();
+    final Metrics metrics = Metrics.getInstance();
+
     final Host host;
-    final MainPanelLayout mainPanelLayout;
-    final CardList selectedCards = new CardList();
+    final BufferedImage[] suitImages = new BufferedImage[TOTAL_SUITS];
+    BufferedImage sourceBackImage;
 
-    ButtonPanel buttonPanel;
-    ButtonPanel bidPanel;
-    ButtonPanel dropPanel;
-    ButtonPanel declareRoundPanel;
-    ButtonPanel menuPanel;
-    ButtonPanel whistSelectionPanel;
-    ButtonPanel whistOptionPanel;
-    final JPanel trickPanel;
+    final Image[][] cardImages = new Image[TOTAL_SUITS][TOTAL_RANKS];
+    BufferedImage backImage;
 
-    GameManager gameManager;
-    RoundStage roundStage;
-    boolean reportReady;
-    HumanPlayer currentPlayer;
-    Bid currentBid;
+    final BufferedImage sourceElderHandImage = pUtil.loadImage("buttons/hand.png");
+    BufferedImage elderHandImage;
+
+    int panelWidth = -1, panelHeight = -1;
+
+    final List<Pair<Widget, JComponent>> widgets = new ArrayList<>();
+
+    @SuppressWarnings("unchecked")
+    private TableLayout<Graphics> tableLayout() {
+        return (TableLayout<Graphics>)TableLayout.getInstance();
+    }
 
     public MainPanel(Host host) {
         this.host = host;
-        this.mainPanelLayout = new MainPanelLayout(this);
-
-/*
-        addMouseMotionListener(new MouseMotionListener() {
-            @Override
-            public void mouseDragged(MouseEvent mouseEvent) {
-                Logger.printf("%s -> %s\n", currMethodName(), mouseEvent);
-            }
-
-            @Override
-            public void mouseMoved(MouseEvent mouseEvent) {
-                Logger.printf("%s -> %s\n", currMethodName(), mouseEvent);
-            }
-        });
-*/
+        this.setLayout(null);
+        this.setOpaque(false);
+        loadImages();
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
-                if (menuPanel.isVisible()) {
-                    host.repaint();
-                }
-                menuPanel.setVisible(false);
-                if (isStage(RoundStage.showTalon)) {
-                    gameManager.unblockGameManager(RoundStage.showTalon);
-                    return;
-                }
-                if (trickPanel.isVisible()) {
-                    trickPanel.setVisible(false);
-                    update();
-                }
-                if (e.getButton() == 3) {
-                    // right button
-                    Rectangle bounds = menuPanel.getBounds();
-                    bounds.x = e.getX();
-                    if (bounds.x + bounds.width > mainRectangle().width) {
-                        bounds.x = mainRectangle().width - bounds.width;
-                    }
-                    bounds.y = e.getY();
-                    if (bounds.y + bounds.height > mainRectangle().height) {
-                        bounds.y = mainRectangle().height - bounds.height;
-                    }
-                    menuPanel.setBounds(bounds);
-                    menuPanel.setVisible(true);
-                    PButton b = menuPanel.getButton(ButtonCommand.lastTrick);
-                    b.setEnabled(!gameManager.getLastTrickCards().isEmpty());
-                    b = menuPanel.getButton(ButtonCommand.yourOffer);
-                    boolean enable = Bot.trickList != null || Bot.targetBot instanceof MisereBot;
-                    b.setEnabled(enable);
-                    b = menuPanel.getButton(ButtonCommand.newGame);
-                    b.setEnabled(host.testing());
-                    b = menuPanel.getButton(ButtonCommand.submitLog);
-                    b.setEnabled(host.getLogFileName() != null);
-                }
-                if (!isStage(RoundStage.drop) &&
-                    !isStage(RoundStage.play) &&
-                    !isStage(RoundStage.trickTaken) &&
-                    !isStage(RoundStage.newTrick)
-                ) {
-                    return;
-                }
-                Logger.printf(DEBUG_LOG, "%s -> %s\n", currMethodName(), e);
-                if (e.getButton() == 1) {
-                    menuPanel.setVisible(false);
-                    // left button
-                    MainPanel.this.mouseClicked(e.getPoint());
-                }
+                getInstance().onMouseClick(e.getX(), e.getY());
             }
         });
-        addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                Logger.printf(DEBUG_LOG, "MainPanel.%s -> %s\n",
-                    currMethodName(), e);
-                update();   // repaint
-            }
-        });
-
-        createButtonPanels();
-
-        trickPanel = createTrickPanel();
-        add(trickPanel);
-        trickPanel.setVisible(false);
-
-        update();
     }
 
-    Rectangle mainRectangle() {
-        return PConfig.getInstance().mainRectangle.get();
+    private void loadImages() {
+        final int cardHeight = 204;
+        final int[] suitStarts = {0, 215, 429, 644};
+        BufferedImage sourceDeckImage = pUtil.loadImage("cards/deck.png");
+        int suitWidth = sourceDeckImage.getWidth();
+        for (int i = 0; i < suitImages.length; ++i) {
+            // descending order
+            int j = suitImages.length - 1 - i;
+            suitImages[j] = sourceDeckImage.getSubimage(0, suitStarts[i], suitWidth, cardHeight);
+        }
+
+        metrics.setCardAspectRatio((double) cardHeight * 8 / suitWidth);
+        sourceBackImage = pUtil.loadImage("cards/b5.jpg");
     }
 
-    private JPanel createTrickPanel() {
-        return new JPanel() {
-            @Override
-            public Dimension getSize() {
-                return new Dimension((int) (2 * Metrics.getInstance().cardW),
-                    (int) (2 * Metrics.getInstance().cardH));
-            }
+    private Image getCardImage(Card card) {
+        return cardImages[card.getSuit().getValue()][card.getRank().ordinal() - 1];
+    }
 
-            @Override
-            public Dimension getPreferredSize() {
-                return getSize();
-            }
+    private void recalculateSizes() {
+        metrics.recalculateSizes();
+        if (metrics.cardW <= 0) {
+            return;
+        }
+        if (panelWidth == metrics.panelWidth && panelHeight == metrics.panelHeight) {
+            return;
+        }
+        panelWidth = metrics.panelWidth;
+        panelHeight = metrics.panelHeight;
 
-            @Override
-            public Dimension getMinimumSize() {
-                return getSize();
+        int cardW = (int)metrics.cardW;
+        int cardH = (int)metrics.cardH;
+        for (int j = 0; j < TOTAL_SUITS; ++j) {
+            BufferedImage scaledSuitImage = pUtil.scale(suitImages[j], cardW * 8, cardH);
+            for (int i = 0; i < TOTAL_RANKS; ++i) {
+                int col = Card.Rank.values()[i].getValue() - Card.Rank.SIX.getValue();
+                int xS = col * cardW;
+                try {
+                    cardImages[j][i] = scaledSuitImage.getSubimage(xS, 0, cardW, cardH);
+                } catch (RasterFormatException e) {
+                    throw new RuntimeException(e);
+                }
             }
+        }
+        backImage = pUtil.scale(sourceBackImage, cardW, cardH);
+        int size = (int)(cardW * metrics.wElderHand);
+        elderHandImage = pUtil.scale(sourceElderHandImage, size, size);
+    }
 
-            @Override
-            public Dimension getMaximumSize() {
-                return getSize();
+    @Override
+    public void add(Widget widget) {
+        JComponent view;
+        String text = widget.getText();
+        if (widget.getCommand() == null) {
+            JLabel lbl = new JLabel();
+            lbl.setOpaque(true);
+//            lbl.setBackground(Color.yellow);
+            lbl.setForeground(Color.red);
+            lbl.setHorizontalAlignment(JLabel.CENTER);
+            lbl.setText(text);
+            view = lbl;
+        } else {
+            JButton b = new JButton();
+            Image image = pUtil.loadImage(String.format("buttons/%s.png", widget.getCommand().toString()));
+            if (image != null) {
+                widget.setUserObject(image);
             }
+            b.setHorizontalTextPosition(JButton.CENTER);
+            b.setVerticalTextPosition(JButton.CENTER);
+            b.addActionListener(actionEvent -> widget.onClick());
+            view = b;
+        }
+        this.add(view, 0);
+        widgets.add(new Pair<>(widget, view));
+    }
 
-            @Override
-            public Rectangle getBounds() {
-                Rectangle r = (Rectangle) super.getBounds().clone();
-                Dimension d = getSize();
-                r.width = d.width;
-                r.height = d.height;
-                return r;
+    @Override
+    public void update() {
+        if (host == null) {
+            return;
+        }
+        int fontSize = (int)(metrics.cardW * .3);
+        Font font = new Font("Serif", Font.PLAIN, fontSize);
+        for (Pair<Widget, JComponent> pair : widgets) {
+            Widget widget = pair.first;
+            JComponent jComponent = pair.second;
+            if (!widget.isVisible()) {
+                jComponent.setVisible(false);
+                continue;
             }
+            jComponent.setVisible(true);
+            jComponent.setFont(font);
+            if (widget.getColor() == Widget.RED_COLOR) {
+                jComponent.setForeground(Color.red);
+            } else {
+                jComponent.setForeground(Color.black);
+            }
+            jComponent.setBounds(widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight());
+            String text = m(widget.getText());
+            if (jComponent instanceof JLabel) {
+                ((JLabel)jComponent).setText(text);
+                Player p = getInstance().getCurrentPlayer();
+                if (p == null || p.getNumber() != widget.getNumber()) {
+                    jComponent.setBackground(LBL_BG_COLOR);
+                } else {
+                    jComponent.setBackground(LBL_SELECTED_BG_COLOR);
+                }
+            } else {
+                jComponent.setEnabled(widget.isEnabled());
+                Image image = (Image) widget.getUserObject();
+                if (image != null) {
+                    image = image.getScaledInstance(widget.getWidth(), widget.getHeight(), Image.SCALE_DEFAULT);
+                    ((JButton)jComponent).setIcon(new ImageIcon(image));
+                    int _fontSize = fontSize;
+                    Font _font = new Font("Serif", Font.PLAIN, _fontSize);
+                    jComponent.setFont(_font);
+                }
+                ((JButton)jComponent).setText(text);
+            }
+        }
+        host.repaint();
 
+        if ((getInstance()).getCurrentPlayer() == null) {
+            // wait cursor
+            this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        } else {
+            // normal cursor
+            this.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        }
+    }
+
+    @Override
+    public void showMessage(String text) {
+        JDialog dialog = new JDialog(Main.mainFrame, m("Message"), true);
+        int width = Main.mainFrame.getWidth();
+        int height = Main.mainFrame.getHeight();
+        dialog.setSize(width, height);
+        dialog.setLocationRelativeTo(Main.mainFrame);
+        dialog.setLayout(new BorderLayout());
+        JEditorPane editorPane = new JEditorPane();
+        editorPane.setEditable(false);
+        editorPane.setContentType("text/html");
+        Font font = new Font("Serif", Font.PLAIN, (int)metrics.fontSize / 2);
+        editorPane.setFont(font);
+        HTMLEditorKit kit = (HTMLEditorKit) editorPane.getEditorKit();
+        kit.getStyleSheet().addRule(String.format("body { font-family: %s; font-size: %dpt; }",
+            font.getFamily(), font.getSize()));
+        editorPane.setText(text);
+        editorPane.setCaretPosition(0);
+        dialog.add(new JScrollPane(editorPane,
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER), BorderLayout.CENTER);
+        JButton okButton = new JButton(m("Continue"));
+        okButton.addActionListener(e -> dialog.dispose());
+        dialog.add(okButton, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
+    @Override
+    public String getUserComments() {
+        JDialog dialog = new JDialog(Main.mainFrame, m("Comments"), true);
+        int width = Main.mainFrame.getWidth() / 2;
+        int height = Main.mainFrame.getHeight() / 2;
+        dialog.setSize(width, height);
+        dialog.setLocationRelativeTo(Main.mainFrame);
+        dialog.setLayout(new BorderLayout());
+        JTextArea textArea = new JTextArea(10, 30);
+        textArea.setFont(new Font("Serif", Font.PLAIN, (int)metrics.fontSize / 2));
+        dialog.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        JButton okButton = new JButton(m("OK"));
+        okButton.addActionListener(e -> dialog.dispose());
+        dialog.add(okButton, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+        return textArea.getText();
+    }
+
+    @Override
+    public void showLastTrick(CardList cards) {
+        JDialog dialog = new JDialog(Main.mainFrame, null, true);
+        dialog.setUndecorated(true);
+        dialog.setLayout(new BorderLayout());
+
+        int pw = (int)(metrics.cardW * 2);
+        int ph = (int)(metrics.cardH * 2);
+        JPanel trickPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                mainPanelLayout.paintTrick((Graphics2D) g,
-                    gameManager.getLastTrickCards());
+                tableLayout().paintTrick(g, cards, getWidth() / 2, getHeight() / 2);
             }
         };
-    }
+        trickPanel.setBackground(Color.green);
+        trickPanel.setPreferredSize(new Dimension(pw, ph));
+        dialog.add(trickPanel, BorderLayout.CENTER);
 
-    void mouseClicked(Point point) {
-        if (currentPlayer == null) {
-            return;
-        }
-        Card card = mainPanelLayout.getCard(point);
-        if (card == null) {
-            return;
-        }
-
-        if (GameManager.getState().getRoundStage().equals(RoundStage.drop)) {
-            if (selectedCards.contains(card)) {
-                selectedCards.remove(card);
-            } else if (selectedCards.size() < 2) {
-                selectedCards.add(card);
-            }
-            update();
-            return;
-        }
-
-        if (!currentPlayer.isOK2Play(card)) {
-            return;
-        }
-
-/* testing, should be confirmed by double click
-        if (selectedCards.size() == 0 || !card.equals(selectedCards.get(0))) {
-            selectedCards.clear();
-            selectedCards.add(card);
-            Logger.printf(DEBUG, "clicked, new currentHandVisualData.card %s", card);
-            refresh();
-            return;
-        }
-//*/
-
-        // unblock human player
-        currentPlayer.accept(card);
-        Logger.printf(DEBUG_LOG, "unblocked, selected %s\n", card);
-        selectedCards.clear();
-        currentPlayer = null;
-    }
-
-    private void returnBid(Bid bid) {
-        currentPlayer.accept(bid);
+        JButton okButton = new JButton(m("Continue"));
+        okButton.addActionListener(e -> dialog.dispose());
+        dialog.add(okButton, BorderLayout.SOUTH);
+        dialog.pack();
+        dialog.setLocationRelativeTo(Main.mainFrame);
+        dialog.setVisible(true);
     }
 
     @Override
-    public synchronized void paintComponent(Graphics g) {
+    public GameManager.RestartCommand showScores(boolean showButtons) {
+        StatusPopup statusPopup = new StatusPopup(showButtons);
+        return statusPopup.result;
+    }
+
+    @Override
+    public int showOffer(int minTricks, int maxTricks) {
+        OfferPopup offerPopup = new OfferPopup(minTricks, maxTricks);
+        return offerPopup.result;
+    }
+
+    @Override
+    public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (g == null || mainPanelLayout == null || gameManager == null) {
+        if (g == null || getInstance() == null) {
             return;
         }
-        mainPanelLayout.paintComponent(g);
-        if (reportReady) {
-            reportReady = false;
-            if (isStage(RoundStage.showTalon)) {
-                return;     // wait for mouse click
-            }
-            host.mainFrame().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-            gameManager.unblockGameManager(this.roundStage);
-        }
-    }
 
-    boolean isStage(RoundStage stage) {
-        if (stage == null) {
-            return false;
-        }
-        return stage.equals(this.roundStage);
-    }
+        recalculateSizes();
+        g.setColor(PConfig.getInstance().bgColor.getColor());
+        g.fillRect(0, 0, metrics.panelWidth, metrics.panelHeight);
 
-    boolean showCards(int index) {
-        if (gameManager.replayMode || (host.specialOption() & SPECIAL_OPTION_SHOW_CARDS) != 0) {
-            return true;
-        } else {
-            Logger.printf(DEBUG_LOG, "showCards %s\n", GameManager.getState().getRoundStage());
-            if (isStage(RoundStage.play)
-                    || isStage(RoundStage.waitForBot)
-                    || isStage(RoundStage.trickTaken)) {
-                if (gameManager.declarerNumber != index) {
-                    if (gameManager.showDefendersCards()) {
-                        return true;
-                    }
-                }
-            }
-            return index == 0;
+        tableLayout().paint(g);
+        Couple<Integer> elderHandLocation = getInstance().elderHandLocation;
+        if (elderHandLocation.first != null) {
+            g.drawImage(elderHandImage, elderHandLocation.first, elderHandLocation.second, this);
         }
     }
 
     @Override
-    public void update(RoundStage roundStage) {
-        this.roundStage = roundStage;
-        reportReady = true;
-        update();
-    }
-
-    private void update() {
-        gameManager = GameManager.getInstance();
-        host.mainFrame().setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-        mainPanelLayout.update();
-
-        bidPanel.setVisible(false);
-        whistSelectionPanel.setVisible(false);
-        whistOptionPanel.setVisible(false);
-        if (currentPlayer != null && gameManager != null) {
-            if (isStage(RoundStage.bidding)) {
-                bidPanel.getButton(ButtonCommand.misere).setEnabled(false);
-                if (Bid.BID_UNDEFINED.equals(currentPlayer.getBid()) &&
-                        gameManager.getMinBid().compareTo(Bid.BID_MISERE) < 0) {
-                    bidPanel.getButton(ButtonCommand.misere).setEnabled(true);
-                }
-                PButton button = bidPanel.getButton(ButtonCommand.minBid);
-                Bid minBid = gameManager.getMinBid();
-                button.setText(minBid.getName());
-                int color = minBid.getValue() % 10;
-                if (color == 3 || color == 4) {
-                    button.setForeground(Color.red);
-                } else {
-                    button.setForeground(Color.black);
-                }
-                button = bidPanel.getButton(ButtonCommand.pass);
-                String text = "Pass";
-                boolean pass = true;
-                for (Player p : gameManager.getPlayers()) {
-                    if (p.getBid().compareTo(Bid.BID_PASS) > 0) {
-                        pass = false;
-                        break;
-                    }
-                }
-                if (pass) {
-                    text += " *" + (gameManager.getAllPassFactor() + 1);
-                }
-                button.setText(text);
-                bidPanel.setVisible(true);
-            } else if (isStage(RoundStage.declareRound)) {
-                setDeclareRoundPanel(null);
-            } else if (isStage(RoundStage.responseOnDeclaration)) {
-                setOnDeclarationPanel();
-                whistSelectionPanel.setVisible(true);
-            }
-            setTitle();
-            whistOptionPanel.setVisible(isStage(RoundStage.selectWhistOption));
-            declareRoundPanel.setVisible(isStage(RoundStage.declareRound));
-            dropPanel.setVisible(isStage(RoundStage.drop));
-            dropPanel.getButton(ButtonCommand.drop).setEnabled(selectedCards.size() == 2);
-            dropPanel.getButton(ButtonCommand.without3)
-                .setEnabled(currentPlayer != null && !Bid.BID_MISERE.equals(currentPlayer.getBid()));
-        }
-
-        host.repaint();
-        if (GameManager.getState() != null) {
-            Logger.printf(DEBUG_LOG, "mainPanel.%s, %s -> invalidate()\n",
-                currMethodName(),
-                GameManager.getState().getRoundStage());
-        }
-        if (isStage(RoundStage.roundEnded) || isStage(RoundStage.offer)) {
-            new StatusPopup(host, true);
-        }
-    }
-
-    private void setTitle() {
-        String title = Config.PROJECT_NAME;
-        if (gameManager.declarerNumber >= 0) {
-            title += " - " + m(gameManager.getMinBid());
-        } else if (gameManager.getMinBid().equals(Bid.BID_ALL_PASS)) {
-            title += " " + Bid.BID_ALL_PASS + " *" + (gameManager.getAllPassFactor() + 1);
-        }
-        if ((host.specialOption() & SPECIAL_OPTION_MANUAL) != 0) {
-            title += ", open cards";
-        }
-        host.mainFrame().setTitle(title);
-    }
-
-    // select whist/pass/half-whist
-    private void setOnDeclarationPanel() {
-        int player1 = (gameManager.declarerNumber + 1) % NOP;
-        int player2 = (gameManager.declarerNumber + 2) % NOP;
-        boolean enable = currentPlayer.getNumber() == player2 &&
-            gameManager.getMinBid().goal() < 8 &&
-            gameManager.getPlayers()[player1].getBid().equals(Bid.BID_PASS);
-        whistSelectionPanel.getButton(ButtonCommand.halfWhist).setEnabled(enable);
-        whistSelectionPanel.getButton(ButtonCommand.pass).setEnabled(!enable);
-    }
-
-    // select trump suit and tricks
-    private void setDeclareRoundPanel(ButtonCommand buttonCommand) {
-        if (buttonCommand == null) {
-            currentBid = gameManager.getMinBid();
-            buttonCommand = ButtonCommand.ok;
-        }
-        int minRound = currentPlayer.getBid().goal();
-        int minSuit = currentPlayer.getBid().getValue() % 10;
-        int roundValue = currentBid.goal();
-        int suitValue = currentBid.getValue() % 10;
-        Logger.printf(DEBUG_LOG, "setDeclareRoundPanel curr %s, %d, %d\n", currentBid, roundValue, suitValue);
-
-        switch (buttonCommand) {
-            case prevSuit:
-                --suitValue;
-                break;
-            case nextSuit:
-                ++suitValue;
-                break;
-            case lesserGame:
-                --roundValue;
-                break;
-            case greaterGame:
-                ++roundValue;
-                break;
-        }
-
-        currentBid = Bid.fromValue(roundValue * 10 + suitValue);
-        Logger.printf(DEBUG_LOG, "setDeclareRoundPanel next %s, %d, %d\n", currentBid, roundValue, suitValue);
-        Color fgColor = Color.black;
-        if (suitValue == 3 || suitValue == 4) {
-            fgColor = Color.red;
-        }
-        declareRoundPanel.getButton(ButtonCommand.select).setText(currentBid.getName(), fgColor);
-
-        if (suitValue <= 1 || roundValue == minRound && suitValue <= minSuit) {
-            declareRoundPanel.getButton(ButtonCommand.prevSuit).setText("");
-            declareRoundPanel.getButton(ButtonCommand.prevSuit).setEnabled(false);
-        } else {
-            declareRoundPanel.getButton(ButtonCommand.prevSuit).setText(Suit.values()[suitValue - 2].getCode());
-            declareRoundPanel.getButton(ButtonCommand.prevSuit).setEnabled(true);
-        }
-
-        if (roundValue <= minRound || roundValue == minRound + 1 && suitValue < minSuit) {
-            declareRoundPanel.getButton(ButtonCommand.lesserGame).setText("");
-            declareRoundPanel.getButton(ButtonCommand.lesserGame).setEnabled(false);
-        } else {
-            declareRoundPanel.getButton(ButtonCommand.lesserGame).setText(roundValue - 1, fgColor);
-            declareRoundPanel.getButton(ButtonCommand.lesserGame).setEnabled(true);
-        }
-
-        if (suitValue >= 5) {
-            declareRoundPanel.getButton(ButtonCommand.nextSuit).setText("");
-        } else if (suitValue == 4) {
-            declareRoundPanel.getButton(ButtonCommand.nextSuit).setText(Config.NO_TRUMP);
-        } else {
-            declareRoundPanel.getButton(ButtonCommand.nextSuit).setText(Suit.values()[suitValue].getCode());
-        }
-        declareRoundPanel.getButton(ButtonCommand.nextSuit).setEnabled(suitValue < 5);
-
-        if (roundValue >= 10) {
-            declareRoundPanel.getButton(ButtonCommand.greaterGame).setText("");
-        } else {
-            declareRoundPanel.getButton(ButtonCommand.greaterGame).setText(roundValue + 1, fgColor);
-        }
-        declareRoundPanel.getButton(ButtonCommand.greaterGame).setEnabled(roundValue < 10);
-
-        host.repaint();
+    public void paint(Graphics g, Card card, int x, int y) {
+        Logger.printf(DEBUG_LOG, "paint %s, %d, %d\n", card, x, y);
+        Image image = getCardImage(card);
+        g.drawImage(image, x, y, this);
     }
 
     @Override
-    public void setSelectedPlayer(Player player) {
-        if (player instanceof HumanPlayer) {
-            this.currentPlayer = (HumanPlayer) player;
-        } else {
-            this.currentPlayer = null;
-        }
-        selectedCards.clear();
-        update();
+    public void paintBack(Graphics g, int x, int y) {
+        g.drawImage(backImage, x, y, this);
     }
-
-    private void submitLog() {
-        String filename = host.getLogFileName();
-        String res = pUtil.submitLog(filename);
-        File f = new File(filename);
-        filename = f.getName();
-        if (res.startsWith(filename)) {
-            res = filename + " " + m(res.substring(filename.length() + 1));
-        }
-        mainPanelLayout.showMessage(res);
-    }
-
-    private void createButtonPanels() {
-        menuPanel = new ButtonPanel(3.5, .6,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.showScores, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    new StatusPopup(host, false);
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.lastTrick, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    trickPanel.setVisible(true);
-                    update();
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.yourOffer, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    new OfferPopup(host);
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.replay, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    for (Player player : gameManager.getPlayers()) {
-                        player.abortThread(GameManager.RestartCommand.replay);
-                    }
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.submitLog, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    submitLog();
-                })},
-                {new PButton.ButtonHandler(ButtonCommand.newGame, buttonCommand -> {
-                    menuPanel.setVisible(false);
-                    for (Player player : gameManager.getPlayers()) {
-                        player.abortThread(GameManager.RestartCommand.newGame);
-                    }
-                })},
-            });
-        menuPanel.setVisible(false);
-        this.add(menuPanel);
-
-        dropPanel = new ButtonPanel( 4, 1,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.drop, buttonCommand -> currentPlayer.drop(new CardSet(selectedCards)))},
-                {new PButton.ButtonHandler(ButtonCommand.without3, buttonCommand -> returnBid(Bid.BID_WITHOUT_THREE))},
-            });
-        dropPanel.setVisible(false);
-        this.add(dropPanel);
-
-        declareRoundPanel = new ButtonPanel( 1.5, 1.5,
-            new PButton.ButtonHandler[][] {
-                {null, new PButton.ButtonHandler(ButtonCommand.greaterGame, buttonCommand -> setDeclareRoundPanel(buttonCommand)), null},
-                {new PButton.ButtonHandler(ButtonCommand.prevSuit, buttonCommand -> setDeclareRoundPanel(buttonCommand)),
-                    new PButton.ButtonHandler(ButtonCommand.select, buttonCommand -> returnBid(currentBid)),
-                    new PButton.ButtonHandler(ButtonCommand.nextSuit, buttonCommand -> setDeclareRoundPanel(buttonCommand))
-                },
-                {null, new PButton.ButtonHandler(ButtonCommand.lesserGame, buttonCommand -> setDeclareRoundPanel(buttonCommand)), null}
-            });
-        declareRoundPanel.setVisible(false);
-        this.add(declareRoundPanel);
-
-        bidPanel = new ButtonPanel(4, 1,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.minBid, buttonCommand -> returnBid(gameManager.getMinBid()))},
-                {new PButton.ButtonHandler(ButtonCommand.misere, buttonCommand -> returnBid(Bid.BID_MISERE))},
-                {new PButton.ButtonHandler(ButtonCommand.pass, buttonCommand -> returnBid(Bid.BID_PASS))}
-            });
-        bidPanel.setVisible(false);
-        this.add(bidPanel);
-
-        double scale = 0.9;
-        buttonPanel = new ButtonPanel(scale, scale,
-            new PButton.ButtonHandler[][] {{
-                new PButton.ButtonHandler(ButtonCommand.settings, buttonCommand -> new SettingsPopup(host)),
-                new PButton.ButtonHandler(ButtonCommand.comment, buttonCommand -> new NotesPopup(host)),
-                new PButton.ButtonHandler(ButtonCommand.help, buttonCommand -> new HelpPopup(host))
-            }});
-        buttonPanel.setVisible(true);
-        this.add(buttonPanel);
-
-        whistSelectionPanel = new ButtonPanel(4, 1,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.whist, buttonCommand -> returnBid(Bid.BID_WHIST))},
-                {new PButton.ButtonHandler(ButtonCommand.halfWhist, buttonCommand -> returnBid(Bid.BID_HALF_WHIST))},
-                {new PButton.ButtonHandler(ButtonCommand.pass, buttonCommand -> returnBid(Bid.BID_PASS))}
-            });
-        whistSelectionPanel.setVisible(false);
-        this.add(whistSelectionPanel);
-
-        whistOptionPanel = new ButtonPanel(4, 1,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(ButtonCommand.lying, buttonCommand -> returnBid(Bid.BID_WHIST_LAYING))},
-                {new PButton.ButtonHandler(ButtonCommand.standing, buttonCommand -> returnBid(Bid.BID_WHIST_STANDING))}
-            });
-        whistOptionPanel.setVisible(false);
-        this.add(whistOptionPanel);
-
-        // todo: remove to allow play whist standing
-        whistOptionPanel.getButton(ButtonCommand.standing).setEnabled(false);
-    }
-
 }

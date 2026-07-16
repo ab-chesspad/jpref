@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Config.Queueable {
-    public static final boolean COLORED_LOG = false;
+    public static final boolean COLORED_LOG = true;
 
     static String ansi_head = "\u001B";
     static String ansi_tail = "m";

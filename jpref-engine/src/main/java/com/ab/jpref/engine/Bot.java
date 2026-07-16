@@ -102,8 +102,11 @@ public class Bot extends Player {
         return bid;
     }
 
+    @Override
+    public void acknowledge() {}         // do nothing
+
     // stab to be overridden in MisereBot and ForTricksBot
-    PlayerBid getDrop(int elderHand) {
+    PlayerBid getDrop(int elderHand, int nDrops) {
         throw new RuntimeException("stub!");
     }
 
@@ -120,14 +123,14 @@ public class Bot extends Player {
 
     // 12 cards
     @Override
-    public void declareRound(Bid minBid, int elderHand) {
-        elderHand = (this.number - elderHand + NOP) % NOP;  // relative to self
+    public void declareRound(Bid minBid, int _elderHand) {
+        int elderHand = (this.number - _elderHand + NOP) % NOP;  // relative to self
         if (Bid.BID_MISERE.equals(minBid)) {
             targetBot = new MisereBot(this);
         } else {
             targetBot = new ForTricksBot(this);
         }
-        BidData.PlayerBid playerBid = targetBot.getDrop(elderHand);
+        BidData.PlayerBid playerBid = targetBot.getDrop(elderHand, 2);
         Bot.playerBid = playerBid;
         this.bid = targetBot.getBid();
         drop(playerBid.drops);
@@ -169,14 +172,7 @@ public class Bot extends Player {
         if (targetBot == null) {
             // when declarer is human; todo: verify declaration!
             Player declarer = gameManager().getDeclarerForDefender();
-            Card current = null;
-            if (trick.getStartedBy() == gameManager().declarerNumber && trick.size() == 1) {
-                current = trick.topCard;
-            }
-            declarer.myHand.add(current);
             declarer.declareRound(gameManager().minBid, trick.getStartedBy());
-            declarer.myHand.remove(current);
-            targetBot.myHand.remove(current);
         }
         return targetBot.play(trick);
     }
@@ -290,7 +286,7 @@ public class Bot extends Player {
                     if (!listData.good && listData.maxMeStart > listData.maxTheyStart) {
                         if (rightHand.list(suit).size() > 2 &&
                                 rightHand.list(suit).prevIndex(cardSet.first()) == 0) {
-                            // there is a sigle card less than my min, so better take this trick
+                            // there is a single card less than my min, so better take this trick
                             problems = cardSet.get(1);
                         } else {
                             problems = cardSet.first();     // give them a chance to take it
@@ -478,7 +474,7 @@ public class Bot extends Player {
             if (cardSet.size() > 1) {
                 if (rightHand.list(suit).size() > 2 &&
                         rightHand.list(suit).prevIndex(myMax) == 0) {
-                    // there is a sigle card less than my max, let's risk it
+                    // there is a single card less than my max, let's risk it
                     return myMin;
                 }
                 return cardSet.get(1);
@@ -514,7 +510,7 @@ public class Bot extends Player {
 
                     if (rightHand.list(suit).size() > 2 &&
                             rightHand.list(suit).prevIndex(myMin) == 0) {
-                            // there is a sigle card less than my min, better take this trick
+                            // there is a single card less than my min, better take this trick
                         return cardSet.get(1);
                     }
                     return myMin;
@@ -554,7 +550,7 @@ public class Bot extends Player {
                 if (cardSet.size() > 1) {
                     if (rightHand.list(suit).size() > 2 &&
                             rightHand.list(suit).prevIndex(myMin) == 0) {
-                        // there is a sigle card less than my min
+                        // there is a single card less than my min
                         if (trick.getNumber() == 0) {
                             res = cardSet.first();
                         } else {

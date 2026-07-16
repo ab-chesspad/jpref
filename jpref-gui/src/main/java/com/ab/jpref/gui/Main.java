@@ -19,15 +19,18 @@
  */
 package com.ab.jpref.gui;
 
+import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.HumanPlayer;
 import com.ab.jpref.engine.TrickList;
-import com.ab.jpref.gui.config.Metrics;
+import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
-import static com.ab.jpref.gui.config.PConfig.Host;
 import static com.ab.jpref.gui.config.PConfig.NOP;
 
+import com.ab.jpref.gui.config.SettingsPopup;
 import com.ab.jpref.trickpool.TrickPool;
+import com.ab.jpref.ui.Host;
+import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
 
 import static com.ab.util.Util.currMethodName;
@@ -46,11 +49,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Main implements Logger.LogHolder, Host {
-    static final boolean release = true;
-    static boolean DEBUG_LOG = true;
+    static final boolean release = false;
+    static boolean DEBUG_LOG = false;
     public static boolean SHOW_ALL = true;
     public static final String LOG_EXT = ".log";
     public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
+    public static final double MAGIC_ASPECT_RATIO = 722d / 505d;
     static {
          PConfig.getInstance().release.set(release);
     }
@@ -77,9 +81,11 @@ public class Main implements Logger.LogHolder, Host {
     private PrintStream logStream;
     private long logStartDate;
 
-    String GUID;
-
     static InputStream testInputStream;
+    private final MainPanel mainPanel;
+    private final TableLayout<Graphics> tableLayout;
+    private final Metrics metrics;
+    private final Config config;
 
     /**
      * @param args optional [fixed-games-file]
@@ -92,12 +98,8 @@ public class Main implements Logger.LogHolder, Host {
 
     public Main(String[] args) {
         TrickList.setTrickPool(new TrickPool());
-        // we need it to upload log files
-        GUID = PConfig.getInstance().GUID.get();
-        if (GUID == null) {
-            GUID = java.util.UUID.randomUUID().toString();
-            PConfig.getInstance().GUID.set(GUID);
-        }
+        metrics = Metrics.getInstance();
+        config = PConfig.getInstance();
 
 /* until IntelliJ adds ansi colors handling to their debugger,
    output to System.out will be ugly and useless
@@ -141,7 +143,9 @@ public class Main implements Logger.LogHolder, Host {
                 mainRectangle.height -= insets.top;
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
                 PConfig.getInstance().mainRectangle.set(mainRectangle);
-                Metrics.getInstance().recalculateSizes();
+                PConfig.getInstance().mainSize.first = mainRectangle.width;
+                PConfig.getInstance().mainSize.second = mainRectangle.height;
+                tableLayout.update(null);
             }
 
             @Override
@@ -172,10 +176,12 @@ public class Main implements Logger.LogHolder, Host {
         mainFrame.setTitle(PConfig.PROJECT_NAME);
         mainFrame.setVisible(true);
 
-        MainPanel mainPanel = new MainPanel(this);
+        mainPanel = new MainPanel(this);
         mainContainer.add(mainPanel);
+        tableLayout = new TableLayout<>(this, mainPanel);
 
-        GameManager gameManager = new GameManager(PConfig.getInstance(), mainPanel);
+        // wait for config.size?
+        GameManager gameManager = new GameManager(PConfig.getInstance(), tableLayout);
         new Thread(() -> {
             try {
                 while (true) {
@@ -225,8 +231,17 @@ public class Main implements Logger.LogHolder, Host {
                 insets.left, insets.right, insets.top, insets.bottom);
         mainRectangle = PConfig.getInstance().mainRectangle.get();
         if (mainRectangle.width == 0) {
-            mainRectangle.width = (fullScreen.width - insets.left - insets.right) / 2;
-            mainRectangle.height = (fullScreen.height - insets.top - insets.bottom) / 2;
+            int w = fullScreen.width - insets.left - insets.right;
+            int h = fullScreen.height - insets.top - insets.bottom;
+            if ( h > w) {
+                w /= 2;
+                h = (int)(w * MAGIC_ASPECT_RATIO);
+            } else {
+                h = h * 2 / 3;
+                w = (int)(h / MAGIC_ASPECT_RATIO);
+            }
+            mainRectangle.width = w;
+            mainRectangle.height = h;
             mainRectangle.x = (fullScreen.width - mainRectangle.width) / 2;
             mainRectangle.y = (fullScreen.height - mainRectangle.height) / 2;
         }
@@ -308,18 +323,18 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     @Override
-    public JFrame mainFrame() {
-        return mainFrame;
+    public Metrics getMetrics() {
+        return metrics;
+    }
+
+    @Override
+    public Config getConfig() {
+        return config;
     }
 
     @Override
     public String getLogFileName() {
         return logFileName;
-    }
-
-    @Override
-    public boolean testing() {
-        return testInputStream != null;
     }
 
     @Override
@@ -359,5 +374,10 @@ public class Main implements Logger.LogHolder, Host {
             res |= Host.SPECIAL_OPTION_SHOW_CARDS;
         }
         return res;
+    }
+
+    @Override
+    public void updateSettings() {
+        new SettingsPopup(this);
     }
 }

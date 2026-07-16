@@ -13,31 +13,31 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see [http://www.gnu.org/licenses/].
  *
- * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
+ * Copyright (C) 2026 Alexander Bootman <ab.jpref@gmail.com>
  *
- * Created: 1/11/2026
+ * Created: 6/19/26
+ *
  */
-package com.ab.util;
 
-import java.io.Serializable;
+package com.ab.jpref.ui;
 
-public class Tuple<T> implements Serializable {
-    T[] values;
+import com.ab.jpref.config.Config;
+import com.ab.jpref.config.Metrics;
 
-    @SafeVarargs
-    public Tuple(T... values) {
-        this.values = values;
-    }
+public interface Host {
+    int SPECIAL_OPTION_SHOW_CARDS = 0x1;
+    int SPECIAL_OPTION_MANUAL = 0x1;
 
-    public T[] getValues() {
-        return values;
-    }
+    int specialOption();
+    void repaint(); // todo: remove
 
-    public T getValue(int i) {
-        return values[i];
-    }
+    Metrics getMetrics();
 
-    public void setValue(int i, T value) {
-        values[i] = value;
-    }
+    Config getConfig();
+
+    String getLogFileName();
+
+    long buildDate();
+
+    void updateSettings();
 }

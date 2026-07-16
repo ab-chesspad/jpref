@@ -1,5 +1,7 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
+deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 6♠ 7
+
 declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
 ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79XK ♥78  ♠9JKA ♣9JK ♦Q ♥JQ  
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
@@ -29,8 +31,6 @@ deal: ♠JQ ♣9QKA ♦7A ♥8A  ♠78KA ♣7X ♦XK ♥XQ  ♠9X ♣8 ♦89J �
 [♠A9 ♣9, ♠7J ♣Q, ♠K ♣A ♠8, ♣X ♦9 ♠X, ♠Q ♣J ♦J, ♦K7 ♥7, ♥9A8, ♣K ♥X ♦X, ♦8 ♥J ♦A, ♥K ♦Q ♥Q]
 list build duration: 1 sec, positions 96314
 deal: ♠78XQA ♦XKA ♥9K  ♠9JK ♣XJK ♦78Q ♥A  ♣9QA ♦9J ♥7X8JQ  ♣78  0 -> 6♠ 6
-
-deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 6- 7
 
 deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> All-pass
 

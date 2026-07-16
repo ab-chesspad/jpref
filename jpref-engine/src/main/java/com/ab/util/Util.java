@@ -24,6 +24,10 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -41,7 +45,6 @@ public class Util {
         windows,
         unknown
     }
-    final OS os = getOS();
 
     public static final Random myRand = new Random();
 
@@ -79,7 +82,7 @@ public class Util {
             Process process = Runtime.getRuntime().exec(command);
             BufferedReader stdInput = new BufferedReader(new
                     InputStreamReader(process.getInputStream()));
-            String line = null;
+            String line;
             while ((line = stdInput.readLine()) != null) {
                 if (line.startsWith("model name")) {
                     int index = line.indexOf(": ");
@@ -96,6 +99,90 @@ public class Util {
         res += String.format("totalMemory=%,dMB, freeMemory=%,dMB",
             Runtime.getRuntime().totalMemory() / 1000000,
             Runtime.getRuntime().freeMemory() / 1000000);
+        return res;
+    }
+
+    // return result file name
+    public String submitLog(String filePath) {
+        final String CrLf = "\r\n";
+        final String url = "http://jpref.elementfx.com/upload.php";
+        final String boundary = "---------------------------4664151417711";
+
+        String res;
+        OutputStream os = null;
+        InputStream is = null;
+        File f = new File(filePath);
+        String fileName = f.getName();
+        String GUID = java.util.UUID.randomUUID().toString();
+        String remoteFileName = GUID + "-" + fileName;
+        System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
+
+        try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
+            byte[] fileData= new byte[input.available()];
+            input.read(fileData);
+            String message1 = "";
+            message1 += "--" + boundary + CrLf;
+            message1 += "Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + remoteFileName + "\"" + CrLf;
+            message1 += "Content-Type: text/plain" + CrLf;
+            message1 += CrLf;
+
+            // the file is sent between the messages in the multipart message.
+            String message2 = "";
+            message2 += CrLf + "--" + boundary + "--" + CrLf;
+
+            URLConnection conn = new URI(url).toURL().openConnection();
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type",
+                "multipart/form-data; boundary=" + boundary);
+            // might not need to specify the content-length when sending chunked data.
+            conn.setRequestProperty("Content-Length",
+                String.valueOf((message1.length() + message2.length() + fileData.length)));
+
+            os = conn.getOutputStream();
+            os.write(message1.getBytes());
+            // send the file body
+            int index = 0;
+            int size = 1024;
+            do {
+                if ((index + size) > fileData.length) {
+                    size = fileData.length - index;
+                }
+                os.write(fileData, index, size);
+                index += size;
+            } while (index < fileData.length);
+            os.write(message2.getBytes());
+            os.flush();
+            is = conn.getInputStream();
+
+            char buff = 512;
+            int len;
+            byte[] data = new byte[buff];
+            StringBuilder sb = new StringBuilder();
+            do {
+                len = is.read(data);
+                if (len > 0) {
+                    sb.append(new String(data, 0, len)).append("\n");
+                }
+            } while (len > 0);
+            res = sb.toString();
+            System.out.println(res);
+            if (res.startsWith(GUID)) {
+                res = res.substring(GUID.length() + 1);
+            }
+        } catch(IOException | URISyntaxException e) {
+            res = e.toString();
+        } finally {
+            try {
+                os.close();
+                if (is == null) {
+                    throw new IOException("log submission error");
+                }
+                is.close();
+            } catch(IOException e){
+                // ignore
+                res = e.toString();
+            }
+        }
         return res;
     }
 
@@ -204,7 +291,7 @@ public class Util {
         return myRand.nextInt(max);
     }
 
-    public void sleep(int timeout) {
+    public static synchronized void sleep(int timeout) {
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {
@@ -213,6 +300,8 @@ public class Util {
     }
 
     public static String currMethodName() {
-        return Thread.currentThread().getStackTrace()[2].getMethodName();
+        int i = -1;
+        while (!Thread.currentThread().getStackTrace()[++i].getMethodName().equals("currMethodName"));
+        return Thread.currentThread().getStackTrace()[++i].getMethodName();
     }
 }

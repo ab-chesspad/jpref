@@ -17,7 +17,7 @@ specifically to allow more testing.
 <!--*** REMOTE ***-->
 <font size="5"><b>Installation</b></font><br/>
 The program can run on all OS that support standard Java, like Windows, macOS, Linux.<br/>
-JRE 1.8 or later is needed to run JPref.<br/>
+JRE 1.8 or later is needed to run <b>JPref</b>.<br/>
 If you do not have JRE installed, you can find all the necessary instructions here:
 <a href="https://www.java.com/en/download/help/download_options.html">www.java.com/en/download/help/download_options.html.</a>
 If you do not plan to build this project and just want to play with the program, JRE will be enough,
@@ -34,42 +34,41 @@ If the list of deals is specified, it will be used for playing instead of random
 This allows better program testing.
 <br/>
 Log file that the program generates (see below) can be used as a list of deals,
-so the recorded games can be replayed.
+so the previous games can be replayed.
 <br/>
 <br/>
 <font size="5"><b>Running the program</b></font><br/>
-The buttons in the bottom-right corner are:
-<ul>
-    <li>Settings.</li>
-    <li>Log your comments.</li>
-    <li>Help - this file/screen.</li>
-</ul>
+Playing preferans with <b>JPref</b> is rather intuitive.<br/>
+Card selection is simplified, it requires
+a single right-button mouse click (later it will be configurable).<br/>
 
-Card selection during the play is simplified, it requires
-a single left-button mouse click (later it will be configurable).<br/>
-Right-button mouse click invokes the program menu:
+The button in the bottom-right corner invokes the program menu:
 <ul>
-    <li>Scores - show score table.</li>
+    <li>Scores - show the score table.</li>
     <li>Last Trick - show the last trick.</li>
     <li>Your Offer - negotiate the round results.</li>
     <li>Replay - replay the current deal.</li>
+    <li>New Round - the current round will be aborted.</li>
+    <li>Comments - see below.</li>
     <li>Submit Log - see below.</li>
-    <li>New Game - the current game will be aborted.</li>
+    <li>Settings - guess.</li>
+    <li>Help - this file/screen.</li>
 </ul>
 In addition to the settings that can be updated explicitly,
 the program window location and size are preserved,
-so JPref will open on the same spot the next time.<br/>
+so <b>JPref</b> will open on the same spot the next time.<br/>
 At the end of the round you'll see the scores. If you dismiss this pop-up window
-with <b>Replay</b> button, the program will replay the last round in the manual mode
+with <b>Replay</b> button (this command is completely different from the menu <b>Replay</b>),
+the program will replay the last round in the manual mode
 when all moves have to be done manually and all the cards are visible.
 This feature allows the user to verify his/her and the program moves,
-and possibly find the errors in the <b>JPref</b> algorithm.
+and possibly find errors in the <b>JPref</b> algorithm.
 <br/><br/>
 The important program feature is logging. The program records there all the games. Logs are located in
 'logs' directory, either next to jpref.jar
 file (macOS, Linux), or in &lt;your home folder&gt;\jpref (Windows).
 New log is opened with a new program launch or with the new day.<br/>
-Button Comments (second right in the bottom right corner) invokes the comment window.
+Menu item <b>Comments</b> invokes the comment window.
 It is important to record the program errors, stupid moves, etc.<br/>
 The whole comment text will be written into the log that the user can submit to the developer:
 <ul>

@@ -53,7 +53,8 @@ public class BaseTrick {
 
     public static final int TOTAL_USED_BITS = INDEX_SHIFT + INDEX_MASK_LEN;                 // 53
 
-    private static final long FORECAST_DONE_BIT = (1L << 63);                                     // 63
+    // for multithreaded TrickList, not in use anymore
+    private static final long FORECAST_DONE_BIT = (1L << 63);                               // 63
 
     long trickData = 0;
 
@@ -125,9 +126,6 @@ public class BaseTrick {
 
     public static int getStartedBy(long trickData) {
         int res = (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
-        if (res > 9) {
-            res = res - 16;
-        }
         return res;
     }
 
@@ -279,11 +277,7 @@ public class BaseTrick {
     }
 
     public int getStartedBy() {
-        int res = (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
-        if (res > 9) {
-            res = res - 16;
-        }
-        return res;
+        return (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
     }
 
     public void setStartedBy(int number) {
@@ -333,6 +327,7 @@ public class BaseTrick {
 
     @Override
     public String toString() {
+//        refresh();
         return toString(this.trickData);
     }
 

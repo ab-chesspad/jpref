@@ -93,6 +93,10 @@ public class CardList extends ArrayList<Card> {
         super(cards);
     }
 
+    public CardList(Card card) {
+        this.add(card);
+    }
+
     public Card first() {
         if (isEmpty()) {
             return null;

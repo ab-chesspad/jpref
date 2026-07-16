@@ -26,12 +26,13 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import static com.ab.jpref.config.Config.ROUND_SIZE;
 import com.ab.util.BidData.PlayerBid;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 
 import java.util.*;
+
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 
 public class MisereBot extends Bot {
 //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
@@ -172,15 +173,15 @@ public class MisereBot extends Bot {
     }
 
     @Override
-    PlayerBid getDrop(int elderHand) {
+    PlayerBid getDrop(int elderHand, int nDrops) {
         PlayerBid playerBid = new PlayerBid(Config.Bid.BID_MISERE);
         if (debugDrop != null) {
             playerBid.drops = new CardSet(debugDrop);
             return playerBid;
         }
-        int drop = this.myHand.size() - ROUND_SIZE;
+//        int drop = this.myHand.size() - ROUND_SIZE;
         if (Bot.playerBid != null) {
-            if (drop == 2) {
+            if (nDrops == 2) {
                 return Bot.playerBid;
             }
             if (this.myHand.contains(Bot.playerBid.drops) &&
@@ -189,7 +190,7 @@ public class MisereBot extends Bot {
             }
         }
 
-        if (drop == 0) {
+        if (nDrops == 0) {
             return playerBid;   // nothing to drop
         }
         Logger.printf(DEBUG_LOG, "getDrop(%d), %s\n", elderHand, this.myHand.toColorString());
@@ -422,7 +423,7 @@ probes:
         }
         if (misereBot.myHand.size() > rightSize) {
             int elderHand = (this.number - gameManager().elderHand + NOP) % NOP;  // relative to self
-            PlayerBid playerBid = misereBot.getDrop(elderHand);
+            PlayerBid playerBid = misereBot.getDrop(elderHand, misereBot.myHand.size() - ROUND_SIZE);
             misereBot.drop(playerBid.drops);
         }
         return misereBot;
@@ -455,6 +456,9 @@ probes:
         Bot.trick = trickNode;
         misereBot.getHoles(0);
         Card card = misereBot.declarerPlay();
+        if (card == null) {
+            throw new RuntimeException("card == null");
+        }
         if (!misereBot.myHand.contains(card)) {
             throw new RuntimeException(String.format("err: card %s does not belong to %s",
                 card.toColorString(), misereBot.myHand.toColorString()));

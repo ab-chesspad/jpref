@@ -31,21 +31,15 @@ public class PConfig extends Config {
     // update serialVersionUID every time a property is being added/changed!
     private static final long serialVersionUID = 9L;
 
-    // these are for my macbook pro with external display because I'm a lazy bum
-    private static final Rectangle DEFAULT_RECTANGLE = new Rectangle(7, 1634,1794,1929);
-    private static final Rectangle DEFAULT_SCORES_RECTANGLE = new Rectangle(1875,1716,1032,1128);
-
-    public final Property<Rectangle> mainRectangle;
-    public final Property<Rectangle> scoresPopupRectangle;
+    public final Property<Rectangle> mainRectangle = new Property<>("", new Rectangle());
+    public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> settingsPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> helpPopupRectangle = new Property<>("", new Rectangle());
 
     public final ColorProperty bgColor = new ColorProperty("", "#007000");
-//    public final ColorProperty bgColor = new ColorProperty("Table Color", "#007000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
-    public final Property<String> GUID = new Property<>("", null);
 
     static final PUtil util = PUtil.getInstance();
 
@@ -73,13 +67,8 @@ public class PConfig extends Config {
         }
         this.language.get().setSelected(defaultLang);
 
-        if (this.release.get()) {
-            mainRectangle = new Property<>("", new Rectangle());
-            scoresPopupRectangle = new Property<>("", new Rectangle());
-        } else {
-            mainRectangle = new Property<>("", DEFAULT_RECTANGLE);
-            scoresPopupRectangle = new Property<>("", DEFAULT_SCORES_RECTANGLE);
-        }
+        mainSize.first = mainRectangle.get().width;
+        mainSize.second = mainRectangle.get().height;
     }
 
     public static PConfig unserialize() {
@@ -97,7 +86,10 @@ public class PConfig extends Config {
             instance = new PConfig();
         }
         if (_instance != null) {
+            // restore
             ((PConfig)instance).mainRectangle.set(_instance.mainRectangle.get());
+            ((PConfig)instance).mainSize.first = _instance.mainRectangle.get().width;
+            ((PConfig)instance).mainSize.second = _instance.mainRectangle.get().height;
             ((PConfig)instance).scoresPopupRectangle.set(_instance.scoresPopupRectangle.get());
             ((PConfig)instance).settingsPopupRectangle.set(_instance.settingsPopupRectangle.get());
             ((PConfig)instance).helpPopupRectangle.set(_instance.helpPopupRectangle.get());
@@ -123,14 +115,4 @@ public class PConfig extends Config {
         }
 
     }
-
-    public interface Host extends Config.Host {
-        int SPECIAL_OPTION_SHOW_CARDS = 0x1;
-        int SPECIAL_OPTION_MANUAL = 0x1;
-
-        int specialOption();
-        void repaint();
-        JFrame mainFrame();
-    }
-
 }

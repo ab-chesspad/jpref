@@ -21,23 +21,15 @@
 
 package com.ab.jpref.gui;
 
-import com.ab.jpref.engine.Bot;
+import com.ab.jpref.config.Metrics;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.MisereBot;
-import com.ab.jpref.engine.Player;
-import com.ab.jpref.gui.config.PConfig.Host;
-import com.ab.jpref.gui.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
-import com.ab.jpref.gui.widgets.ButtonPanel;
-import com.ab.jpref.gui.widgets.PButton;
+import com.ab.jpref.ui.TableLayout;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-import static com.ab.jpref.config.Config.Bid;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.jpref.config.I18n.m;
 
@@ -50,77 +42,29 @@ public class OfferPopup extends JDialog {
     final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
 
     final JList<String> jList;
-    final int minTricks;
-    final int maxTricks;
     int selectedIndex = -1;
 
-    public OfferPopup(Host host) {
-        super(host.mainFrame(), false);
+    JButton acceptButton = null;
+    int result = -1;
+
+    public OfferPopup(int minTricks, int maxTricks) {
+        super(Main.mainFrame, true);
         popupInstance = this;
 
         gameManager = GameManager.getInstance();
-        Player[] players = gameManager.getPlayers();
-        Player player0 = players[0];
-        int theirTricks = players[1].getTricks() + players[2].getTricks();
-        int tricksEstimate;
-        if (Bot.trickList == null) {
-            if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
-                tricksEstimate = ROUND_SIZE - players[gameManager.declarerNumber].getTricks();
-                if (Bot.targetBot instanceof MisereBot) {
-                    ((MisereBot)Bot.targetBot).getHoles(gameManager.declarerNumber);
-                    tricksEstimate -= ((MisereBot)Bot.targetBot).holes.size();
-                }
-            } else {
-                tricksEstimate = 0;
-            }
-        } else {
-            tricksEstimate = Bot.trickList.getEstimate();
-        }
-
-        if (player0.getBid().equals(Bid.BID_MISERE)) {
-            minTricks = tricksEstimate;
-            maxTricks = ROUND_SIZE - theirTricks;
-        } else if (player0.getBid().equals(Bid.BID_WHIST)) {
-            int _minTricks = players[0].getTricks();
-            if (players[1].getBid() == Bid.BID_PASS) {
-                _minTricks += players[1].getTricks();
-            } else {
-                _minTricks += players[2].getTricks();
-            }
-            if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
-                minTricks = tricksEstimate;
-                maxTricks = ROUND_SIZE - players[gameManager.declarerNumber].getTricks();
-            } else {
-                minTricks = _minTricks;
-                maxTricks = ROUND_SIZE - tricksEstimate;
-            }
-        } else {
-            // for tricks play
-            if (player0.getTricks() > 0) {
-                minTricks = player0.getTricks();
-            } else {
-                minTricks = 0;
-            }
-            if (ROUND_SIZE - theirTricks < tricksEstimate) {
-                maxTricks = ROUND_SIZE - theirTricks;
-            } else {
-                maxTricks = tricksEstimate;
-            }
-        }
-
         setTitle(m("Your Offer"));
-        Rectangle mainRectangle = (Rectangle) PConfig.getInstance().mainRectangle.get().clone();
-        mainRectangle.width /= 4;
+        Rectangle mainRectangle = new Rectangle(PConfig.getInstance().mainRectangle.get());
+        mainRectangle.width /= 2;
         mainRectangle.height /= 2;
         setSize(mainRectangle.width, mainRectangle.height);
 
-        setLocationRelativeTo(host.mainFrame());
+        setLocationRelativeTo(Main.mainFrame);
         Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW / 5));
         int size = font.getSize();
         BufferedImage scaledLineImage = pUtil.scale(lineImage, size, size);
         Icon lineIcon = new ImageIcon(scaledLineImage);
-        BufferedImage scaledSelectdLineImage = pUtil.scale(selectedLineImage, size, size);
-        Icon selectedLineIcon = new ImageIcon(scaledSelectdLineImage);
+        BufferedImage scaledSelectedLineImage = pUtil.scale(selectedLineImage, size, size);
+        Icon selectedLineIcon = new ImageIcon(scaledSelectedLineImage);
 
         // 0. top label
         JLabel jLab = new JLabel(m("Your Tricks"), SwingConstants.CENTER);
@@ -128,18 +72,7 @@ public class OfferPopup extends JDialog {
         jLab.setOpaque(true);
         add(jLab, BorderLayout.NORTH);
 
-        // 1. bottom buttons
-        ButtonPanel buttonPanel = new ButtonPanel(.8, .8,
-            new PButton.ButtonHandler[][] {
-                {new PButton.ButtonHandler(MainPanel.ButtonCommand.accept, buttonCommand -> accept()),
-                    new PButton.ButtonHandler(MainPanel.ButtonCommand.cancel, buttonCommand -> cancel())
-                }});
-        buttonPanel.setFont(font);
-        add(buttonPanel, BorderLayout.SOUTH);
-        final PButton okButton = buttonPanel.getButton(MainPanel.ButtonCommand.accept);
-        okButton.setEnabled(false);
-
-        // 2. list of settings
+        // 1. list of settings
         final String[] values = {
             "10",
             "9",
@@ -154,13 +87,14 @@ public class OfferPopup extends JDialog {
             "0",
         };
 
-        JLabel[] jLabels = new JLabel[values.length];
+        final JLabel[] jLabels = new JLabel[values.length];
         jList = new JList<>(values);
         jList.setCellRenderer((jList, value, index, isSelected, cellHasFocus) -> {
             String text = m(value);
             JLabel jLabel = jLabels[index];
             if (jLabel == null) {
                 jLabel = new JLabel(text, lineIcon, JLabel.LEFT);
+                jLabels[index] = jLabel;
                 jLabel.setFont(font);
                 jLabel.setOpaque(true);
             }
@@ -169,10 +103,11 @@ public class OfferPopup extends JDialog {
                 jLabel.setForeground(Color.GRAY);
             } else if (isSelected) {
                 jLabel.setIcon(selectedLineIcon);
+                jLabel.setForeground(Color.RED);
             } else {
                 jLabel.setIcon(lineIcon);
+                jLabel.setForeground(Color.BLACK);
             }
-
             return jLabel;
         });
         jList.addListSelectionListener(event -> {
@@ -180,36 +115,32 @@ public class OfferPopup extends JDialog {
                 int index = jList.getSelectedIndex();
                 if (index >= (ROUND_SIZE - maxTricks) && index <= (ROUND_SIZE - minTricks)) {
                     selectedIndex = index;
-                    okButton.setEnabled(true);
+                    acceptButton.setEnabled(true);
                 } else {
                     jList.setSelectedIndex(selectedIndex);
                 }
             }
         });
-        JScrollPane scrollPane = new JScrollPane(jList);
-        add(scrollPane, BorderLayout.CENTER);
+        JPanel centerPanel = new JPanel(new GridBagLayout());
+        centerPanel.add(jList);
+        add(centerPanel, BorderLayout.CENTER);
 
+        // 2. bottom buttons
+        JPanel jPanel = new JPanel();
+        acceptButton = new JButton(m(TableLayout.ButtonCommand.accept.getName()));
+        acceptButton.setEnabled(false);
+        acceptButton.addActionListener(actionEvent -> {
+            popupInstance.dispose();
+            result = ROUND_SIZE - jList.getSelectedIndex();
+        });
+        jPanel.add(acceptButton);
+        JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton.addActionListener(actionEvent -> {
+            popupInstance.dispose();
+            result = -1;
+        });
+        jPanel.add(cancelButton);
+        add(jPanel, BorderLayout.SOUTH);
         setVisible(true);
-        host.repaint();
-    }
-
-    private void accept() {
-        int others = jList.getSelectedIndex();
-        int acceptedTricks = ROUND_SIZE - others;
-        Player[] players = gameManager.getPlayers();
-        players[0].setTricks(acceptedTricks);
-        if (players[2].getBid() == Bid.BID_PASS) {
-            players[1].setTricks(others);
-        } else {
-            players[2].setTricks(others);
-        }
-        popupInstance.dispose();
-        for (Player player : gameManager.getPlayers()) {
-            player.abortThread(GameManager.RestartCommand.offer);
-        }
-    }
-
-    private void cancel() {
-        popupInstance.dispose();
     }
 }

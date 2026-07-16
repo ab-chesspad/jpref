@@ -143,7 +143,7 @@ public class Trick extends BaseTrick {
 
         Player[] players = gameManager.players;
         if (discardingPlayer >= 0) {
-            CardSet remove = CardSet.getList(startingSuit);
+            CardSet remove = CardSet.getDeck(startingSuit);
             players[discardingPlayer].myHand.remove(remove);
             players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
             players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);
@@ -154,13 +154,10 @@ public class Trick extends BaseTrick {
                     if (targetBot != null) {
                         targetBot.myHand.remove(remove);
                     }
-                    if (Bot.playerBid != null) {
-                        Bot.playerBid.drops.remove(remove);     // we may need them to recalc declarer's drops
-                    }
                 }
             }
             if (trumpSuit != null && !card.getSuit().equals(trumpSuit)) {
-                remove = CardSet.getList(trumpSuit);
+                remove = CardSet.getDeck(trumpSuit);
                 players[discardingPlayer].myHand.remove(remove);
                 players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
                 players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);

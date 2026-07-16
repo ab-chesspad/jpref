@@ -12,28 +12,35 @@ public class TestBidData {
     public void testGetBid() {
         String[] sources = {
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
+            "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦QA",
+            "♠78QK ♣QKA ♦QA ♥JQA  1 -> 6♠ : ♦QA",
+            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
+            "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♦ : ♣QK",
+            "♠QK ♣KA ♦8QK ♥78JQA  0 -> 7♥ : ♠QK",
+            "♠78JQA ♣8QK ♦QK ♥KA  0 -> 7♠ : ♦QK",
+            "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
+            "♠79XJQA ♦8XJKA  2 -> 9♠",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
-//            "♠7JQ ♣QA ♦XQKA ♥89X  0  7- -> 8♦ : ♣Q ♥8",
             // 11 cards, no drop:
             "♠79JQA ♣JA ♦XK ♥79  2 -> Pass",
             "♠JA ♣79JQA ♦XK ♥78  2 -> Pass",
             "♠JQK ♣8QA ♦8A ♥QKA  0 -> 7-",
             "♠JQK ♣8QKA ♦8A ♥QK  0 -> 8♣",
             "♠JQK ♣8QKA ♦8A ♥QK  1 -> 7♣",
-            "♠79XJQA ♦8XJKA  2 -> 9♠",
             "♠79XJQA ♣8JA ♦K ♥8  2 -> 6♠",
 
-            "♠8KA ♣78KA ♦7 ♥7JQK  0  8♦ -> 8♥ : ♠8 ♦7",
-            "♠XJQ ♣89JQKA ♦7X ♥A  1  7♦ -> 8♣ : ♦7X",
-            "♠XJQ ♣89JQKA ♦7X ♥A  1  8♠ -> 8♣ : ♦7X",
             "♠XJQ ♣89JQKA ♦7X ♥A  0 -> 8♣ : ♦7X",
             "♠XJQ ♣89JQKA ♦7X ♥A  1  7♠ -> 7♣ : ♦7X",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
-            "♠79XJQA ♣8JA ♦XK ♥8  2  6♥ -> 7♠ : ♦X ♥8",
-            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♣Q ♥8",
-            "♠78JQA ♣8QK ♦QK ♥KA  0 -> 7♠ : ♦QK",
+
+            // overbidding
+//            "♠7JQ ♣QA ♦XQKA ♥89X  0  7- -> 8♦ : ♣Q ♥8",
+//            "♠8KA ♣78KA ♦7 ♥7JQK  0  8♦ -> 8♥ : ♠8 ♦7",
+//            "♠XJQ ♣89JQKA ♦7X ♥A  1  7♦ -> 8♣ : ♦7X",
+//            "♠XJQ ♣89JQKA ♦7X ♥A  1  8♠ -> 8♣ : ♦7X",
+//            "♠79XJQA ♣8JA ♦XK ♥8  2  6♥ -> 7♠ : ♦X ♥8",
+//            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♣Q ♥8",
             "♣A ♦79XQA ♥79XQKA  0 -> 8♥ : ♣A ♦7",
-            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
             "♦789XQA ♥79XQKA  0 -> 9♦ : ♥79",
             "♠KA ♣9XJ ♦KA ♥78JQA  1 -> 8♥ : ♣9X",
             "♠9JQKA ♣8QA ♦8A ♥QK  0 -> 8♠ : ♣8 ♦8",
@@ -60,7 +67,7 @@ public class TestBidData {
                 expectedDrops = new CardSet(util.toCardList(_parts[1]));
             }
 
-            BidData.PlayerBid playerBid = BidData.getBid(hand, minBid, elderhand);
+            BidData.PlayerBid playerBid = BidData.getBid(hand, minBid, elderhand, hand.size() - 10);
             Bid bid = playerBid.toBid();
             Assert.assertEquals("bid", expectedBid, bid);
             if (expectedDrops != null) {

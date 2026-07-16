@@ -32,10 +32,12 @@ import org.junit.Test;
 public class TestScoreCalculator {
     public static final int NOP = Config.NOP;
     static final Config config = Config.getInstance();
+    static GameManager gameManager;
 
     @BeforeClass
     public static void initClass() {
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
+        gameManager = new GameManager(config, null);
         config.pauseBetweenRounds.set(0);
     }
 

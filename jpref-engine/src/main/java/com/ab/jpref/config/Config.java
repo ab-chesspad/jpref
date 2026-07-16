@@ -33,7 +33,6 @@ package com.ab.jpref.config;
 
 import com.ab.jpref.cards.Card;
 import com.ab.util.Couple;
-import com.ab.util.Tuple;
 
 import java.io.*;
 
@@ -44,15 +43,14 @@ public class Config implements Serializable {
 
     public final Property<Boolean> release = new Property<>("", true);
 
+    public final Couple<Integer> mainSize = new Couple<>(0, 0);
+
     public final Property<Selection<Couple<String>>> language =
         new Property<>("Language", true, new Selection<>(
             new Couple<>("English", "en"),
             new Couple<>("Русский", "ru"),
             new Couple<>("Олбанский", "ol")   // nerd's joke
         ));
-
-    public final Property<Tuple<String>> playerNames = new Property<>("Player's Names", true,
-        new Tuple<>("Аня", "Боря", "Витя"));
 
     public enum GameType implements Selectable<GameType> {
         Miami,
@@ -85,7 +83,7 @@ public class Config implements Serializable {
 
     public final Property<Integer> pauseBetweenRounds = new Property<>("", 100);
 //    public final Property<IntTriplet> animDelay = new Property<>("Animation Timeout", new IntTriplet(100, 1, 200));
-    public final Property<Integer> animDelay = new Property<>("", 100);
+//    public final Property<Integer> animDelay = new Property<>("", 100);
 
     public final Property<Integer> deleteLogsAfter = new Property<>("Delete logs after, days", 1);
 
@@ -188,14 +186,6 @@ public class Config implements Serializable {
         T[] getAll();
     }
 
-    public String getPlayerName(int number) {
-        String[] allPNames = playerNames.get().getValues();
-        if (number < 0 || number >= allPNames.length) {
-            return "";  // for talon
-        }
-        return allPNames[number];
-    }
-
     public static class Property<T> implements Serializable {
         private final String label;
         private final boolean visual;
@@ -237,7 +227,7 @@ public class Config implements Serializable {
         BID_WHIST_LAYING(43, "Whist Lying"),
         BID_WHIST_STANDING(44, "Whist Standing"),
 
-        BID_UNDEFINED(50, "---"),     // before actual bidding
+        BID_UNDEFINED(50, "?"),     // before actual bidding
         BID_ALL_PASS(55, "All-pass"),
         BID_PASS(59, "Pass"),
         BID_WITHOUT_THREE(60, "Without 3"),
@@ -308,11 +298,6 @@ public class Config implements Serializable {
             return null;
         }
 
-        public static Bid fromParams(int tricks, Card.Suit suit) {
-            int value = tricks * 10 + suit.getValue() + 1;
-            return fromValue(value);
-        }
-
         public Bid next() {
             return values()[this.ordinal() + 1];
         }
@@ -355,12 +340,6 @@ public class Config implements Serializable {
         public String toString() {
             return getName();
         }
-    }
-
-    public interface Host {
-        default String getLogFileName() { return null; }
-        default boolean testing() { return false; }
-        long buildDate();
     }
 
 }

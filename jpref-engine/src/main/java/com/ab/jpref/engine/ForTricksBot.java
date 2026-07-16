@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.ab.jpref.cards.Card.Suit;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 
 public class ForTricksBot extends Bot {
     PlayerBid maxPlayerBid;
@@ -57,7 +58,7 @@ public class ForTricksBot extends Bot {
             Card card0 = Card.get(bit0);
             myHand.add(card0);
             // 11 cards
-            PlayerBid playerBid = BidData.getBid(myHand, minBid, elderHand);
+            PlayerBid playerBid = BidData.getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
             playerBid.drops.add(card0);     // for testing
             playerBids.add(playerBid);
             myHand.remove(card0);
@@ -75,14 +76,14 @@ public class ForTricksBot extends Bot {
     }
 
     @Override
-    public PlayerBid getDrop(int elderHand) {
+    public PlayerBid getDrop(int elderHand, int nDrops) {
         if (debugDrop != null) {
             PlayerBid playerBid = new PlayerBid(this.bid);
             playerBid.drops = new CardSet(debugDrop);
             return playerBid;
         }
         if (playerBid == null || !myHand.contains(playerBid.drops)) {
-            playerBid = BidData.getBid(myHand, bid, elderHand);
+            playerBid = BidData.getBid(myHand, bid, elderHand, nDrops);
         }
         this.bid = playerBid.toBid();
         return playerBid;

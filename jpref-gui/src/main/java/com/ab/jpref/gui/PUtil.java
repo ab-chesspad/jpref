@@ -20,21 +20,14 @@
 package com.ab.jpref.gui;
 
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.gui.config.PConfig;
 import com.ab.util.Util;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class PUtil extends Util {
     private static PUtil instance;
@@ -90,89 +83,5 @@ public class PUtil extends Util {
         g.drawImage(original, 0, 0, newWidth, newHeight, null);
         g.dispose();
         return scaledImage;
-    }
-
-    // return result file name
-    public String submitLog(String filePath) {
-        final String CrLf = "\r\n";
-        final String url = "http://jpref.elementfx.com/upload.php";
-        final String boundary = "---------------------------4664151417711";
-
-        String res;
-        OutputStream os = null;
-        InputStream is = null;
-        File f = new File(filePath);
-        String fileName = f.getName();
-        String GUID = PConfig.getInstance().GUID.get();
-        String remoteFileName = GUID + "-" + fileName;
-        System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
-
-        try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
-            byte[] fileData= new byte[input.available()];
-            input.read(fileData);
-            String message1 = "";
-            message1 += "--" + boundary + CrLf;
-            message1 += "Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + remoteFileName + "\"" + CrLf;
-            message1 += "Content-Type: text/plain" + CrLf;
-            message1 += CrLf;
-
-            // the file is sent between the messages in the multipart message.
-            String message2 = "";
-            message2 += CrLf + "--" + boundary + "--" + CrLf;
-
-            URLConnection conn = new URL(url).openConnection();
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type",
-                    "multipart/form-data; boundary=" + boundary);
-            // might not need to specify the content-length when sending chunked data.
-            conn.setRequestProperty("Content-Length",
-                    String.valueOf((message1.length() + message2.length() + fileData.length)));
-
-            os = conn.getOutputStream();
-            os.write(message1.getBytes());
-            // send the file body
-            int index = 0;
-            int size = 1024;
-            do {
-                if ((index + size) > fileData.length) {
-                    size = fileData.length - index;
-                }
-                os.write(fileData, index, size);
-                index += size;
-            } while (index < fileData.length);
-            os.write(message2.getBytes());
-            os.flush();
-            is = conn.getInputStream();
-
-            char buff = 512;
-            int len;
-            byte[] data = new byte[buff];
-            StringBuilder sb = new StringBuilder();
-            do {
-                len = is.read(data);
-                if (len > 0) {
-                    sb.append(new String(data, 0, len)).append("\n");
-                }
-            } while (len > 0);
-            res = sb.toString();
-            System.out.println(res);
-            if (res.startsWith(GUID)) {
-                res = res.substring(GUID.length() + 1);
-            }
-        } catch(IOException e) {
-            res = e.toString();
-        } finally {
-            try {
-                os.close();
-                if (is == null) {
-                    throw new IOException("log submission error");
-                }
-                is.close();
-            } catch(IOException e){
-                // ignore
-                res = e.toString();
-            }
-        }
-        return res;
     }
 }

@@ -19,24 +19,23 @@
  */
 package com.ab.jpref.engine;
 
+import static com.ab.jpref.engine.GameManager.RestartCommand;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
-import com.ab.util.Util;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import static java.lang.Thread.currentThread;
 
 public class HumanPlayer extends Player {
     public static final boolean DEBUG_LOG = false;
 
-    private final Util util = Util.getInstance();
     private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
     final GameManager.EventObserver clickable;
 
-    private GameManager.RestartCommand restartCommand;
     private CardSet drop;
 
     public HumanPlayer(int number, GameManager.EventObserver clickable) {
@@ -51,20 +50,17 @@ public class HumanPlayer extends Player {
     }
 
     @Override
-    public void abortThread(GameManager.RestartCommand restartCommand) {
-        this.restartCommand = restartCommand;
+    public void abortThread(RestartCommand restartCommand) {
         clearQueue();
+        accept(restartCommand);
     }
 
     @Override
     public void clear() {
         super.clear();
-        restartCommand = null;
     }
 
     public void clearQueue() {
-        accept(Config.Bid.BID_PASS);
-        util.sleep(10);
         while (queue.peek() != null) {
             queue.remove();
         }
@@ -81,18 +77,11 @@ public class HumanPlayer extends Player {
 
     private Config.Queueable takeFromQueue() throws Player.PrefExceptionRerun {
         try {
-            if (restartCommand != null) {
-                GameManager.RestartCommand _restartCommand = restartCommand;
-                restartCommand = null;
-                throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
-            }
-            Logger.printf(DEBUG_LOG, "human blocking:%s -> %s\n", Thread.currentThread().getName(), GameManager.getState().getRoundStage());
+            Logger.printf(DEBUG_LOG, "human blocking:%s\n", currentThread().getName());
             Config.Queueable q = queue.take();
-            Logger.printf(DEBUG_LOG, "human unblock:%s bid %s\n", Thread.currentThread().getName(), q);
-            if (restartCommand != null) {
-                GameManager.RestartCommand _restartCommand = restartCommand;
-                restartCommand = null;
-                throw new PrefExceptionRerun(_restartCommand.name());   // a little ugly
+            Logger.printf(DEBUG_LOG, "human unblock:%s got %s\n", currentThread().getName(), q);
+            if (q instanceof RestartCommand) {
+                throw new PrefExceptionRerun(((RestartCommand)q).name());   // a little ugly
             }
             return q;
         } catch (InterruptedException e) {
@@ -102,9 +91,21 @@ public class HumanPlayer extends Player {
 
     @Override
     public Config.Bid getBid(Config.Bid minBid, int elderHand) {
-        clickable.setSelectedPlayer(this);
-        bid = (Config.Bid)takeFromQueue();
-        return bid;
+        clickable.setCurrentPlayer(this);
+        Config.Queueable q = takeFromQueue();
+        if (q instanceof Config.Bid) {
+            bid = (Config.Bid)q;
+            return bid;
+        }
+        return Config.Bid.BID_6S;
+    }
+
+    // wait for mouse click, needed when talon is shown
+    @Override
+    public void acknowledge() {
+        clickable.setCurrentPlayer(this);
+        Config.Queueable q = takeFromQueue();
+        Logger.printf(DEBUG_LOG, "view acknowledged, %s", q.toString());
     }
 
     public void drop(CardSet drop) {
@@ -114,7 +115,7 @@ public class HumanPlayer extends Player {
 
     @Override
     public Config.Bid drop() {
-        clickable.setSelectedPlayer(this);
+        clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();        // block
         if (Config.Bid.BID_WITHOUT_THREE.equals(q)) {
             bid = (Config.Bid)q;
@@ -126,7 +127,7 @@ public class HumanPlayer extends Player {
     public void declareRound(Config.Bid minBid, int elderHand) {
         BidData.PlayerBid playerBid = new BidData.PlayerBid();
         if (!minBid.equals(Config.Bid.BID_MISERE)) {
-            clickable.setSelectedPlayer(this);
+            clickable.setCurrentPlayer(this);
             this.bid = (Config.Bid) takeFromQueue();
         }
         playerBid.setBid(this.bid);
@@ -136,14 +137,14 @@ public class HumanPlayer extends Player {
     @Override
     public void respondOnDeclaration() {
         // todo: whist or half-whist or pass
-        clickable.setSelectedPlayer(this);
+        clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();        // block
         this.bid = (Config.Bid)q;
     }
 
     @Override
     public boolean playWhistLaying() {
-        clickable.setSelectedPlayer(this);
+        clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();        // block
         Config.Bid bid = (Config.Bid)q;
         return bid.equals(Config.Bid.BID_WHIST_LAYING);
@@ -151,7 +152,7 @@ public class HumanPlayer extends Player {
 
     @Override
     public Card play(Trick trick) {
-        clickable.setSelectedPlayer(this);
+        clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {
             Logger.println(q);

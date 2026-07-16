@@ -30,14 +30,14 @@ import java.util.*;
 public abstract class Player {
     public static final boolean DEBUG_LOG = false;
     public static final int NOP = Config.NOP;   // Number of players
-    //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
-    public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
-
-    enum DeclarerDrop {
-        First,
-        Last,
-        Random
-    }
+//    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
+//    public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
+//
+//    enum DeclarerDrop {
+//        First,
+//        Last,
+//        Random
+//    }
 
     public enum PlayerPoints {
         leftPoints, rightPoints, poolPoints, dumpPoints, status
@@ -54,6 +54,7 @@ public abstract class Player {
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
     public abstract void declareRound(Config.Bid minBid, int elderHand);
+    public abstract void acknowledge();         // wait for mouse click
     public abstract void respondOnDeclaration(); // return whist or half-whist or pass
     public abstract Card play(Trick trick);
 
@@ -126,7 +127,7 @@ public abstract class Player {
     }
 
     public String getName() {
-        return GameManager.getConfig().getPlayerName(this.number);
+        return "p" + number;
     }
 
     public void setBid(Config.Bid bid) {
@@ -183,10 +184,6 @@ public abstract class Player {
 
     public void clearHistory() {
         history.clear();
-    }
-
-    public void removeLastRoundResults() {
-        history.remove(history.size() - 1);
     }
 
     public Card anyCard() {
