@@ -318,6 +318,7 @@ public class GameManager {
         RestartCommand next;
         try {
             gameThread = Thread.currentThread();
+            TrickList.getInstance().initBuild();
             trick.clear(elderHand);
             lastTrickCards.clear();
             deal(deck);
@@ -330,6 +331,9 @@ public class GameManager {
             if (declarer == null) {
                 printf("playing all-pass\n");
                 playRoundAllPass();
+                if (replayMode) {
+                    updateFromAvatars();
+                }
             } else {
                 printf("declarer %s: %s, %s\n",
                     declarer.getName(), declarer.getBid(), declarer.toColorString());
@@ -338,6 +342,7 @@ public class GameManager {
                 for (Player p : players) {
                     if (p instanceof HumanPlayer) {
                         p.acknowledge();
+                        break;
                     }
                 }
                 declarer.takeTalon(talonCards);
@@ -384,10 +389,17 @@ public class GameManager {
                 }
             }
         } catch (Player.PrefExceptionRerun e) {
+            for (Player p : players) {
+                if (p instanceof HumanPlayer) {
+                    ((HumanPlayer)p).clearQueue();
+                }
+            }
             String msg = e.getMessage();
             println("round aborted for " + msg);
             next = RestartCommand.valueOf(msg);     // a little ugly
-            if (next.equals(RestartCommand.offer)) {
+            if (next.equals(RestartCommand.replay)) {
+                updateFromAvatars();
+            } else if (next.equals(RestartCommand.offer)) {
                 updateFromAvatars();
                 ScoreCalculator.getInstance().calculate(players, minBid.goal());
                 if (eventObserver == null) {
@@ -565,6 +577,9 @@ public class GameManager {
     public Player[] avatars4Round() {
         // replace human or bot depending on whist elections
         int i = this.declarerNumber;
+        if (i < 0) {
+            i = 0;
+        }
         Player declarer = this.getPlayers()[i];
         Player defender0 = this.getPlayers()[(i + 1) % NOP];
         Player defender1 = this.getPlayers()[(i + 2) % NOP];
@@ -767,15 +782,15 @@ public class GameManager {
         }
     }
 
-    public CardList getLastTrickCards() {
-        return lastTrickCards;
-    }
-
     public void restart(RestartCommand command) {
-        printf("this %s, game %s\n", Thread.currentThread().getName(), gameThread.getName());
+        printf(DEBUG_LOG, "this %s, game %s\n", Thread.currentThread().getName(), gameThread.getName());
         for (Player player : this.getPlayers()) {
             player.abortThread(command);
         }
+    }
+
+    public CardList getLastTrickCards() {
+        return lastTrickCards;
     }
 
     public interface EventObserver {

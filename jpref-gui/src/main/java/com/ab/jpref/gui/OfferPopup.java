@@ -53,7 +53,9 @@ public class OfferPopup extends JDialog {
 
         gameManager = GameManager.getInstance();
         setTitle(m("Your Offer"));
-        Rectangle mainRectangle = new Rectangle(PConfig.getInstance().mainRectangle.get());
+        Rectangle mainRectangle = new Rectangle();
+        mainRectangle.width = PConfig.getInstance().mainSize.first;
+        mainRectangle.height = PConfig.getInstance().mainSize.second;
         mainRectangle.width /= 2;
         mainRectangle.height /= 2;
         setSize(mainRectangle.width, mainRectangle.height);

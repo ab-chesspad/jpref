@@ -26,7 +26,6 @@ import com.ab.jpref.config.Config;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -48,13 +47,12 @@ public class Util {
 
     public static final Random myRand = new Random();
 
-    private static Util instance;
+    private static class Holder {
+        static final Util instance = new Util();
+    }
 
     public static Util getInstance() {
-        if (instance == null) {
-            instance = new Util();
-        }
-        return instance;
+        return Holder.instance;
     }
 
     protected Util() {}

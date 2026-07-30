@@ -87,7 +87,9 @@ public class StatusPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = PConfig.getInstance().scoresPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            Rectangle mainRectangle = PConfig.getInstance().mainRectangle.get();
+            Rectangle mainRectangle = new Rectangle();
+            mainRectangle.width = PConfig.getInstance().mainSize.first;
+            mainRectangle.height = PConfig.getInstance().mainSize.second;
             popupRectangle.height = (int)(mainRectangle.width * MAGIC_HEIGHT_FACTOR);
             popupRectangle.width = (int)(popupRectangle.height / MAGIC_ASPECT_RATIO);
             popupRectangle.x = mainRectangle.x +
@@ -155,7 +157,6 @@ public class StatusPopup extends JDialog {
 
         public void recalc() {
             PLabel.initRecalc();
-//            Rectangle scoresRectangle = StatusPopup.instance.getScoresRectangle();
             Rectangle scoresRectangle = getScoresRectangle();
             Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
 
@@ -340,17 +341,12 @@ public class StatusPopup extends JDialog {
             Graphics2D g2d = (Graphics2D) g;
             g2d.setColor(Color.white);
             g2d.fillRect(0, 0,
-/*
-                StatusPopup.instance.getScoresRectangle().width,
-                StatusPopup.instance.getScoresRectangle().height);
-*/
                 StatusPopup.this.getScoresRectangle().width,
                 StatusPopup.this.getScoresRectangle().height);
             paintLines(g2d);
         }
 
         private void paintLines(Graphics2D g2d) {
-//            Rectangle scoresRectangle = StatusPopup.instance.getScoresRectangle();
             Rectangle scoresRectangle = StatusPopup.this.getScoresRectangle();
             g2d.setStroke(new BasicStroke(strokeWidth));
             g2d.setColor(lineColor);
@@ -422,7 +418,6 @@ public class StatusPopup extends JDialog {
         JPanel jPanel = new JPanel();
         JButton goonButton = new JButton(TableLayout.ButtonCommand.goon.getName());
         goonButton.addActionListener(actionEvent -> {
-//            instance.dispose();
             StatusPopup.this.dispose();
             instance = null;
             result = RestartCommand.newRound;
@@ -430,7 +425,6 @@ public class StatusPopup extends JDialog {
         jPanel.add(goonButton);
         JButton replayButton = new JButton(TableLayout.ButtonCommand.replay.getName());
         replayButton.addActionListener(actionEvent -> {
-//            instance.dispose();
             StatusPopup.this.dispose();
             instance = null;
             result = RestartCommand.replay;

@@ -29,9 +29,8 @@ import com.ab.util.BidData.PlayerBid;
 public class Bot extends Player {
     public static CardList debugDrop = null;
 
-    // when declarer is Bot, it uses the same logic as mimic BotFse
-    // so trickList and playerBid are the same and can be shared
-    public static TrickList trickList = null;
+    // when declarer is Bot, it uses the same logic for declarer and defenders
+    // so playerBid is the same and can be shared
     static PlayerBid playerBid;
 
     public static Bot targetBot;  // either forTricksBot or misereBot
@@ -67,7 +66,6 @@ public class Bot extends Player {
     public void clear() {
         super.clear();
         playerBid = null;
-        trickList = null;
         targetBot = null;
         trick = null;
         debugDrop = null;

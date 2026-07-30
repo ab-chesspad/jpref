@@ -70,22 +70,24 @@ public class Main implements Logger.LogHolder, Host {
         }
     }
 
-    public static Container mainContainer;
     public static JFrame mainFrame;
-
     static final PUtil pUtil = PUtil.getInstance();
-    static Rectangle mainRectangle;
-    static Insets insets;
+
+    private Container mainContainer;
+    private TrickList trickList;
+
+    private Rectangle mainRectangle = new Rectangle();
+    private Insets insets;
 
     private String logFileName;
     private PrintStream logStream;
     private long logStartDate;
 
-    static InputStream testInputStream;
+    private InputStream testInputStream;
     private final MainPanel mainPanel;
     private final TableLayout<Graphics> tableLayout;
     private final Metrics metrics;
-    private final Config config;
+    private GameManager gameManager;
 
     /**
      * @param args optional [fixed-games-file]
@@ -93,13 +95,17 @@ public class Main implements Logger.LogHolder, Host {
     public static void main(String[] args) {
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(() -> new Main(args));
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                Main main = new Main(args);
+                main.go();
+            }
+        });
     }
 
     public Main(String[] args) {
-        TrickList.setTrickPool(new TrickPool());
+        trickList = new TrickList(new TrickPool());
         metrics = Metrics.getInstance();
-        config = PConfig.getInstance();
 
 /* until IntelliJ adds ansi colors handling to their debugger,
    output to System.out will be ugly and useless
@@ -142,7 +148,8 @@ public class Main implements Logger.LogHolder, Host {
                 insets = mainFrame.getInsets();
                 mainRectangle.height -= insets.top;
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
-                PConfig.getInstance().mainRectangle.set(mainRectangle);
+                PConfig.getInstance().mainPosition.setX(mainRectangle.x);
+                PConfig.getInstance().mainPosition.setY(mainRectangle.y);
                 PConfig.getInstance().mainSize.first = mainRectangle.width;
                 PConfig.getInstance().mainSize.second = mainRectangle.height;
                 tableLayout.update(null);
@@ -154,7 +161,10 @@ public class Main implements Logger.LogHolder, Host {
                 insets = mainFrame.getInsets();
                 mainRectangle.height -= insets.top;
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
-                PConfig.getInstance().mainRectangle.set(mainRectangle);
+                PConfig.getInstance().mainPosition.setX(mainRectangle.x);
+                PConfig.getInstance().mainPosition.setY(mainRectangle.y);
+                PConfig.getInstance().mainSize.first = mainRectangle.width;
+                PConfig.getInstance().mainSize.second = mainRectangle.height;
             }
         });
 
@@ -179,8 +189,10 @@ public class Main implements Logger.LogHolder, Host {
         mainPanel = new MainPanel(this);
         mainContainer.add(mainPanel);
         tableLayout = new TableLayout<>(this, mainPanel);
+        gameManager = new GameManager(PConfig.getInstance(), tableLayout);
+    }
 
-        // wait for config.size?
+    public void go() {
         GameManager gameManager = new GameManager(PConfig.getInstance(), tableLayout);
         new Thread(() -> {
             try {
@@ -229,7 +241,10 @@ public class Main implements Logger.LogHolder, Host {
         Insets insets = new Insets(0,0,0,0);
         Logger.printf(DEBUG_LOG, "insets=(%dx%dx%dx%d)\n",
                 insets.left, insets.right, insets.top, insets.bottom);
-        mainRectangle = PConfig.getInstance().mainRectangle.get();
+        mainRectangle.x = PConfig.getInstance().mainPosition.getX();
+        mainRectangle.y = PConfig.getInstance().mainPosition.getY();
+        mainRectangle.width = PConfig.getInstance().mainSize.first;
+        mainRectangle.height = PConfig.getInstance().mainSize.second;
         if (mainRectangle.width == 0) {
             int w = fullScreen.width - insets.left - insets.right;
             int h = fullScreen.height - insets.top - insets.bottom;
@@ -317,7 +332,7 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     @Override
-    public void repaint() {
+    public void repaintAll() {
         mainContainer.validate();
         mainContainer.repaint();
     }
@@ -328,8 +343,8 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     @Override
-    public Config getConfig() {
-        return config;
+    public Config config() {
+        return PConfig.getInstance();
     }
 
     @Override

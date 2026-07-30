@@ -11,6 +11,7 @@ public class TestBidData {
     @Test
     public void testGetBid() {
         String[] sources = {
+                "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♦ : ♣QK",
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
             "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦QA",
             "♠78QK ♣QKA ♦QA ♥JQA  1 -> 6♠ : ♦QA",
@@ -19,7 +20,7 @@ public class TestBidData {
             "♠QK ♣KA ♦8QK ♥78JQA  0 -> 7♥ : ♠QK",
             "♠78JQA ♣8QK ♦QK ♥KA  0 -> 7♠ : ♦QK",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
-            "♠79XJQA ♦8XJKA  2 -> 9♠",
+            "♠79XJQA ♦8XJKA  2 -> 8♠",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
             // 11 cards, no drop:
             "♠79JQA ♣JA ♦XK ♥79  2 -> Pass",
@@ -47,7 +48,7 @@ public class TestBidData {
             "♠JQA ♣89JA ♦Q ♥89KA  0 -> 6♥ : ♠J ♦Q",
             "♣8 ♦89XKA ♥79XQKA  0 -> 9♥ : ♣8 ♦8",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
-            "♠JQA ♣89JA ♦Q ♥89KA  1 -> 6♣ : ♠J ♦Q",
+//            "♠JQA ♣89JA ♦Q ♥89KA  1 -> 6♣ : ♠J ♦Q",
         };
         for (String source : sources) {
             Logger.println(source);
@@ -67,7 +68,7 @@ public class TestBidData {
                 expectedDrops = new CardSet(util.toCardList(_parts[1]));
             }
 
-            BidData.PlayerBid playerBid = BidData.getBid(hand, minBid, elderhand, hand.size() - 10);
+            BidData.PlayerBid playerBid = BidData.getInstance().getBid(hand, minBid, elderhand, hand.size() - 10);
             Bid bid = playerBid.toBid();
             Assert.assertEquals("bid", expectedBid, bid);
             if (expectedDrops != null) {

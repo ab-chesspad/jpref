@@ -33,16 +33,18 @@ package com.ab.jpref.config;
 
 import com.ab.jpref.cards.Card;
 import com.ab.util.Couple;
+import com.ab.util.Point;
 
 import java.io.*;
 
 public class Config implements Serializable {
-    private static final long serialVersionUID = 8L;
+    private static final long serialVersionUID = 10L;
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.0." + serialVersionUID;
+    public static final String VERSION = "0.1";
 
     public final Property<Boolean> release = new Property<>("", true);
 
+    public final Point mainPosition = new Point(0, 0);
     public final Couple<Integer> mainSize = new Couple<>(0, 0);
 
     public final Property<Selection<Couple<String>>> language =
@@ -77,6 +79,19 @@ public class Config implements Serializable {
     }
     public final Property<Selection<WhistType>> whistType =
         new Property<>("Whist Type", new Selection<>(WhistType.values()));
+
+    public enum MoveMethod implements Selectable<MoveMethod> {
+        SingleClick,
+        DoubleClick,
+        Dragging,
+        ;
+        @Override
+        public MoveMethod[] getAll() {
+            return values();
+        }
+    }
+    public final Property<Selection<MoveMethod>> moveMethod =
+        new Property<>("Move Method", new Selection<>(MoveMethod.values()));
 
     public final Property<Integer> pauseBetweenTricks = new Property<>("Pause between tricks, msec", 500);
     public final Property<Integer> pauseBetweenMoves = new Property<>("Pause between moves, msec", 100);

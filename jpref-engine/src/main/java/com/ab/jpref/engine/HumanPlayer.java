@@ -21,9 +21,7 @@ package com.ab.jpref.engine;
 
 import static com.ab.jpref.engine.GameManager.RestartCommand;
 import com.ab.jpref.cards.Card;
-import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.util.BidData;
 import com.ab.util.Logger;
 
 import java.util.concurrent.BlockingQueue;
@@ -35,8 +33,6 @@ public class HumanPlayer extends Player {
 
     private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
     final GameManager.EventObserver clickable;
-
-    private CardSet drop;
 
     public HumanPlayer(int number, GameManager.EventObserver clickable) {
         this.number = number;
@@ -77,9 +73,9 @@ public class HumanPlayer extends Player {
 
     private Config.Queueable takeFromQueue() throws Player.PrefExceptionRerun {
         try {
-            Logger.printf(DEBUG_LOG, "human blocking:%s\n", currentThread().getName());
+            Logger.printf(DEBUG_LOG, "human %s blocking:%s\n", getName(), currentThread().getName());
             Config.Queueable q = queue.take();
-            Logger.printf(DEBUG_LOG, "human unblock:%s got %s\n", currentThread().getName(), q);
+            Logger.printf(DEBUG_LOG, "human %s unblock:%s got %s\n", getName(), currentThread().getName(), q);
             if (q instanceof RestartCommand) {
                 throw new PrefExceptionRerun(((RestartCommand)q).name());   // a little ugly
             }
@@ -108,11 +104,6 @@ public class HumanPlayer extends Player {
         Logger.printf(DEBUG_LOG, "view acknowledged, %s", q.toString());
     }
 
-    public void drop(CardSet drop) {
-        super.drop(drop);
-        this.drop = new CardSet(drop);
-    }
-
     @Override
     public Config.Bid drop() {
         clickable.setCurrentPlayer(this);
@@ -125,13 +116,10 @@ public class HumanPlayer extends Player {
 
     @Override
     public void declareRound(Config.Bid minBid, int elderHand) {
-        BidData.PlayerBid playerBid = new BidData.PlayerBid();
         if (!minBid.equals(Config.Bid.BID_MISERE)) {
             clickable.setCurrentPlayer(this);
             this.bid = (Config.Bid) takeFromQueue();
         }
-        playerBid.setBid(this.bid);
-        playerBid.drops = this.drop;
     }
 
     @Override
@@ -162,6 +150,9 @@ public class HumanPlayer extends Player {
     }
 
     public boolean isOK2Play(Card card) {
+        if (card == null) {
+            return false;
+        }
         Trick trick = GameManager.getInstance().getTrick();
         if (trick.getStartingSuit() == null) {
             return true;

@@ -26,26 +26,29 @@ import java.util.HashMap;
 // todo: rethink language change
 public class I18n {
     public static int maxPhraseLength = 50;
-    private static I18n instance;
 
     private String iso639_1_2002_code;
     private LanguageMap languageMap;
 
+    private static class Holder {
+        static final I18n instance = new I18n();
+    }
+
     public static I18n getInstance() {
-        if (instance == null) {
-            instance = new I18n();
-        }
-        return instance;
+        return Holder.instance;
     }
 
     private I18n() {
-        instance = this;
-        refresh();
+        _refresh();
     }
 
     public static void refresh() {
+        Holder.instance._refresh();
+    }
+
+    private void _refresh() {
         String lang = Config.getInstance().language.get().getSelectedValue().second;
-        instance.loadLanguageMap(lang);
+        loadLanguageMap(lang);
     }
 
     public String translate(String text) {

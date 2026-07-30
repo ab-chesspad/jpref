@@ -1,5 +1,13 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+deal: ♣89XA ♦XA ♥7JQK  ♠8XJK ♣7 ♦78QK ♥X  ♠79A ♣JQK ♦9 ♥89A  ♠Q ♦J  1 -> 6♥ 5
+
+[♥AJ9, ♥8QK, ♥X ♣JK, ♠K9Q, ♣AX9, ♠X ♣Q ♠7, ♦XA ♣7, ♠J ♦J ♠8, ♠A ♦Q8, ♣8 ♦K9]
+deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 0  -> 6♣ 7
+
+[♥AJ9, ♥8QK, ♥X ♣JK, ♠K9Q, ♣AX9, ♠X ♣Q ♠7, ♦XA ♣7, ♠J ♦J ♠8, ♠A ♦Q8, ♣8 ♦K9]
+deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
+
 #deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
 
 #deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 6♦ 5
@@ -84,10 +92,6 @@ deal: ♠JK ♣9 ♦89JQKA ♥7  ♠8 ♣78JK ♦7 ♥8JQA  ♠9XQA ♣XA ♦X �
 #deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
 #deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7
 
-[♥8JK, ♣X9K, ♠K97, ♠X ♣Q ♠8, ♦X8 ♣7, ♠A ♦J ♠Q, ♣A ♦Q ♣J, ♠J ♦K9, ♣8 ♥9 ♦A, ♥QXA]
-list build duration: 1 sec, positions 25939
-deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
-
 [♠QX8, ♠7 ♦J ♠J, ♣7A8, ♠A9 ♣9, ♦KX ♣J, ♦AQ ♣Q, ♦7 ♠K ♥7, ♦8 ♣K ♥8, ♦9 ♥XJ, ♥AKQ]
 list build duration: 1 sec, positions 158228
 deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
@@ -105,9 +109,9 @@ deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ
 
 ###
 
-# invalid bid:
-#deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> all-pass
-#deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> all-pass
-#deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> all-pass
-#deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> all-pass
-#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> 0 misere # small hole 7-10
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 0 # small hole 7-10
+deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> All-pass
+deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> All-pass
+deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> All-pass
+deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J♥Q 2 -> All-pass
+deal: ♠XK ♣9JKA ♦9XJ ♥A  ♠J ♣8XQ ♦8K ♥7XJK  ♠7QA ♣7 ♦7QA ♥89Q  ♠98  2 -> All-pass

@@ -47,7 +47,7 @@
                     </excludes>
                     <source>8</source>
                     <target>8</target>
-                    <compilerArgument>-Xlint:unchecked</compilerArgument>
+                    <compilerArgument>-Xlint:unchecked,-options</compilerArgument>
                 </configuration>
             </plugin>
             <plugin>

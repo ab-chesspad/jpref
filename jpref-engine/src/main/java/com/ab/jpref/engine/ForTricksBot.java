@@ -58,7 +58,7 @@ public class ForTricksBot extends Bot {
             Card card0 = Card.get(bit0);
             myHand.add(card0);
             // 11 cards
-            PlayerBid playerBid = BidData.getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
+            PlayerBid playerBid = BidData.getInstance().getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
             playerBid.drops.add(card0);     // for testing
             playerBids.add(playerBid);
             myHand.remove(card0);
@@ -83,7 +83,7 @@ public class ForTricksBot extends Bot {
             return playerBid;
         }
         if (playerBid == null || !myHand.contains(playerBid.drops)) {
-            playerBid = BidData.getBid(myHand, bid, elderHand, nDrops);
+            playerBid = BidData.getInstance().getBid(myHand, bid, elderHand, nDrops);
         }
         this.bid = playerBid.toBid();
         return playerBid;
@@ -98,10 +98,7 @@ public class ForTricksBot extends Bot {
             return declarerPlay();
         } else {
             // create and use trick list
-            if (trickList == null) {
-                trickList = new TrickList(this, trick, myHand, leftHand, rightHand);
-            }
-            Card res = trickList.getCard(trick, myHand, leftHand, rightHand);
+            Card res = TrickList.getInstance().getCard(this, trick);
             if (res != null) {
                 return res;
             }
@@ -128,11 +125,11 @@ public class ForTricksBot extends Bot {
     // returns sorted in ascending order
     List<SuitInfo> getAllSuitInfo() {
         List<SuitInfo> allSuitInfo = new ArrayList<>();
-        List<Pair<String, Integer>> pairs = BidData.toSuitChunks(myHand, 0);
+        List<Pair<String, Integer>> pairs = BidData.getInstance().toSuitChunks(myHand, 0);
         for (Pair<String, Integer> pair : pairs) {
             SuitInfo suitInfo = new SuitInfo();
             allSuitInfo.add(suitInfo);
-            suitInfo.suit = BidData.getSuit(pair.first);
+            suitInfo.suit = BidData.getInstance().getSuit(pair.first);
             suitInfo.cardSet = myHand.list(suitInfo.suit);
             suitInfo.chunk = pair.first.substring(1, pair.first.length() - 1);
             suitInfo.length = suitInfo.cardSet.size();

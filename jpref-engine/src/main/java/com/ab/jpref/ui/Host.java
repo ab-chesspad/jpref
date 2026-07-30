@@ -29,15 +29,10 @@ public interface Host {
     int SPECIAL_OPTION_MANUAL = 0x1;
 
     int specialOption();
-    void repaint(); // todo: remove
-
-    Metrics getMetrics();
-
-    Config getConfig();
-
-    String getLogFileName();
-
     long buildDate();
-
+    Metrics getMetrics();
+    Config config();
+    String getLogFileName();
+    void repaintAll();
     void updateSettings();
 }

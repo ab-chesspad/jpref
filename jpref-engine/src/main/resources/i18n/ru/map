@@ -6,6 +6,8 @@ Cancel->Забыть
 Comments->Комментарии
 Continue->Продолжить
 Delete logs after, days -> Удалять логи старше, дней
+Double click -> Двойной клик
+Dragging -> Перетаскивание
 Drop->снос
 Game Type->Вид игры
 Help->Описание
@@ -15,7 +17,8 @@ Last Trick->Последняя взятка
 Lying->Лежа
 Miami->Сочи
 Misère -> мизер
-New Game->Новая игра
+Move Method -> Способ хода
+New Round->Новый раунд
 Not implemented yet->Пока не работает
 OK->Сохранить
 Pass -> пас
@@ -31,6 +34,7 @@ Replay->Переиграть
 Rostov->Ростов
 Scores->Пуля
 Settings->Настройки
+Single click -> Одиночный клик
 Standing->Стоя
 Submit Log->Послать лог
 Table Color->Цвет стола

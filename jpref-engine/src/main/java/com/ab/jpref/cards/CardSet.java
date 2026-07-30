@@ -131,7 +131,9 @@ public class CardSet {
     public static CardSet union(CardSet... cardSets) {
         int bitmap = 0;
         for (CardSet cardSet : cardSets) {
-            bitmap |= cardSet.bitmap;
+            if (cardSet != null) {
+                bitmap |= cardSet.bitmap;
+            }
         }
         return new CardSet(bitmap);
     }

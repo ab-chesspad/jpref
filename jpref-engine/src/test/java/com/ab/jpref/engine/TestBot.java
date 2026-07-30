@@ -25,10 +25,11 @@ public class TestBot {
     static final Config config = Config.getInstance();
     static final Util util = Util.getInstance();
     static GameManager gameManager;
+    static TrickList trickList;
 
     @BeforeClass
     public static void initClass() {
-        TrickList.setTrickPool(new TrickPool());
+        trickList = new TrickList(new TrickPool());
         gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
@@ -36,8 +37,6 @@ public class TestBot {
     @Before
     public void initTest() {
         Bot.targetBot = null;
-        Bot.trickList = null;
-
     }
 
     private InputStream getInputStream(String testFileName) {
@@ -82,9 +81,10 @@ public class TestBot {
     }
 
     @Test
-    public void testDeclareGame() throws IOException {
+    public void testDeclareRound() throws IOException {
         println("running: " + currMethodName());
-        util.getList(getInputStream("declare-game"),
+        util.getList(getInputStream("declare-round" +
+                        ""),
             (res, tokens) -> {
                 String[] parts = res.split(", ");
                 Card drop0 = Card.fromName(parts[0]);
@@ -93,7 +93,7 @@ public class TestBot {
 
                 int _elderHand = 0;
                 CardList hand = new CardList();
-                Config.Bid minBid = Config.Bid.BID_PASS;
+                Config.Bid minBid = null;
                 for (String token : tokens) {
                     try {
                         _elderHand = Integer.parseInt(token);
@@ -109,6 +109,9 @@ public class TestBot {
                     hand.addAll(util.toCardList(token));
                 }
                 Assert.assertEquals(12, hand.size());
+                if (minBid == null) {
+                    minBid = Config.Bid.fromName("6" + expectedBid.getTrump());
+                }
                 Bot.playerBid = null;
                 Bot bot = new Bot(0);
                 bot.clear();
@@ -120,8 +123,8 @@ public class TestBot {
                 Assert.assertEquals(expectedBid, bid);
                 if (!bid.equals(Config.Bid.BID_PASS)) {
                     CardSet drops = cardSet.diff(bot.myHand);
-                    Assert.assertTrue(String.format("%s not found", drop0.toColorString()), drops.contains(drop0));
-                    Assert.assertTrue(String.format("%s not found", drop1.toColorString()), drops.contains(drop1));
+                    Assert.assertTrue(String.format("%s drop not found", drop0.toColorString()), drops.contains(drop0));
+                    Assert.assertTrue(String.format("%s drop not found", drop1.toColorString()), drops.contains(drop1));
                 }
             });
     }

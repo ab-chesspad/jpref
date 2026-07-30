@@ -25,6 +25,7 @@ import com.ab.jpref.engine.*;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.gui.config.SettingsPopup;
+import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.BidData;
 import com.ab.util.Logger;
 
@@ -43,8 +44,8 @@ public class TestPosition implements Host {
     public static final boolean[] BOTS = new boolean[NOP];
     static {
         BOTS[0] = false;
-        BOTS[1] = false;
-        BOTS[2] = false;
+        BOTS[1] = true;
+        BOTS[2] = true;
     }
     final PConfig config;
     final Metrics metrics;
@@ -57,8 +58,10 @@ public class TestPosition implements Host {
     Rectangle mainRectangle;
 
     ForTricksBot forTricksBot;
+    public static TrickList trickList;
 
     public static void main(String[] args) {
+        trickList = new TrickList(new TrickPool());
         javax.swing.SwingUtilities.invokeLater(TestPosition::new);
         throw new RuntimeException("fix gameMan.eventObserver");
     }
@@ -75,14 +78,17 @@ public class TestPosition implements Host {
                 Insets insets = mainFrame.getInsets();
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 mainRectangle.height -= insets.top;
-                PConfig.getInstance().mainRectangle.set(mainRectangle);
+                PConfig.getInstance().mainSize.first = mainRectangle.width;
+                PConfig.getInstance().mainSize.second = mainRectangle.height;
                 Metrics.getInstance().recalculateSizes();
-                repaint();
+                repaintAll();
             }
         });
 
         JFrame.setDefaultLookAndFeelDecorated(true);
-        Rectangle mainRectangle = config.mainRectangle.get();
+        Rectangle mainRectangle = new Rectangle();
+        mainRectangle.width = PConfig.getInstance().mainSize.first;
+        mainRectangle.height = PConfig.getInstance().mainSize.second;
         mainFrame.setBounds(mainRectangle);
         mainContainer = mainFrame.getContentPane();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.X_AXIS));
@@ -102,7 +108,7 @@ public class TestPosition implements Host {
     }
 
     @Override
-    public void repaint() {
+    public void repaintAll() {
         mainContainer.validate();
         mainContainer.repaint();
     }
@@ -136,8 +142,8 @@ public class TestPosition implements Host {
     }
 
     @Override
-    public Config getConfig() {
-        return config;
+    public Config config() {
+        return PConfig.getInstance();
     }
 
     @Override
@@ -154,17 +160,17 @@ public class TestPosition implements Host {
         public void playRoundForTricks() {
             super.playRoundForTricks();
         }
+
         @Override
         public void playRoundMisere() {
             super.playRoundMisere();
         }
-
     }
 
     void runTests() {
         final String[] sources = {
             // hands, bid, [elderHand]
-            "♠7 ♣9QK ♦7JQK ♥8X ♦X8  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK : 6♦ : 1",
+//            "♠7 ♣9QK ♦7JQK ♥8X ♦X8  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK : 6♦ : 1",
             "♣9K ♦QK  ♣XA ♥7A  ♣7 ♥9QK : 6♦",
             "♣9QK ♦78XJQK  ♠9XA ♣8XA ♥7JA  ♠QK ♣7J ♦9A ♥9QK : 6♦",
             "♣J ♦Q ♥8A  ♥XQ  ♥9K : 7♣",
@@ -173,7 +179,7 @@ public class TestPosition implements Host {
         };
 
         for (String source : sources) {
-            Logger.println(source);
+            Logger.println("deal: " + source);
             String[] parts = source.split("  | : ");
             for (int j = 0; j < NOP; ++j) {
                 hands[j] = new CardSet(pUtil.toCardList(parts[j]));
@@ -208,10 +214,9 @@ public class TestPosition implements Host {
                         forTricksBot.drop(playerBid.drops);
                         hands[0] = forTricksBot.getMyHand();
                     }
-//                    forTricksBot = new ForTricksBot(gameManager.getPlayers()[0]);
                     trick.setNumber(ROUND_SIZE - hands[1].size());
                     Bot.targetBot = forTricksBot;
-                    Bot.trickList = new TrickList(forTricksBot, trick, hands);
+                    forTricksBot.play(trick);
 
                     if (bid.equals(Bid.BID_MISERE)) {
                         gameManager.playRoundMisere();

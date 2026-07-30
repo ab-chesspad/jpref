@@ -29,10 +29,11 @@ public class TestGameManager {
     static final Config config = Config.getInstance();
     static final Util util = Util.getInstance();
     static GameManager gameManager;
+    static TrickList trickList;
 
     @Before
     public void initClass() {
-        TrickList.setTrickPool(new TrickPool());
+        trickList = new TrickList(new TrickPool());
         gameManager = new GameManager(config, null);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
@@ -41,8 +42,6 @@ public class TestGameManager {
     @Before
     public void initTest() {
         Bot.targetBot = null;
-        Bot.trickList = null;
-
     }
 
     private void printStatistics(int count) {

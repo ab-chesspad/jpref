@@ -255,14 +255,13 @@ probes:
         Card res;
         if (trick.getTurn() != gameManager().declarerNumber) {
             // defender
-            if (trickList == null) {
-                if (holes.isEmpty()) {
-                    return gameManager().players[trick.getTurn()].anyCard(trick, false);
+            if (holes.isEmpty()) {
+                if (TrickList.bestNodes[0] != null) {
+                    TrickList.bestNodes[0].trickData = 0;   // ugly
                 }
-                trickList = new TrickList(this, trick, myHand, leftHand, rightHand);
+                return gameManager().players[trick.getTurn()].anyCard(trick, false);
             }
-            res = trickList.getCard(trick, myHand, leftHand, rightHand);
-
+            res = TrickList.getInstance().getCard(this, trick);
             if (res != null) {
                 return res;
             }

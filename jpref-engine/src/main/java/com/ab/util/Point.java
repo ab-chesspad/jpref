@@ -18,7 +18,15 @@ public class Point extends Pair<Integer, Integer> {
         return first;
     }
 
+    public void setX(int value) {
+        first = value;
+    }
+
     public int getY() {
         return second;
+    }
+
+    public void setY(int value) {
+        second = value;
     }
 }

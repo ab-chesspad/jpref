@@ -2,6 +2,8 @@
 # 10 or 12 cards
 #♠ ♣ ♦ ♥
 
+♠9 ♣89JQ ♦78XA ♥7XQ 1 -> ♥7, ♠9, 6♦
+
 ♠78QK ♣QKA ♦QA ♥JQA 2 -> ♦Q, ♦A, 6♠
 
 ♠78XQKA ♣8X ♦9XJK 1 -> ♣X, ♣8, 8♠
@@ -33,8 +35,8 @@
 #♠78QKA ♦7X ♥89QKA 7♣ 2 -> ♦7, ♦X, 9♠
 ♠78K ♣QA ♦7X ♥89QKA 2 -> ♦7, ♦X, 6♥
 ♠J ♣78KA ♦XQ ♥89JKA 1 -> ♦X, ♠J, 7♥
-♠9 ♣89JQ ♦78XA ♥7XQ 1 -> ♥7, ♠9, Pass
 
+# todo: test misere declaration
 #♠7A ♣789XA ♦79J ♥79 1 -> ♠A, ♥9, Misère # clean
 #♠7A ♣789X ♦79J ♥79A 1 -> ♠A, ♥A, Misère # clean
 #♠QA ♣789X ♦79J ♥79 ♣A 1 -> ♠A, ♣A, Misère # singleton

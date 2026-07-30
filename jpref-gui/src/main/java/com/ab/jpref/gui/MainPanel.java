@@ -84,8 +84,22 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-                getInstance().onMouseClick(e.getX(), e.getY());
+                Logger.printf(DEBUG_LOG, "%s: %s\n", PUtil.currMethodName(), e.toString());
+                tableLayout().onMouseClick(e.getX(), e.getY());
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                Logger.printf(DEBUG_LOG, "%s: %s\n", PUtil.currMethodName(), e.toString());
+                tableLayout().onMouseDragged(e.getX(), e.getY(), true);
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                Logger.printf(DEBUG_LOG, "%s: %s\n", PUtil.currMethodName(), e.toString());
+                tableLayout().onMouseDragged(e.getX(), e.getY(), false);
             }
         });
     }
@@ -203,14 +217,13 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
                 if (image != null) {
                     image = image.getScaledInstance(widget.getWidth(), widget.getHeight(), Image.SCALE_DEFAULT);
                     ((JButton)jComponent).setIcon(new ImageIcon(image));
-                    int _fontSize = fontSize;
-                    Font _font = new Font("Serif", Font.PLAIN, _fontSize);
+                    Font _font = new Font("Serif", Font.PLAIN, fontSize);
                     jComponent.setFont(_font);
                 }
                 ((JButton)jComponent).setText(text);
             }
         }
-        host.repaint();
+        host.repaintAll();
 
         if ((getInstance()).getCurrentPlayer() == null) {
             // wait cursor

@@ -31,7 +31,6 @@ public class PConfig extends Config {
     // update serialVersionUID every time a property is being added/changed!
     private static final long serialVersionUID = 9L;
 
-    public final Property<Rectangle> mainRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> settingsPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> helpPopupRectangle = new Property<>("", new Rectangle());
@@ -66,9 +65,6 @@ public class PConfig extends Config {
             }
         }
         this.language.get().setSelected(defaultLang);
-
-        mainSize.first = mainRectangle.get().width;
-        mainSize.second = mainRectangle.get().height;
     }
 
     public static PConfig unserialize() {
@@ -87,9 +83,11 @@ public class PConfig extends Config {
         }
         if (_instance != null) {
             // restore
-            ((PConfig)instance).mainRectangle.set(_instance.mainRectangle.get());
-            ((PConfig)instance).mainSize.first = _instance.mainRectangle.get().width;
-            ((PConfig)instance).mainSize.second = _instance.mainRectangle.get().height;
+            instance.mainSize.first = _instance.mainSize.first;
+            instance.mainSize.second = _instance.mainSize.second;
+            instance.mainPosition.setX(_instance.mainPosition.getX());
+            instance.mainPosition.setY(_instance.mainPosition.getY());
+            instance.mainSize.second = _instance.mainSize.second;
             ((PConfig)instance).scoresPopupRectangle.set(_instance.scoresPopupRectangle.get());
             ((PConfig)instance).settingsPopupRectangle.set(_instance.settingsPopupRectangle.get());
             ((PConfig)instance).helpPopupRectangle.set(_instance.helpPopupRectangle.get());

@@ -47,7 +47,8 @@ public class SettingsPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = pConfig.settingsPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle = new Rectangle(pConfig.mainRectangle.get());
+            popupRectangle.width = PConfig.getInstance().mainSize.first;
+            popupRectangle.height = PConfig.getInstance().mainSize.second;
         }
         this.setBounds(popupRectangle);
         this.setLocation(popupRectangle.x, popupRectangle.y);
@@ -92,7 +93,7 @@ public class SettingsPopup extends JDialog {
     private void cancel() {
         PConfig.refresh();  // restore configuration
         I18n.refresh(); // restore
-        host.repaint();
+        host.repaintAll();
         popupInstance.dispose();
     }
 
@@ -154,7 +155,7 @@ public class SettingsPopup extends JDialog {
                         Logger.printf(DEBUG_LOG, "%d: new value %s\n", index, jTextField.getText());
                         ((Tuple<String>)property.get()).getValues()[index] = jTextField.getText();
                         if (property.isVisual()) {
-                            host.repaint();
+                            host.repaintAll();
                         }
                         super.focusLost(e);
                     }
@@ -168,7 +169,7 @@ public class SettingsPopup extends JDialog {
             JList<?> jList = new JList<>(selection.values);
             jList.setCellRenderer((ListCellRenderer<Object>) (jList1, value, index, isSelected, cellHasFocus) -> {
                 JLabel jLabel;
-                String text = m(value.toString());
+                String text = m(String.join(" ", value.toString().split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
                 if (isSelected) {
                     jLabel = new JLabel(text, selectedLineIcon, JLabel.LEFT);
                 } else {
@@ -195,8 +196,8 @@ public class SettingsPopup extends JDialog {
                     thisContainer.validate();
                     thisContainer.repaint();
 
-                    // repaint mail panel too
-                    host.repaint();
+                    // repaint main panel too
+                    host.repaintAll();
                 }
             });
             editor = jList;

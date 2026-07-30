@@ -5,6 +5,9 @@ Animation Time->врэмя анимэшн
 Cancel->забить
 Comments->каммент
 Continue->прадолжыз
+Delete logs after, days -> Удалячь логи старшэ, дней
+Double click -> Двайной шчолчок
+Dragging -> Пиритаскиванийе
 Drop->сброз
 Game Type->вид игри
 Gentleman->жэнтельменский
@@ -14,10 +17,13 @@ Last Trick->паследне взятко
 Lying->лежачо
 Miami->Соче
 Misère -> мизер
-New game->новойа игра
+Move Method -> Спосоп хода
+New Round->Новый раунт
 Not implemented yet->пака ни рабтаит
 OK->ок
 Pass -> пас
+Pause between moves, msec -> Павза меж ходами, мсек
+Pause between tricks, msec -> Павза меж взятками, мсек
 Please select->пажалста выберай
 Peter->Питерчег
 Player's Names->имена плеерав
@@ -28,6 +34,7 @@ Replay->переигрунть
 Rostov->Растов
 Scores->щот
 Settings->настроке
+Single click -> Адиночный шчолчок
 Standing->стая
 Submit Log->паслать лог
 Table Color->цвет стала
