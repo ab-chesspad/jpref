@@ -17,7 +17,7 @@
  * Created: 9/3/2025
  *
  * Load bid data generated from utyatsky1, utyatsky2 and tricks-src.
- * Complete with my own data
+ * Completed with my own data
  */
 
 package com.ab.util;
@@ -33,27 +33,27 @@ import com.ab.jpref.cards.CardSet;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.util.*;
 
 import static com.ab.jpref.cards.Card.TOTAL_SUITS;
 
-public class BidData {
+public class Bidder {
     private static final boolean DEBUG_LOG = false;
 
     private final Map<String, OneBid[]> allBidData = loadBidData("utyatsky-12");
     public final List<Pair<String, int[]>> tricks = loadTricks("tricks");
-    final List<Card> added = new ArrayList<>();
     final OneBid[] allBids = new OneBid[6];
 
     private static class Holder {
-        static final BidData instance = new BidData();
+        static final Bidder instance = new Bidder();
     }
 
-    public static BidData getInstance() {
+    public static Bidder getInstance() {
         return Holder.instance;
     }
 
-    private BidData() {}
+    private Bidder() {}
 
     private Map<String, OneBid[]> loadBidData(String resourceName) {
         Map<String, OneBid[]> data = new HashMap<>();
@@ -78,7 +78,7 @@ public class BidData {
                         int drop0 = Integer.parseInt(p[0]);
                         int drop1 = Integer.parseInt(p[1]);
                         int bid = Integer.parseInt(p[2]);
-                        allBids[++i] = new BidData.OneBid(bid, drop0, drop1);
+                        allBids[++i] = new Bidder.OneBid(bid, drop0, drop1);
                         j = -1;
                     }
                 }
@@ -121,7 +121,7 @@ public class BidData {
     }
 
     // get pairs for all suits
-    public List<Pair<String, Integer>> toSuitChunks(CardSet hand, int turn) {
+    public List<Pair<String, Integer>> toSuitChunks(CardSet hand, int turn, Suit trumpCandidate) {
         List<Pair<String, Integer>> pairs = new ArrayList<>();
         int bitset = 0;
         while ((bitset = CardSet.bm4NextSuit(hand.getBitmap(), bitset)) != 0) {
@@ -134,7 +134,11 @@ public class BidData {
                 sb.append(String.format("%X", rank));
             }
             String chunk = new String(sb);
-            Pair<String, Integer> pair = searchTricks(chunk, turn);
+            int _turn = turn;
+            if (suit.equals(trumpCandidate)) {
+                _turn = 0;
+            }
+            Pair<String, Integer> pair = searchTricks(chunk, _turn);
             // append suit code to be able to locate real suits after sorting
             chunk = pair.first + suit.toString();
             pair.first = chunk;
@@ -153,20 +157,21 @@ public class BidData {
     }
 
     // called with:
-    // 11 cards to guess max bid
-    // 12 cards to define drops and declare round
+    // 11 cards to guess max bid (getMaxPlayerBid)
+    // 12 cards to define drops and declare round (getDrop)
     public PlayerBid getBid(CardSet hand, Bid minBid, int elderHand, int nDrops) {
         PlayerBid playerBid;
-        added.clear();
-        List<Pair<String, Integer>> pairs = toSuitChunks(hand, elderHand);
+        Card added = null;
+        List<Pair<String, Integer>> pairs = toSuitChunks(hand, elderHand, null);
+        Suit trumpCandidate = getSuit(pairs.get(0).first);
 
         // fill hand up to 12 cards to use Utyatsky's table
         // using the least significant suits and cards to minimize the impact
         int handSize = hand.size();
         CardSet handCopy = new CardSet(hand);
-        int add = 12 - handSize;
-        while (--add >= 0) {
+        if (handSize < 12) {
             if (pairs.size() < TOTAL_SUITS) {
+                // add to empty suit
                 final Suit[] suits = {Suit.SPADE, Suit.CLUB, Suit.DIAMOND, Suit.HEART};
                 for (Pair<String, Integer> p : pairs) {
                     int suitNum = getSuit(p.first).getValue();
@@ -177,12 +182,9 @@ public class BidData {
                         continue;
                     }
                     Card card = Card.fromName(s + "7");
-                    added.add(card);
+                    added = card;
                     handCopy.add(card);
                     ++handSize;
-                    if (add == 0) {
-                        break;
-                    }
                 }
             } else {
                 Card card;
@@ -197,11 +199,11 @@ public class BidData {
                     }
                     card = Card.fromName(first.getSuit().toString() + (first.getRank().getValue() + 1));
                 }
-                added.add(card);
+                added = card;
                 handCopy.add(card);
                 ++handSize;
             }
-            pairs = toSuitChunks(handCopy, elderHand);
+            pairs = toSuitChunks(handCopy, elderHand, null);
         }
 
         OneBid oneBid;
@@ -227,29 +229,20 @@ public class BidData {
                     String handChunk = pairs.get(oneBid.drops[i]).first;
                     Suit suit = getSuit(handChunk);
                     Card drop = handCopy.list(suit).first();
-                    if (added.isEmpty() || added.contains(drop)) {
-                        playerBid.drops.add(drop);
-                        handCopy.remove(drop);
-                        added.remove(drop);
+                    playerBid.drops.add(drop);
+                    handCopy.remove(drop);
+                    if (drop.equals(added)) {
+                        added = null;
                     }
                 }
-                if (playerBid.drops.size() < nDrops) {
-                    PlayerBid playerBid1 = calcPlayerBid(handCopy, minBid, elderHand, nDrops - playerBid.drops.size());
-                    playerBid.drops.add(playerBid1.drops);
+                if (added == null) {
+                    return playerBid;
                 }
-                return playerBid;
             }
         }
-        // not found or overbidding, use suit lists
-        playerBid = calcPlayerBid(handCopy, minBid, elderHand, nDrops);
-        return playerBid;
-    }
 
-    // brute force, find the cards to drop for the max tricks
-    private PlayerBid calcPlayerBid(CardSet hand, Bid minBid, int elderHand, int nDrops) {
-        PlayerBid playerBid = new PlayerBid();
-        List<Pair<String, Integer>> pairs = toSuitChunks(hand, elderHand);
-        Suit trumpCandidate = getSuit(pairs.get(0).first);
+        // not found or overbidding or invalid drops, use suit lists
+        pairs = toSuitChunks(hand, elderHand, trumpCandidate);
 
         // create CardList sorted by suit lengths
         CardList handList0 = new CardList();
@@ -259,36 +252,51 @@ public class BidData {
             if (suit.equals(trumpCandidate)) {
                 continue;   // skip
             }
-            int bit0 = 0;
-            int bitmap = hand.list(suit).getBitmap();
-            while ((bit0 = CardSet.next(bitmap, bit0)) != 0) {
-                Card card = Card.get(bit0);
-                if (added.contains(card)) {
-                    continue;  // skip
-                }
-                handList0.add(card);
-            }
+            handList0.addAll(hand.list(suit).toCardList());
         }
 
+        // find the best drops, the least valuable cards
+        playerBid = new PlayerBid();
+        nDrops = 12 - hand.size();
         int maxTricks = -1;
+        int diff0 = -1;
+        int diff1 = -1;
         for (int i = 0; i < handList0.size(); ++i) {
             Card card0 = handList0.get(i);
             handList0.remove(i);
+            int wBefore = getWaste(pairs, card0);
             hand.remove(card0);
+            List<Pair<String, Integer>> _pairs = toSuitChunks(hand, elderHand, trumpCandidate);
+            int wAfter = getWaste(_pairs, card0);
+            int _diff0 = wBefore - wAfter;
             CardList handList1 = handList0;
             if (nDrops == 1) {
                 handList1 = new CardList(card0);
             }
-            for (Card card1 : handList1) {
+            for (int j = 0; j < handList1.size(); ++j) {
+                Card card1 = handList1.get(j);
+                wBefore = getWaste(_pairs, card1);
                 hand.remove(card1);
-
-                int tricks = calcTricks(hand, elderHand);
+                List<Pair<String, Integer>> __pairs = toSuitChunks(hand, elderHand, trumpCandidate);
+                wAfter = getWaste(__pairs, card1);
+                int _diff1 = wBefore - wAfter;
+                int tricks = calcTricks(hand, elderHand, trumpCandidate);
                 hand.add(card1);
-                if (maxTricks < tricks) {
+                boolean update = maxTricks < tricks;
+                if (maxTricks == tricks) {
+                    if (_diff0 + _diff1 > diff0 + diff1) {
+                        update = true;
+                        Logger.printf(DEBUG_LOG, "==%d: %s %s, sums %d, %d\n", tricks, card0, card1, _diff0 + _diff1, diff0 + diff1);
+                    }
+                }
+                if (update) {
                     maxTricks = tricks;
+                    diff0 = _diff0;
+                    diff1 = _diff1;
                     playerBid.drops.clear();
                     playerBid.drops.add(card0);
                     playerBid.drops.add(card1);
+                    Logger.printf(DEBUG_LOG, "%d: %s %s\n", tricks, card0, card1);
                 }
             }
             hand.add(card0);
@@ -296,62 +304,78 @@ public class BidData {
         }
 
         hand.remove(playerBid.drops);
-        pairs = toSuitChunks(hand, elderHand);
-        int tricks = calcTricks(hand, elderHand);
+        pairs = toSuitChunks(hand, elderHand, trumpCandidate);
+        int tricks = calcTricks(hand, elderHand, trumpCandidate);
         hand.add(playerBid.drops);
 
         String chunk0 = pairs.get(0).first;
         int len0 = Integer.parseInt(chunk0.substring(0, 1));
+        int bidSuitNum0 = getSuit(chunk0).getValue() + 1;
         String chunk1 = pairs.get(1).first;
         int len1 = Integer.parseInt(chunk1.substring(0, 1));
+        int bidSuitNum1 = getSuit(chunk1).getValue() + 1;
         if (len0 == 4 && len1 == 4 && elderHand != 0) {
             // set 2nd best suit as trump
-            chunk0 = pairs.get(1).first;
-            chunk1 = pairs.get(0).first;
+            bidSuitNum0 ^= bidSuitNum1;
+            bidSuitNum1 ^= bidSuitNum0;
+            bidSuitNum0 ^= bidSuitNum1;
         }
 
-        int bidSuitNum = 5; // no trump
-        if (len0 > 3) {
-            // the best suit must be long enough
-            bidSuitNum = getSuit(chunk0).getValue() + 1;
+        if (len0 <= 3) {
+            bidSuitNum0 = 5; // no trump
         }
-        int bidValue = tricks * 10 + bidSuitNum;
+        int bidValue = tricks * 10 + bidSuitNum0;
 
         int minValue = minBid.getValue();
+        int minTricks = minBid.goal();
         if (bidValue < minValue) {
-            if (!added.isEmpty()) {
-                // bidding
+            if (hand.size() < 12) {
+                // bidding, pass
                 playerBid.value = Bid.BID_PASS.getValue();
                 return playerBid;
             }
             // declaring round, overbidding
-            if (len1 >= 4 && len1 == len0) {    // 2nd best suit must be long enough
-                int bidSuitNum1 = getSuit(chunk1).getValue() + 1;
-                int _bidValue = tricks * 10 + bidSuitNum1;
-                if (bidValue < _bidValue) {
-                    bidValue = _bidValue;
-                    bidSuitNum = bidSuitNum1;
-                }
+            if (tricks < minTricks) {
+                tricks = minTricks;
+                bidValue = tricks * 10 + bidSuitNum0;
+            } else if (bidSuitNum1 > (minValue % 10)) {
+                bidValue = tricks * 10 + bidSuitNum1;
+            }
+        }
+        int minSuitNum = minBid.getValue() + 1;
+        if (bidValue <= minValue && bidSuitNum0 < minSuitNum) {
+            if (bidSuitNum1 >= minSuitNum) {
+                bidValue = tricks * 10 + bidSuitNum1;
             }
         }
 
         if (bidValue < minValue) {
-            int minBidSuitNum = minValue % 10;
-            int minBidTricks = minValue / 10;
-            if (bidSuitNum >= minBidSuitNum) {
-                tricks = minBidTricks;
-            } else {
-                tricks = minBidTricks + 1;
-            }
-            bidValue = tricks * 10 + bidSuitNum;
+            tricks = minTricks + 1;
+            bidValue = tricks * 10 + bidSuitNum0;
         }
         playerBid.value = bidValue;
         return playerBid;
     }
 
-    private int calcTricks(CardSet hand, int elderHand) {
+    // get diff between number of cards and tricks in this suit
+    int getWaste(List<Pair<String, Integer>> pairs, Card card) {
+        Suit suit = card.getSuit();
+        for (Pair<String, Integer> pair : pairs) {
+            Suit s = getSuit(pair.first);
+            if (suit.equals(s)) {
+                int len = Integer.parseInt(pair.first.substring(0, 1));
+                return len - pair.second;
+            }
+        }
+        if (card.getRank().equals(Rank.ACE)) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private int calcTricks(CardSet hand, int elderHand, Suit trumpCandidate) {
         int tricks = 0;
-        List<Pair<String, Integer>> pairs0 = toSuitChunks(hand, elderHand);
+        List<Pair<String, Integer>> pairs0 = toSuitChunks(hand, elderHand, trumpCandidate);
         for (Pair<String, Integer> pair : pairs0) {
             tricks += pair.second;
         }
@@ -425,7 +449,7 @@ public class BidData {
         }
     }
 
-    public static class PlayerBid {
+    public static class PlayerBid implements Serializable {
         public CardSet drops = new CardSet();
         public int value;
 

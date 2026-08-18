@@ -17,14 +17,18 @@ public class TestTrickList {
     public static final int NOP = Config.NOP;
 
     static final Config config = Config.getInstance();
-    static final Util util = Util.getInstance();
+    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
     public void initClass() {
-        trickList = new TrickList(new TrickPool());
-        gameManager = new GameManager(config, null);
+        trickList = new TrickList();
+        trickList.init(new TrickPool());
+        util = new Util();
+        config.util = util;
+        gameManager = new GameManager();
+        gameManager.init(() -> config);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }
@@ -54,7 +58,7 @@ public class TestTrickList {
             int expectdTricks = Integer.parseInt(parts[2]);
             Trick trick = new Trick();
             trick.clear(0);
-            gameManager.minBid = bid;
+            gameManager.setMinBid(bid);
             trick.minBid = bid;
             trick.trumpSuit = bid.getTrump();
             trick.setNumber(10 - size);

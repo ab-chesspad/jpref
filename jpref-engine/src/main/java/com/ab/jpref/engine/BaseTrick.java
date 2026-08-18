@@ -21,12 +21,14 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+
+import java.io.Serializable;
+
 import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 
-public class BaseTrick {
+public class BaseTrick implements Serializable {
     public static final int MAX_TRICK_CARDS = 3;
-    public static final int NULL_DATA = 0;
     private static final int CARD_MASK = Card.TOTAL_SUITS * Card.TOTAL_RANKS - 1;
     private static final int CARD_MASK_LEN = 5;         // bits needed to store 0-31 card values
 
@@ -125,8 +127,7 @@ public class BaseTrick {
     }
 
     public static int getStartedBy(long trickData) {
-        int res = (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
-        return res;
+        return (int)(trickData >>> STARTED_BY_SHIFT) & STARTED_BY_MASK;
     }
 
     public static int getTop(long trickData) {
@@ -288,11 +289,7 @@ public class BaseTrick {
     }
 
     public int getTop() {
-        int res = (int)(trickData >>> TOP_SHIFT) & TOP_MASK;
-        if (res > 2) {
-            res = -1;
-        }
-        return res;
+        return getTop(trickData);
     }
 
     public void setTop(int top) {

@@ -26,9 +26,8 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.util.BidData.PlayerBid;
+import com.ab.util.Bidder.PlayerBid;
 import com.ab.util.Logger;
-import com.ab.util.Util;
 
 import java.util.*;
 
@@ -81,8 +80,7 @@ public class MisereBot extends Bot {
         }
     }
 
-    private final Util util = Util.getInstance();
-    public final List<CardSet.ListData> holes = new ArrayList<>();
+    private transient List<CardSet.ListData> holes = new ArrayList<>();
 
     MisereBot(CardSet... hands) {
         super(hands);
@@ -98,18 +96,18 @@ public class MisereBot extends Bot {
         super(player);
     }
 
-    // If we care about a single declarer's trick, we cannot summate probabilities
-    // return the highest one
+    // pa|b = 1 - (1-pa)(1-pb)
+    // todo: adjust probabilities for elderhand
     private int getEval4Misere(CardSet cardSet) {
-        int eval = 0;
+        StringBuilder sb = new StringBuilder();
+        double pab = 1;    // 1 - pa|b
         int bitset = 0;
         while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
-            // todo: use bitmaps only
             CardSet cards = new CardSet(bitset);
             if (cards.isClean4Misere()) {
                 continue;
             }
-            StringBuilder sb = new StringBuilder();
+            sb.delete(0, sb.length());
             int bit = 0;
             while ((bit = CardSet.next(cards.getBitmap(), bit)) != 0) {
                 Card card = Card.get(bit);
@@ -119,11 +117,9 @@ public class MisereBot extends Bot {
             if (res == null) {
                 res = MAX_EVAL + cardSet.first().getRank().getValue() - Card.Rank.ACE.getValue();
             }
-            if (eval < res) {
-                eval = res;
-            }
+            pab *= 1 - (double)res / MAX_EVAL;
         }
-        return eval;
+        return (int)((1 - pab) * MAX_EVAL);
     }
 
     // eval possible talon out of 22 remaining cards
@@ -145,6 +141,9 @@ public class MisereBot extends Bot {
             int bit1 = 0;
             while ((bit1 = CardSet.next(myHand.getBitmap(), bit1)) != 0) {
                 Card card1 = Card.get(bit1);
+                if (card0.equals(card1)) {
+                    continue;
+                }
                 myHand.remove(card1);
                 eval = getEval4Misere(myHand);
                 myHand.add(card1);
@@ -152,7 +151,6 @@ public class MisereBot extends Bot {
                     playerBid.value = eval;
                     playerBid.drops.clear();
                     playerBid.drops.add(card0);
-                    playerBid.drops.add(card1);
                     if (playerBid.value == 0) {
                         break;
                     }
@@ -162,12 +160,9 @@ public class MisereBot extends Bot {
             myHand.remove(card0);
         }
         Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
-        int index = playerBids.size() - 1;
         // rule of 7 cards
         // https://gambiter.ru/pref/mizer-preferans.html
-        if (index > 6) {
-            index = 6;
-        }
+        int index = 6;
         PlayerBid playerBid = playerBids.get(index);
         return playerBid.value < 500;
     }
@@ -179,7 +174,6 @@ public class MisereBot extends Bot {
             playerBid.drops = new CardSet(debugDrop);
             return playerBid;
         }
-//        int drop = this.myHand.size() - ROUND_SIZE;
         if (Bot.playerBid != null) {
             if (nDrops == 2) {
                 return Bot.playerBid;
@@ -226,6 +220,10 @@ probes:
     }
 
     public void getHoles(int declarerNum) {
+        if (holes == null) {
+            // happens after unserialization
+            holes = new ArrayList<>();
+        }
         holes.clear();
         CardSet myHand = new CardSet(this.myHand);
         CardSet leftHand = new CardSet(this.leftHand);
@@ -259,7 +257,7 @@ probes:
                 if (TrickList.bestNodes[0] != null) {
                     TrickList.bestNodes[0].trickData = 0;   // ugly
                 }
-                return gameManager().players[trick.getTurn()].anyCard(trick, false);
+                return gameManager().getPlayers()[trick.getTurn()].anyCard(trick, false);
             }
             res = TrickList.getInstance().getCard(this, trick);
             if (res != null) {
@@ -407,7 +405,7 @@ probes:
             return cardList.first();
         }
         if (declarerDrop == DeclarerDrop.Random || GameManager.RELEASE) {
-            return cardList.get(util.nextRandInt(cardList.size()));
+            return cardList.get(nextRandInt(cardList.size()));
         }
         return cardList.last();
     }
@@ -456,7 +454,7 @@ probes:
         misereBot.getHoles(0);
         Card card = misereBot.declarerPlay();
         if (card == null) {
-            throw new RuntimeException("card == null");
+            throw new RuntimeException("card == null"); // sanity check
         }
         if (!misereBot.myHand.contains(card)) {
             throw new RuntimeException(String.format("err: card %s does not belong to %s",

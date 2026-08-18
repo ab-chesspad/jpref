@@ -24,6 +24,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
+import com.ab.util.Bidder;
 import com.ab.util.SimpleLongIntMap;
 
 import static com.ab.jpref.config.Config.NOP;
@@ -33,22 +34,27 @@ import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
 
-public class TrickList {
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
+public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
     public static final boolean PRINT_BEST_PATH = true;    // for debug
 
-    static final TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
     static final TrickList.TrickNode[] probesBestNodes = new TrickList.TrickNode[ROUND_SIZE + 1];
+
+    static TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
     static int nodeIndex = 0;
 
-    private final TrickPool trickPool;
-    private final SimpleLongIntMap positions;
+    private transient TrickPool trickPool;
+    private transient SimpleLongIntMap positions;
 
     private Bot targetBot;
-    private int myNum;
 
     // just statistics, not used
-    private long start;
+    private transient long start;
     public static long maxListBuildTime = 0;
     public static long maxSimilar = 0;
     public static long maxPoolCount = 0;
@@ -60,7 +66,9 @@ public class TrickList {
         return instance;
     }
 
-    public TrickList(TrickPool trickPool) {
+    public TrickList() {}
+
+    public void init(TrickPool trickPool) {
         instance = this;
         this.trickPool = trickPool;
         this.positions = new SimpleLongIntMap();
@@ -126,12 +134,14 @@ public class TrickList {
                 bestNode = bestNodes[++nodeIndex];
             }
         } else {
-            // unexpected move, need to rebuild trick list
-            String s = trick.toString();
-            if (s.isEmpty()) {
-                s = "not getting " + bestNode;
+            if(trick.number > 0) {
+                // unexpected move, need to rebuild trick list
+                String s = trick.toString();
+                if (s.isEmpty()) {
+                    s = "not getting " + bestNode;
+                }
+                printf("rebuild list after %s\n", s);
             }
-            printf("rebuild list after %s\n", s);
             rebuild(targetBot, trick);
             bestNode = bestNodes[++nodeIndex];
         }
@@ -142,7 +152,6 @@ public class TrickList {
 
     private void initBuild(Bot targetBot) {
         this.targetBot = targetBot;
-        myNum = gameManager().declarerNumber;
         if (bestNodes[0] == null) {
             for (int i = 0; i <= ROUND_SIZE; ++i) {
                 bestNodes[i] = new TrickNode();
@@ -157,7 +166,7 @@ public class TrickList {
     }
 
     public int getEstimate() {
-        if (bestNodes[0] == null) {
+        if (gameManager().declarerNumber < 0 || bestNodes[0] == null) {
             return -1;
         }
         return bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
@@ -167,7 +176,8 @@ public class TrickList {
         int diff;
         CardSet hand0 = new CardSet(gameManager().declarerHand);
 
-        if (gameManager().declarerNumber == trick.getTurn() && bestNodes[nodeIndex].trickData == 0) {
+        if (gameManager().declarerNumber == trick.getTurn()) {
+            // biddedplay: deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
             diff = 0;
         } else {
             if (!gameManager().discarded.intersection(Bot.playerBid.drops).isEmpty()) {
@@ -393,7 +403,7 @@ if (cards == null) {
 
         // create root and list of tricks
         private TrickNode(Trick trick, CardSet... hands) {
-            this.setTop((trick.getStartedBy() - myNum + NOP) % NOP);
+            this.setTop((trick.getStartedBy() - targetBot.getNumber() + NOP) % NOP);
             this.setStartedBy(this.getTop());
             this.minBid = trick.minBid;
             init(hands);
@@ -464,7 +474,7 @@ if (cards == null) {
         }
 
         private void init(CardSet... hands) {
-            this.trumpSuit = gameManager().minBid.getTrump();
+            this.trumpSuit = gameManager().getMinBid().getTrump();
             this.hands = new CardSet[hands.length];
             for (int i = 0; i < hands.length; ++i) {
                 CardSet hand = hands[i];
@@ -472,7 +482,7 @@ if (cards == null) {
             }
         }
 
-        public int addPosition(int probeIndex) {
+        private int addPosition(int probeIndex) {
             int bitmap = CardSet.union(hands).getBitmap();
             if (bitmap == 0) {
                 return 0;
@@ -540,6 +550,24 @@ if (cards == null) {
             this.hands[num].add(last);
             return last;
         }
+    }
+
+    private void writeObject(ObjectOutputStream oos) throws IOException {
+        println("serializing TrickList");
+        oos.defaultWriteObject(); // Serialize default fields
+        oos.writeObject(TrickList.bestNodes);
+        oos.writeObject(TrickList.nodeIndex);
+        oos.writeObject(Bot.targetBot);
+        oos.writeObject(Bot.playerBid);
+    }
+
+    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+        println("unserializing TrickList");
+        ois.defaultReadObject();
+        TrickList.bestNodes = (TrickList.TrickNode[])ois.readObject();
+        TrickList.nodeIndex = (int)ois.readObject();
+        Bot.targetBot = (Bot)ois.readObject();
+        Bot.playerBid = (Bidder.PlayerBid) ois.readObject();
     }
 
     public interface TrickPool {

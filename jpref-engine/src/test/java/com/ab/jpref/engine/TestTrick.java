@@ -33,14 +33,18 @@ import org.junit.Test;
 
 public class TestTrick {
     static final Config config = Config.getInstance();
-    static final Util util = Util.getInstance();
+    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
     public void initClass() {
-        trickList = new TrickList(new TrickPool());
-        gameManager = new GameManager(config, null);
+        trickList = new TrickList();
+        trickList.init(new TrickPool());
+        util = new Util();
+        config.util = util;
+        gameManager = new GameManager();
+        gameManager.init(() -> config);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }

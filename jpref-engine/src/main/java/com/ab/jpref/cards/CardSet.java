@@ -29,9 +29,10 @@ import com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.engine.Bot;
 import com.ab.util.Pair;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class CardSet {
+public class CardSet implements Serializable {
     // todo: first, last, random
     public static final boolean RANDOM_ANY_CARD = false;
     /* this is nice, but I don't want to see it in debugger
@@ -718,7 +719,6 @@ mainLoop:
         } else if ((myNextMin = this.get(1)).getRank().compare(Rank.TEN) >= 0) {
             // 7X, et al.
             if (leftSize >= 2 && myNextMin.compareInTrick(leftSuit.first()) > 0 ||
-//                leftSize < 2 && myNextMin.compareInTrick(rightSuit.get(1)) > 0 ||  // "7X 8 9JQKA 0"
                 rightSize >= 2 && myNextMin.compareInTrick(rightSuit.get(1)) > 0) {
                 // ловится:
                 listData.maxTheyStart = 1;

@@ -25,11 +25,12 @@ package com.ab.jpref.cards;
 
 import com.ab.jpref.config.Config;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class Card implements Comparable<Card>, Config.Queueable {
+public class Card implements Comparable<Card>, Config.Queueable, Serializable {
     public static final boolean COLORED_LOG = true;
 
     static String ansi_head = "\u001B";

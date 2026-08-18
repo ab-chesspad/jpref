@@ -22,7 +22,7 @@ package com.ab.util;
 import java.io.Serializable;
 
 public class Tuple<T> implements Serializable {
-    T[] values;
+    final T[] values;
 
     @SafeVarargs
     public Tuple(T... values) {

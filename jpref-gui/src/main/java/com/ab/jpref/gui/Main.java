@@ -62,19 +62,18 @@ public class Main implements Logger.LogHolder, Host {
         GameManager.RELEASE = release;
         if (release) {
             DEBUG_LOG = false;
+            Logger.DEBUG_LOG = false;
             GameManager.BOTS[0] = false;
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
             SHOW_ALL = false;
-            Logger.DEBUG_LOG = false;
         }
     }
 
     public static JFrame mainFrame;
-    static final PUtil pUtil = PUtil.getInstance();
 
-    private Container mainContainer;
-    private TrickList trickList;
+    private final Config config;
+    private final Container mainContainer;
 
     private Rectangle mainRectangle = new Rectangle();
     private Insets insets;
@@ -84,10 +83,9 @@ public class Main implements Logger.LogHolder, Host {
     private long logStartDate;
 
     private InputStream testInputStream;
-    private final MainPanel mainPanel;
     private final TableLayout<Graphics> tableLayout;
     private final Metrics metrics;
-    private GameManager gameManager;
+    private final GameManager gameManager;
 
     /**
      * @param args optional [fixed-games-file]
@@ -95,25 +93,22 @@ public class Main implements Logger.LogHolder, Host {
     public static void main(String[] args) {
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                Main main = new Main(args);
-                main.go();
-            }
+        SwingUtilities.invokeLater(() -> {
+            Main main = new Main(args);
+            main.go();
         });
     }
 
     public Main(String[] args) {
-        trickList = new TrickList(new TrickPool());
+        PUtil pUtil = PUtil.getInstance();
+        config = PConfig.getInstance();
+        config.util = pUtil;
         metrics = Metrics.getInstance();
 
-/* until IntelliJ adds ansi colors handling to their debugger,
-   output to System.out will be ugly and useless
-//*/
         Logger.setHolder(this);
         String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
         Logger.printf("%s %s, options 0x%x\n", PConfig.PROJECT_NAME, version, specialOption());
-        Logger.println(String.format("running on %s, %d cores\n", pUtil.getOS(),
+        Logger.println(String.format("running on %s, %d cores\n", PConfig.getOS(),
             Runtime.getRuntime().availableProcessors()));
 
         if (args.length > 0) {
@@ -132,11 +127,11 @@ public class Main implements Logger.LogHolder, Host {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JFrame.setDefaultLookAndFeelDecorated(true);
         mainFrame.setBounds(mainRectangle);
+        Logger.printf(DEBUG_LOG, "Main() %s\n", mainRectangle.toString());
 
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                System.out.println("\nwindowClosing()");
                 saveConfig();
             }
         });
@@ -146,12 +141,12 @@ public class Main implements Logger.LogHolder, Host {
             public void componentResized(ComponentEvent e) {
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 insets = mainFrame.getInsets();
-                mainRectangle.height -= insets.top;
+                config.insetsTop = insets.top;
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
-                PConfig.getInstance().mainPosition.setX(mainRectangle.x);
-                PConfig.getInstance().mainPosition.setY(mainRectangle.y);
-                PConfig.getInstance().mainSize.first = mainRectangle.width;
-                PConfig.getInstance().mainSize.second = mainRectangle.height;
+                config.mainPosition.setX(mainRectangle.x);
+                config.mainPosition.setY(mainRectangle.y);
+                config.mainSize.first = mainRectangle.width;
+                config.mainSize.second = mainRectangle.height - insets.top;
                 tableLayout.update(null);
             }
 
@@ -159,12 +154,12 @@ public class Main implements Logger.LogHolder, Host {
             public void componentMoved(ComponentEvent e) {
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 insets = mainFrame.getInsets();
-                mainRectangle.height -= insets.top;
+                config.insetsTop = insets.top;
                 Logger.printf(DEBUG_LOG,"main.%s -> %s, %s\n", currMethodName(), e, mainRectangle);
-                PConfig.getInstance().mainPosition.setX(mainRectangle.x);
-                PConfig.getInstance().mainPosition.setY(mainRectangle.y);
-                PConfig.getInstance().mainSize.first = mainRectangle.width;
-                PConfig.getInstance().mainSize.second = mainRectangle.height;
+                config.mainPosition.setX(mainRectangle.x);
+                config.mainPosition.setY(mainRectangle.y);
+                config.mainSize.first = mainRectangle.width;
+                config.mainSize.second = mainRectangle.height - insets.top;
             }
         });
 
@@ -186,14 +181,25 @@ public class Main implements Logger.LogHolder, Host {
         mainFrame.setTitle(PConfig.PROJECT_NAME);
         mainFrame.setVisible(true);
 
-        mainPanel = new MainPanel(this);
+        MainPanel mainPanel = new MainPanel(this);
         mainContainer.add(mainPanel);
         tableLayout = new TableLayout<>(this, mainPanel);
-        gameManager = new GameManager(PConfig.getInstance(), tableLayout);
+        config.eventObserver = tableLayout;
+        TrickList trickList;
+        if (testInputStream == null) {
+            gameManager = pUtil.getSerializable(GameManager.class);
+            trickList = pUtil.getSerializable(TrickList.class);
+        } else {
+            gameManager = new GameManager();
+            pUtil.register(gameManager);
+            trickList = new TrickList();
+            pUtil.register(trickList);
+        }
+        gameManager.init(this);
+        trickList.init(new TrickPool());
     }
 
     public void go() {
-        GameManager gameManager = new GameManager(PConfig.getInstance(), tableLayout);
         new Thread(() -> {
             try {
                 while (true) {
@@ -208,14 +214,14 @@ public class Main implements Logger.LogHolder, Host {
 
     boolean saved = false;
 
-    private void saveConfig() {
+    private synchronized void saveConfig() {
         if (saved) {
             return;
         }
-        mainRectangle.height += insets.top;
-        PConfig.getInstance().serialize();
+        saved = true;
+        ((PUtil)config.util).serialize();
+        ((PConfig)config).serialize();
         closeLog();
-        saved = false;
     }
 
     private GraphicsDevice getGraphicsDevice() {
@@ -241,10 +247,10 @@ public class Main implements Logger.LogHolder, Host {
         Insets insets = new Insets(0,0,0,0);
         Logger.printf(DEBUG_LOG, "insets=(%dx%dx%dx%d)\n",
                 insets.left, insets.right, insets.top, insets.bottom);
-        mainRectangle.x = PConfig.getInstance().mainPosition.getX();
-        mainRectangle.y = PConfig.getInstance().mainPosition.getY();
-        mainRectangle.width = PConfig.getInstance().mainSize.first;
-        mainRectangle.height = PConfig.getInstance().mainSize.second;
+        mainRectangle.x = config.mainPosition.getX();
+        mainRectangle.y = config.mainPosition.getY();
+        mainRectangle.width = config.mainSize.first;
+        mainRectangle.height = config.mainSize.second + config.insetsTop;
         if (mainRectangle.width == 0) {
             int w = fullScreen.width - insets.left - insets.right;
             int h = fullScreen.height - insets.top - insets.bottom;
@@ -260,20 +266,16 @@ public class Main implements Logger.LogHolder, Host {
             mainRectangle.x = (fullScreen.width - mainRectangle.width) / 2;
             mainRectangle.y = (fullScreen.height - mainRectangle.height) / 2;
         }
+        Logger.printf(DEBUG_LOG, "getGraphicsDevice() %s\n", mainRectangle.toString());
         return mainGD;
     }
 
     @Override
     public PrintStream getLogStream() {
-        if (DEBUG_LOG || specialOption() != 0) {
-            System.out.println("output to System.out");
-            return System.out;
-        }
-
         long today = new Date().getTime() / LOG_THRESHOLD;
         if (today != logStartDate) {
             closeLog();
-            String date = new SimpleDateFormat("yyyy-MM-dd-").format(new Date());
+            String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
             try {
                 logStream = getNewOutput(date);
                 logStartDate = today;
@@ -281,15 +283,14 @@ public class Main implements Logger.LogHolder, Host {
                 throw new RuntimeException(e);
             }
         }
-        System.out.println("output to " + logStream);
         return logStream;
     }
 
     private PrintStream getNewOutput(String date) throws IOException {
-        String dataDir = pUtil.getDataDirectory();
+        String dataDir = PUtil.getDataDirectory();
         File logDir = new File(dataDir, "logs");
         logDir.mkdir();
-        int deleteTimeout = PConfig.getInstance().deleteLogsAfter.get();
+        int deleteTimeout = config.deleteLogsAfter.get();
         Calendar c = new GregorianCalendar();
         c.add(Calendar.HOUR, -24 * deleteTimeout);
         long threshold = c.getTimeInMillis();
@@ -320,8 +321,10 @@ public class Main implements Logger.LogHolder, Host {
             }
             return false;
         });
-        logFileName = logDir + File.separator + String.format("%s%02d%s", date, lastNum[0] + 1, LOG_EXT);
-        return new PrintStream(logFileName, StandardCharsets.UTF_8.name());
+        logFileName = logDir + File.separator + String.format("%s%s", date, LOG_EXT);
+        FileOutputStream f = new FileOutputStream(logFileName, true);
+        System.out.println("output to " + logFileName);
+        return new PrintStream(f, true, StandardCharsets.UTF_8.name());
     }
 
     private void closeLog() {
@@ -344,7 +347,7 @@ public class Main implements Logger.LogHolder, Host {
 
     @Override
     public Config config() {
-        return PConfig.getInstance();
+        return config;
     }
 
     @Override

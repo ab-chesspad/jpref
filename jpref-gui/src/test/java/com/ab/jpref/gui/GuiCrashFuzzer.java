@@ -55,7 +55,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 3. Run the fuzzer against that display:
  *   DISPLAY=:99 java -cp "jpref-gui/target/classes:jpref-gui/target/test-classes:jpref-engine/target/classes" \
  *        com.ab.jpref.gui.GuiCrashFuzzer [durationSeconds] [seed]
-   DISPLAY=:99 java -cp "jpref-gui/target/classes:jpref-gui/target/test-classes:jpref-engine/target/classes" \
+ *   e.g.
+     DISPLAY=:99 java -cp "jpref-gui/target/classes:jpref-gui/target/test-classes:jpref-engine/target/classes" \
         com.ab.jpref.gui.GuiCrashFuzzer 7200 > log
  *   - durationSeconds defaults to 180 if omitted, seed defaults to a random value.
  *   - Exits 0 if no crash was found in that time, 1 (with stack traces printed) if one was.
@@ -98,13 +99,11 @@ public class GuiCrashFuzzer {
 
         installExceptionCapture();
 
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                Main main = new Main(new String[0]);
-                main.config().pauseBetweenTricks.set(0);
-                main.config().pauseBetweenRounds.set(0);
-                main.go();
-            }
+        SwingUtilities.invokeLater(() -> {
+            Main main = new Main(new String[0]);
+            main.config().pauseBetweenTricks.set(0);
+            main.config().pauseBetweenRounds.set(0);
+            main.go();
         });
         JFrame frame = waitForFrame();
 

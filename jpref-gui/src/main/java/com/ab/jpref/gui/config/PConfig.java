@@ -23,24 +23,22 @@ import com.ab.jpref.config.Config;
 import com.ab.util.Couple;
 import com.ab.jpref.gui.PUtil;
 
-import javax.swing.*;
 import java.awt.*;
 import java.util.Locale;
 
 public class PConfig extends Config {
     // update serialVersionUID every time a property is being added/changed!
-    private static final long serialVersionUID = 9L;
+    private static final long serialVersionUID = 10L;
 
     public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> settingsPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> helpPopupRectangle = new Property<>("", new Rectangle());
+    public final Property<Rectangle> offerPopupRectangle = new Property<>("", new Rectangle());
 
     public final ColorProperty bgColor = new ColorProperty("", "#007000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
-
-    static final PUtil util = PUtil.getInstance();
 
     public static PConfig getInstance() {
         if (instance == null) {
@@ -68,11 +66,11 @@ public class PConfig extends Config {
     }
 
     public static PConfig unserialize() {
-        return (PConfig)unserialize(util.getDataDirectory());
+        return (PConfig)unserialize(PUtil.getDataDirectory());
     }
 
     public void serialize() {
-        serialize(util.getDataDirectory());
+        serialize(PUtil.getDataDirectory());
     }
 
     public static void refresh() {

@@ -24,6 +24,7 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLConnection;
@@ -31,73 +32,72 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Random;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class Util {
-    public static final String PROJECT_NAME = Config.PROJECT_NAME;
+    public static final String DATA_FILE_NAME = Config.PROJECT_NAME + ".state";
     public static final String DEAL_MARK = "deal:";
 
-    public enum OS {
-        linux,
-        mac,
-        windows,
-        unknown
-    }
-
-    public static final Random myRand = new Random();
-
-    private static class Holder {
-        static final Util instance = new Util();
-    }
-
-    public static Util getInstance() {
-        return Holder.instance;
-    }
-
-    protected Util() {}
-
-    public OS getOS() {
-        OS os = OS.unknown;
-        String osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
-        if (osName.contains("nux")) {
-            os = OS.linux;
-        } else if ((osName.contains("mac")) || (osName.contains("darwin"))) {
-            os = OS.mac;
-        } else if ((osName.startsWith("windows"))) {
-            os = OS.windows;
+    private static Util instance;
+    public static synchronized Util getInstance() {
+        if (instance == null) {
+            instance = new Util();
         }
-        return os;
-    }
-    public String getDataDirectory() {
-        throw new RuntimeException("stub!");
+        return instance;
     }
 
-    public String info() {
-        String[] command = {"cat", "/proc/cpuinfo"};
-        String cpuInfo = "?";
-        try {
-            Process process = Runtime.getRuntime().exec(command);
-            BufferedReader stdInput = new BufferedReader(new
-                    InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = stdInput.readLine()) != null) {
-                if (line.startsWith("model name")) {
-                    int index = line.indexOf(": ");
-                    cpuInfo = line.substring(index + 2);
-                    break;
-                }
+    public Util() {}
+
+    private List<Serializable> serializables;
+
+    public void register(Serializable serializable) {
+        int i;
+        for (i = 0; i < serializables.size(); ++i) {
+            Serializable s = serializables.get(i);
+            if (s.getClass().equals(serializable.getClass())) {
+                break;
             }
-        } catch (IOException e) {
-            // ignore
         }
+        if (i < serializables.size()) {
+            serializables.remove(i);
+        }
+        serializables.add(serializable);
+    }
 
-        int cores = Runtime.getRuntime().availableProcessors();
-        String res = String.format("%s, #=%d\n", cpuInfo, cores);
-        res += String.format("totalMemory=%,dMB, freeMemory=%,dMB",
-            Runtime.getRuntime().totalMemory() / 1000000,
-            Runtime.getRuntime().freeMemory() / 1000000);
-        return res;
+    @SuppressWarnings("unchecked")
+    public <T> T getSerializable(Class<T> claz) {
+        for (Serializable serializable : serializables) {
+            if (claz.isInstance(serializable)) {
+                return (T)serializable;
+            }
+        }
+        try {
+            Serializable serializable = (Serializable)claz.getDeclaredConstructor().newInstance();
+            serializables.add(serializable);
+            return (T)serializable;
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void serialize(String dataDirectory) {
+        try (FileOutputStream fos = new FileOutputStream(new File(dataDirectory, DATA_FILE_NAME));
+                ObjectOutputStream oos = new ObjectOutputStream(fos) ) {
+            oos.writeObject(serializables);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void unserialize(String dataDirectory) {
+        try (FileInputStream fis = new FileInputStream(new File(dataDirectory, DATA_FILE_NAME));
+                ObjectInputStream ois = new ObjectInputStream(fis)) {
+            serializables = (List<Serializable>) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println(e.getMessage());
+            serializables = new ArrayList<>();
+        }
     }
 
     // return result file name
@@ -111,13 +111,11 @@ public class Util {
         InputStream is = null;
         File f = new File(filePath);
         String fileName = f.getName();
-        String GUID = java.util.UUID.randomUUID().toString();
-        String remoteFileName = GUID + "-" + fileName;
+        String GUID = Config.getInstance().GUID;
+        String remoteFileName = GUID + "-" + fileName.substring(0, fileName.length() - 3) + "zip";
         System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
-
-        try (InputStream input = Files.newInputStream(Paths.get(filePath))) {
-            byte[] fileData= new byte[input.available()];
-            input.read(fileData);
+        try {
+            byte[] fileData = getLogBytes(filePath);
             String message1 = "";
             message1 += "--" + boundary + CrLf;
             message1 += "Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + remoteFileName + "\"" + CrLf;
@@ -182,6 +180,23 @@ public class Util {
             }
         }
         return res;
+    }
+
+    private byte[] getLogBytes(String filePath) throws IOException {
+        try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
+            byte[] fileData = new byte[is.available()];
+            is.read(fileData);
+            File f = new File(filePath);
+            String fileName = f.getName();
+            // --- Compress ---
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+                zos.putNextEntry(new ZipEntry(fileName));  // entry name = filename inside zip
+                zos.write(fileData);
+                zos.closeEntry();
+            }
+            return baos.toByteArray();
+        }
     }
 
     public void getList(InputStream is, LineHandler lineHandler) throws IOException {
@@ -283,10 +298,6 @@ public class Util {
 
     public interface LineHandler {
         void handleLine(String res, List<String> tokens);
-    }
-
-    public int nextRandInt(int max) {
-        return myRand.nextInt(max);
     }
 
     public static synchronized void sleep(int timeout) {

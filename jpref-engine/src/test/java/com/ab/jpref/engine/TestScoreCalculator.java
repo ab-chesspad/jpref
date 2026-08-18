@@ -23,6 +23,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Logger;
 import com.ab.util.ScoreCalculator;
 import org.junit.Assert;
@@ -37,7 +38,8 @@ public class TestScoreCalculator {
     @BeforeClass
     public static void initClass() {
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
-        gameManager = new GameManager(config, null);
+        gameManager = new GameManager();
+        gameManager.init(() -> config);
         config.pauseBetweenRounds.set(0);
     }
 

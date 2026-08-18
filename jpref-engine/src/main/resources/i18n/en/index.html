@@ -44,8 +44,6 @@ The button in the bottom-right corner invokes the program menu:
     <li>Scores - show the score table.</li>
     <li>Last Trick - show the last trick.</li>
     <li>Your Offer - negotiate the round results.</li>
-    <li>Replay - replay the current deal.</li>
-    <li>New Round - the current round will be aborted.</li>
     <li>Comments - see below.</li>
     <li>Submit Log - see below.</li>
     <li>Settings - guess.</li>
@@ -55,7 +53,7 @@ In addition to the settings that can be updated explicitly,
 the program window location and size are preserved,
 so <b>JPref</b> will open on the same spot the next time.<br/>
 At the end of the round you'll see the scores. If you dismiss this pop-up window
-with <b>Replay</b> button (this command is completely different from the menu <b>Replay</b>),
+with <b>Replay</b> button,
 the program will replay the last round in the manual mode
 when all moves are to be done manually and all cards are visible.
 This feature allows the user and the program moves verification,
@@ -64,7 +62,7 @@ and find errors in the <b>JPref</b> algorithm.
 The important program feature is logging. The program records there all the games. Logs are located in
 'logs' directory, either next to jpref.jar
 file (macOS, Linux), or in &lt;your home folder&gt;\jpref (Windows).
-New log is opened with a new program launch or with the new day.<br/>
+New log is opened every day and consecutive launches the same day continue the same log.<br/>
 Menu item <b>Comments</b> invokes the comment window.
 It is important to record the program errors, stupid moves, etc.<br/>
 The whole comment text will be written into the log that the user can submit to the developer:

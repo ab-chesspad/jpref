@@ -22,11 +22,15 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
+import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
-import com.ab.util.BidData;
-import com.ab.util.BidData.PlayerBid;
+import com.ab.util.Bidder;
+import com.ab.util.Bidder.PlayerBid;
 
-public class Bot extends Player {
+import java.io.Serializable;
+import java.util.Random;
+
+public class Bot extends Player implements Serializable {
     public static CardList debugDrop = null;
 
     // when declarer is Bot, it uses the same logic for declarer and defenders
@@ -119,6 +123,11 @@ public class Bot extends Player {
         throw new RuntimeException("stub!");
     }
 
+    @Override
+    public Config.Bid drop() {
+        return bid;
+    }
+
     // 12 cards
     @Override
     public void declareRound(Bid minBid, int _elderHand) {
@@ -128,7 +137,7 @@ public class Bot extends Player {
         } else {
             targetBot = new ForTricksBot(this);
         }
-        BidData.PlayerBid playerBid = targetBot.getDrop(elderHand, 2);
+        Bidder.PlayerBid playerBid = targetBot.getDrop(elderHand, 2);
         Bot.playerBid = playerBid;
         this.bid = targetBot.getBid();
         drop(playerBid.drops);
@@ -170,7 +179,7 @@ public class Bot extends Player {
         if (targetBot == null) {
             // when declarer is human; todo: verify declaration!
             Player declarer = gameManager().getDeclarerForDefender();
-            declarer.declareRound(gameManager().minBid, trick.getStartedBy());
+            declarer.declareRound(gameManager().getMinBid(), trick.getStartedBy());
         }
         return targetBot.play(trick);
     }
@@ -568,6 +577,13 @@ public class Bot extends Player {
 
         return res;
     }
+
+    public final Random myRand = new Random();
+
+    public int nextRandInt(int max) {
+        return myRand.nextInt(max);
+    }
+
 
     static class HandResults {
         final CardSet.ListData[] allListData = new CardSet.ListData[Card.TOTAL_SUITS];

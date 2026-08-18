@@ -24,17 +24,9 @@ import java.io.PrintStream;
 public class Logger {
     public static boolean DEBUG_LOG = true;
     private static LogHolder logHolder = new LogHolder() {};
-    private static PrintStream out;
 
     public static void setHolder(LogHolder logHolder) {
         Logger.logHolder = logHolder;
-    }
-
-    private static PrintStream getOutput() {
-        if (out == null) {
-            out = logHolder.getLogStream();
-        }
-        return out;
     }
 
     public static void println() {
@@ -60,7 +52,7 @@ public class Logger {
     }
 
     public static void printf(String format, Object... args) {
-        PrintStream out = getOutput();
+        PrintStream out = logHolder.getLogStream();
         out.printf(format, args);
         if (DEBUG_LOG && out != System.out) {
             System.out.printf(format, args);

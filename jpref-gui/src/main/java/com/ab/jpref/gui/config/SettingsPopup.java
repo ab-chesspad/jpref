@@ -32,7 +32,8 @@ public class SettingsPopup extends JDialog {
     final SettingsPopup popupInstance;
     final BufferedImage lineImage = pUtil.loadImage("buttons/radio.png");
     final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
-    JButton okButton, cancelButton;
+    final JButton okButton;
+    final JButton cancelButton;
 
     final Host host;
     Rectangle popupRectangle;

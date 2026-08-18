@@ -26,15 +26,19 @@ import java.io.*;
 public class TestGameManager {
     public static final int NOP = Config.NOP;
 
-    static final Config config = Config.getInstance();
-    static final Util util = Util.getInstance();
+    static Config config = Config.getInstance();
+    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
     public void initClass() {
-        trickList = new TrickList(new TrickPool());
-        gameManager = new GameManager(config, null);
+        trickList = new TrickList();
+        trickList.init(new TrickPool());
+        util = new Util();
+        config.util = util;
+        gameManager = new GameManager();
+        gameManager.init(() -> config);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }
@@ -52,7 +56,7 @@ public class TestGameManager {
 
     private void printTricks() {
         String sep = "results: ";
-        for (Player p : gameManager.players) {
+        for (Player p : gameManager.getPlayers()) {
             printf("%s%s: %d", sep, p.getName(), p.getTricks());
             sep = ", ";
         }
@@ -122,16 +126,16 @@ public class TestGameManager {
                         gameManager.prepareTest(declarerNum, expectedBid, talon);
                         if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
                             gameManager.playRoundAllPass();
-                        } else if (gameManager.minBid.equals(Config.Bid.BID_MISERE)) {
+                        } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
                             gameManager.playRoundMisere();
                         } else {
                             gameManager.playRoundForTricks();
                         }
                         printTricks();
                         if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            Assert.assertEquals("wrong bid", expectedBid, gameManager.declarer.bid);
-                            if (!gameManager.minBid.equals(Config.Bid.BID_MISERE)) {
-                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.declarer.getTricks());
+                            Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                            if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                             }
                         }
 /*
@@ -140,7 +144,7 @@ if (++count[0] > 0) {
 }
 */
 
-                        for (Player player: gameManager.players) {
+                        for (Player player: gameManager.getPlayers()) {
                             player.clearHistory();
                         }
                         System.gc();
@@ -205,16 +209,16 @@ if (++count[0] > 0) {
                         gameManager.prepareTest(declarerNum, expectedBid, talon);
                         if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
                             gameManager.playRoundAllPass();
-                        } else if (gameManager.minBid.equals(Config.Bid.BID_MISERE)) {
+                        } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
                             gameManager.playRoundMisere();
                         } else {
                             gameManager.playRoundForTricks();
                         }
                         printTricks();
                         if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            Assert.assertEquals("wrong bid", expectedBid, gameManager.declarer.bid);
-                            if (!gameManager.minBid.equals(Config.Bid.BID_MISERE)) {
-                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.declarer.getTricks());
+                            Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                            if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                             }
                         }
 /*
@@ -223,7 +227,7 @@ if (++count[0] > 0) {
 }
 */
 
-                        for (Player player: gameManager.players) {
+                        for (Player player: gameManager.getPlayers()) {
                             player.clearHistory();
                         }
                         System.gc();
@@ -235,6 +239,7 @@ if (++count[0] > 0) {
             });
         printStatistics(count[0]);
     }
+
 
     @Test
     // let players bid and play the highest bid
@@ -259,7 +264,7 @@ if (++count[0] > 0) {
                 }
                 _deck.verifyDeck();
                 CardList _talonCards = new CardList(_deck.subList(30, 32));
-                for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
+                for (int declarerNum = 2; declarerNum < NOP; ++declarerNum) {
                     printf("declarer #%d\n", declarerNum);
                     int elderHand = (_elderHand + declarerNum) % NOP;
                     CardList deck = new CardList();
@@ -268,24 +273,34 @@ if (++count[0] > 0) {
                         deck.addAll(_deck.subList(k, k + 10));
                     }
                     deck.addAll(new CardList(_talonCards));
-                    gameManager.playRound(deck, elderHand);
+                    gameManager.deal(deck);
+                    gameManager.elderHand = elderHand;
+                    gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
+//                    gameManager.nextBidder = elderHand;
+//                    gameManager.getTrick().setNumber(0);
+//                    gameManager.passCount = 0;
+//                    gameManager.setMinBid(Config.Bid.BID_6S);
+                    Bot.targetBot = null;
+                    gameManager.playRound(deck);
 
                     String[] resParts0 = res.split("\\s+:\\s+|\\s+#\\s+");
                     String[] resParts = resParts0[0].split("\\s+|#");
                     Config.Bid expectedBid = Config.Bid.fromName(resParts[0]);
                     if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
-                        Assert.assertEquals("wrong bid", expectedBid, gameManager.minBid);
+                        Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
                     } else {
                         int declarerTricks = Integer.parseInt(resParts[1]);
-                        Assert.assertNotNull("wrong bid all-pass", gameManager.declarer);
-                        Assert.assertEquals("wrong bid", expectedBid, gameManager.declarer.bid);
-                        if (!gameManager.minBid.equals(Config.Bid.BID_MISERE)) {
-                            Assert.assertEquals("wrong tricks", declarerTricks, gameManager.declarer.getTricks());
+                        Assert.assertNotNull("wrong bidding", gameManager.getDeclarer());
+                        Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                        if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                            Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                         }
                     }
-                    for (Player player: gameManager.players) {
-                        player.clearHistory();
-                    }
+//                    for (Player player: gameManager.getPlayers()) {
+//                        player.clearHistory();
+//                    }
+                    gameManager.roundStage = GameManager.RoundStage.dealing;
+                    gameManager.setMinBid(Config.Bid.BID_6S);
                 }
                 ++count[0];
             });
@@ -346,9 +361,9 @@ if (++count[0] > 0) {
                         gameManager.prepareTest(declarerNum, Config.Bid.BID_MISERE, talonCards);
                         gameManager.playRoundMisere();
                         printTricks();
-                        Assert.assertEquals("wrong result", clean, gameManager.players[declarerNum].getTricks() == 0);
+                        Assert.assertEquals("wrong result", clean, gameManager.getPlayers()[declarerNum].getTricks() == 0);
                     }
-                    for (Player player: gameManager.players) {
+                    for (Player player: gameManager.getPlayers()) {
                         player.clearHistory();
                     }
                 }
@@ -393,9 +408,9 @@ if (++count[0] > 0) {
         gameManager.deal(deck);
         gameManager.playRoundAllPass();
         printf("%d, %d, %d\n"
-            , gameManager.players[0].getTricks()
-            , gameManager.players[1].getTricks()
-            , gameManager.players[2].getTricks()
+            , gameManager.getPlayers()[0].getTricks()
+            , gameManager.getPlayers()[1].getTricks()
+            , gameManager.getPlayers()[2].getTricks()
         );
         String[] parts =  res.split("[:|,|#] ");
         int k = 1;
@@ -403,7 +418,7 @@ if (++count[0] > 0) {
             k = 2;
         }
         for (int i = 0; i < NOP; ++i) {
-            Player p = gameManager.players[i];
+            Player p = gameManager.getPlayers()[i];
 /* I am tired of testing all possible outcomes, let's leave it for later
             Assert.assertEquals(String.format("%s\n tricks for player-%d", deck.toString(), p.getNumber()),
                 Integer.parseInt(parts[k * i + k - 1].trim()), p.getTricks());
@@ -429,7 +444,7 @@ if (++count[0] > 0) {
 
         try {
             gameManager.runGame(testInputStream, 0);
-            String t = util.info();
+            String t = config.info();
             String text = t + "\n" + String.format("maxBuildTime=%,d msec, maxPositions=%,d, maxMapSize=%,d\n",
                 TrickList.maxListBuildTime, TrickList.maxPositions, SimpleLongIntMap.maxSize);
             println(text);

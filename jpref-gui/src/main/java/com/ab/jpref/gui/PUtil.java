@@ -19,14 +19,14 @@
  */
 package com.ab.jpref.gui;
 
+import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
 import com.ab.util.Util;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URISyntaxException;
 
 public class PUtil extends Util {
@@ -39,13 +39,16 @@ public class PUtil extends Util {
         return instance;
     }
 
-    @Override
-    public String getDataDirectory() {
-        OS os = getOS();
+    protected PUtil() {
+        unserialize(getDataDirectory());
+    }
+
+    public static String getDataDirectory() {
+        Config.OS os = Config.getOS();
         File file;
-        if (os == Util.OS.windows) {
+        if (os == Config.OS.windows) {
             String userHome = System.getProperty("user.home");
-            file = new File(userHome, PROJECT_NAME);
+            file = new File(userHome, Config.PROJECT_NAME);
             if (!file.exists()) {
                 file.mkdirs();
             }
@@ -59,6 +62,10 @@ public class PUtil extends Util {
             }
         }
         return file.getAbsolutePath();
+    }
+
+    public void serialize() {
+        serialize(getDataDirectory());
     }
 
     public BufferedImage loadImage(String path) {

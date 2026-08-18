@@ -23,7 +23,6 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
-// todo: rethink language change
 public class I18n {
     public static int maxPhraseLength = 50;
 
@@ -103,7 +102,6 @@ public class I18n {
     }
 
     public static String loadString(String path) {
-//        Logger.println(path);
         StringBuilder sb = new StringBuilder();
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         path = String.format("i18n/%s/%s", getInstance().iso639_1_2002_code, path);
@@ -112,7 +110,6 @@ public class I18n {
             String line;
             while ((line = br.readLine()) != null) {
                 sb.append(line).append(" ");
-//                sb.append(line).append(" \r");
             }
         } catch (Exception e) {
             System.out.printf("error loading resource %s\n", path);

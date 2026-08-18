@@ -154,8 +154,7 @@ public class SimpleLongIntMap {
     }
 
     private int hash(long key) {
-        int index = (int)(key % keys.length);
-        return index;
+        return (int)(key % keys.length);
     }
 
     public static void printStatistics() {

@@ -32,20 +32,26 @@
 package com.ab.jpref.config;
 
 import com.ab.jpref.cards.Card;
+import com.ab.jpref.engine.GameManager;
 import com.ab.util.Couple;
 import com.ab.util.Point;
+import com.ab.util.Util;
 
 import java.io.*;
+import java.util.Locale;
 
 public class Config implements Serializable {
-    private static final long serialVersionUID = 10L;
+    private static final long serialVersionUID = 11L;
     public static final String PROJECT_NAME = "JPref";
     public static final String VERSION = "0.1";
 
     public final Property<Boolean> release = new Property<>("", true);
 
+    public transient GameManager.EventObserver eventObserver;
+    public transient Util util;
     public final Point mainPosition = new Point(0, 0);
     public final Couple<Integer> mainSize = new Couple<>(0, 0);
+    public int insetsTop;
 
     public final Property<Selection<Couple<String>>> language =
         new Property<>("Language", true, new Selection<>(
@@ -108,6 +114,7 @@ public class Config implements Serializable {
     public static final char NO_TRUMP = '-';
 
     protected static Config instance;
+    public final String GUID;
 
     public static Config getInstance() {
         if (instance == null) {
@@ -116,7 +123,9 @@ public class Config implements Serializable {
         return instance;
     }
 
-    protected Config() {}
+    protected Config() {
+        GUID = java.util.UUID.randomUUID().toString();
+    }
 
     public static Config unserialize(String dir) {
         Object object = null;
@@ -355,6 +364,52 @@ public class Config implements Serializable {
         public String toString() {
             return getName();
         }
+    }
+
+    public enum OS {
+        linux,
+        mac,
+        windows,
+        unknown
+    }
+
+    public static OS getOS() {
+        OS os = OS.unknown;
+        String osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
+        if (osName.contains("nux")) {
+            os = OS.linux;
+        } else if ((osName.contains("mac")) || (osName.contains("darwin"))) {
+            os = OS.mac;
+        } else if ((osName.startsWith("windows"))) {
+            os = OS.windows;
+        }
+        return os;
+    }
+
+    public String info() {
+        String[] command = {"cat", "/proc/cpuinfo"};
+        String cpuInfo = "?";
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = stdInput.readLine()) != null) {
+                if (line.startsWith("model name")) {
+                    int index = line.indexOf(": ");
+                    cpuInfo = line.substring(index + 2);
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            // ignore
+        }
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        String res = String.format("%s, #=%d\n", cpuInfo, cores);
+        res += String.format("totalMemory=%,dMB, freeMemory=%,dMB",
+                Runtime.getRuntime().totalMemory() / 1000000,
+                Runtime.getRuntime().freeMemory() / 1000000);
+        return res;
     }
 
 }

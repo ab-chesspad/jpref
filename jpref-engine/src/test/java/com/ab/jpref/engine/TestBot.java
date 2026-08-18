@@ -10,7 +10,7 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.trickpool.TrickPool;
-import com.ab.util.BidData;
+import com.ab.util.Bidder;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 import org.junit.*;
@@ -23,14 +23,18 @@ import static com.ab.util.Util.currMethodName;
 public class TestBot {
     public static final int NOP = Config.NOP;
     static final Config config = Config.getInstance();
-    static final Util util = Util.getInstance();
+    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @BeforeClass
     public static void initClass() {
-        trickList = new TrickList(new TrickPool());
-        gameManager = new GameManager(config, null);
+        trickList = new TrickList();
+        trickList.init(new TrickPool());
+        util = new Util();
+        config.util = util;
+        gameManager = new GameManager();
+        gameManager.init(() -> config);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
 
@@ -73,18 +77,18 @@ public class TestBot {
                     }
                 } else {
                     ForTricksBot player = new ForTricksBot(cards);
-                    BidData.PlayerBid playerBid = player.getMaxPlayerBid(minBid, turn);
+                    Bidder.PlayerBid playerBid = player.getMaxPlayerBid(minBid, turn);
                     bid = playerBid.toBid();
                 }
                 Assert.assertEquals(expectedBid, bid);
             });
     }
 
+    // todo: merge with duplicating TestBidData.testGetBid
     @Test
     public void testDeclareRound() throws IOException {
         println("running: " + currMethodName());
-        util.getList(getInputStream("declare-round" +
-                        ""),
+        util.getList(getInputStream("declare-round"),
             (res, tokens) -> {
                 String[] parts = res.split(", ");
                 Card drop0 = Card.fromName(parts[0]);
@@ -153,7 +157,7 @@ public class TestBot {
             k -= size;
             hands[--i] = new CardSet(cards.subList(0, k));  // the rest
             Config.Bid bid = Config.Bid.fromName(parts[1]);
-            gameManager.minBid = bid;
+            gameManager.setMinBid(bid);
 
             Trick trick = new Trick();
             trick.minBid = bid;

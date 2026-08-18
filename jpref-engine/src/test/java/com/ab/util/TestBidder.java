@@ -5,50 +5,60 @@ import com.ab.jpref.config.Config.Bid;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestBidData {
+public class TestBidder {
     private final Util util = Util.getInstance();
 
     @Test
     public void testGetBid() {
         String[] sources = {
-                "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♦ : ♣QK",
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
-            "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦QA",
-            "♠78QK ♣QKA ♦QA ♥JQA  1 -> 6♠ : ♦QA",
-            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
+            "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦Q ♥J",
+/////////
+            "♠9 ♣89JQ ♦78XA ♥7XQ  0 -> 6♦ : ♥7 ♠9",
+            "♠9 ♣89JQ ♦78XA ♥7XQ  1 -> 6♣ : ♥7 ♠9",
+
+            "♠JQK ♣8QKA ♦8A ♥QK  0 -> 8♣ : ♦8",  // todo: 7♣
+            "♠JQK ♣8QKA ♦8A ♥QK  1 -> 7♣ : ♦8",
+
+            "♠8XJQK ♣JA ♦7K ♥7Q  1 -> Pass",
+            "♠78XJQK ♣JA ♦7K ♥7Q  1  6♠ -> 6♠ : ♥7Q",
+            "♠78XJQK ♣JA ♦7K ♥7Q  1  6♣ -> 7♠ : ♥7Q",   // overbidding
+
+            "♠78XJQK ♣JA ♦7K ♥Q  1 -> 6♠",
+            "♠78QK ♣QKA ♦QA ♥JQA  0 -> 7♠ : ♦Q ♥J",
+            "♠78QK ♣QKA ♦QA ♥JQA  1 -> 7♠ : ♦Q ♥J",
+            "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦Q ♥J",
             "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♦ : ♣QK",
+            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
             "♠QK ♣KA ♦8QK ♥78JQA  0 -> 7♥ : ♠QK",
             "♠78JQA ♣8QK ♦QK ♥KA  0 -> 7♠ : ♦QK",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
             "♠79XJQA ♦8XJKA  2 -> 8♠",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
-            // 11 cards, no drop:
+
             "♠79JQA ♣JA ♦XK ♥79  2 -> Pass",
             "♠JA ♣79JQA ♦XK ♥78  2 -> Pass",
             "♠JQK ♣8QA ♦8A ♥QKA  0 -> 7-",
-            "♠JQK ♣8QKA ♦8A ♥QK  0 -> 8♣",
-            "♠JQK ♣8QKA ♦8A ♥QK  1 -> 7♣",
             "♠79XJQA ♣8JA ♦K ♥8  2 -> 6♠",
 
             "♠XJQ ♣89JQKA ♦7X ♥A  0 -> 8♣ : ♦7X",
             "♠XJQ ♣89JQKA ♦7X ♥A  1  7♠ -> 7♣ : ♦7X",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
 
-            // overbidding
-//            "♠7JQ ♣QA ♦XQKA ♥89X  0  7- -> 8♦ : ♣Q ♥8",
-//            "♠8KA ♣78KA ♦7 ♥7JQK  0  8♦ -> 8♥ : ♠8 ♦7",
-//            "♠XJQ ♣89JQKA ♦7X ♥A  1  7♦ -> 8♣ : ♦7X",
-//            "♠XJQ ♣89JQKA ♦7X ♥A  1  8♠ -> 8♣ : ♦7X",
-//            "♠79XJQA ♣8JA ♦XK ♥8  2  6♥ -> 7♠ : ♦X ♥8",
-//            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♣Q ♥8",
-            "♣A ♦79XQA ♥79XQKA  0 -> 8♥ : ♣A ♦7",
+            "♠7JQ ♣QA ♦XQKA ♥89X  0  7- -> 8♦ : ♣Q ♥8",
+            "♠8KA ♣78KA ♦7 ♥7JQK  0  8♦ -> 8♥ : ♠8 ♦7", // overbidding
+            "♠XJQ ♣89JQKA ♦7X ♥A  1  7♦ -> 8♣ : ♦7X",
+            "♠XJQ ♣89JQKA ♦7X ♥A  1  8♠ -> 8♣ : ♦7X",
+            "♠79XJQA ♣8JA ♦XK ♥8  2  6♥ -> 7♠ : ♦X ♥8",
+            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♣Q ♥8",
+            "♣A ♦79XQA ♥79XQKA  0 -> 8♥ : ♦79",
             "♦789XQA ♥79XQKA  0 -> 9♦ : ♥79",
             "♠KA ♣9XJ ♦KA ♥78JQA  1 -> 8♥ : ♣9X",
             "♠9JQKA ♣8QA ♦8A ♥QK  0 -> 8♠ : ♣8 ♦8",
             "♠JQA ♣89JA ♦Q ♥89KA  0 -> 6♥ : ♠J ♦Q",
             "♣8 ♦89XKA ♥79XQKA  0 -> 9♥ : ♣8 ♦8",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
-//            "♠JQA ♣89JA ♦Q ♥89KA  1 -> 6♣ : ♠J ♦Q",
+            "♠JQA ♣89JA ♦Q ♥89KA  1 -> 6♣ : ♠J ♦Q",
         };
         for (String source : sources) {
             Logger.println(source);
@@ -68,12 +78,12 @@ public class TestBidData {
                 expectedDrops = new CardSet(util.toCardList(_parts[1]));
             }
 
-            BidData.PlayerBid playerBid = BidData.getInstance().getBid(hand, minBid, elderhand, hand.size() - 10);
+            Bidder.PlayerBid playerBid = Bidder.getInstance().getBid(hand, minBid, elderhand, hand.size() - 10);
             Bid bid = playerBid.toBid();
-            Assert.assertEquals("bid", expectedBid, bid);
             if (expectedDrops != null) {
                 Assert.assertEquals("drops", expectedDrops, playerBid.drops);
             }
+            Assert.assertEquals("bid", expectedBid, bid);
         }
     }
 

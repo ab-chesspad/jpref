@@ -23,8 +23,8 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.util.BidData;
-import com.ab.util.BidData.PlayerBid;
+import com.ab.util.Bidder;
+import com.ab.util.Bidder.PlayerBid;
 import com.ab.util.Pair;
 
 import java.util.ArrayList;
@@ -52,25 +52,21 @@ public class ForTricksBot extends Bot {
         CardSet talonCandidates = myHand.complement();
         CardSet myHand = new CardSet(this.myHand);
         List<PlayerBid> playerBids = new ArrayList<>();
-
         int bit0 = 0;
         while ((bit0 = CardSet.next(talonCandidates.getBitmap(), bit0)) != 0) {
             Card card0 = Card.get(bit0);
             myHand.add(card0);
             // 11 cards
-            PlayerBid playerBid = BidData.getInstance().getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
+            PlayerBid playerBid = Bidder.getInstance().getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
             playerBid.drops.add(card0);     // for testing
             playerBids.add(playerBid);
             myHand.remove(card0);
         }
 
         Collections.sort(playerBids, (b1, b2) -> b2.value - b1.value);
-        int index = playerBids.size() - 1;
         // the same rule of 7 cards
         // https://gambiter.ru/pref/mizer-preferans.html
-        if (index > 6) {
-            index = 6;
-        }
+        int index = 6;
         maxPlayerBid = playerBids.get(index);
         return maxPlayerBid;
     }
@@ -83,7 +79,7 @@ public class ForTricksBot extends Bot {
             return playerBid;
         }
         if (playerBid == null || !myHand.contains(playerBid.drops)) {
-            playerBid = BidData.getInstance().getBid(myHand, bid, elderHand, nDrops);
+            playerBid = Bidder.getInstance().getBid(myHand, bid, elderHand, nDrops);
         }
         this.bid = playerBid.toBid();
         return playerBid;
@@ -125,11 +121,11 @@ public class ForTricksBot extends Bot {
     // returns sorted in ascending order
     List<SuitInfo> getAllSuitInfo() {
         List<SuitInfo> allSuitInfo = new ArrayList<>();
-        List<Pair<String, Integer>> pairs = BidData.getInstance().toSuitChunks(myHand, 0);
+        List<Pair<String, Integer>> pairs = Bidder.getInstance().toSuitChunks(myHand, 0, null);
         for (Pair<String, Integer> pair : pairs) {
             SuitInfo suitInfo = new SuitInfo();
             allSuitInfo.add(suitInfo);
-            suitInfo.suit = BidData.getInstance().getSuit(pair.first);
+            suitInfo.suit = Bidder.getInstance().getSuit(pair.first);
             suitInfo.cardSet = myHand.list(suitInfo.suit);
             suitInfo.chunk = pair.first.substring(1, pair.first.length() - 1);
             suitInfo.length = suitInfo.cardSet.size();

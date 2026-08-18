@@ -28,16 +28,18 @@ import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
+
+import com.ab.jpref.ui.Host;
 import com.ab.util.ScoreCalculator;
 import com.ab.util.Util;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 
-public class GameManager {
+public class GameManager implements Serializable {
     public static boolean RELEASE = false;
     public static boolean DEBUG_LOG = false;
+    private static final long serialVersionUID = 1L;
 
     public static final boolean[] BOTS = new boolean[NOP];
     static {
@@ -47,22 +49,15 @@ public class GameManager {
     }
 
     public enum RoundStage implements Config.Queueable {
-        waitForBot,     // for long operations
+        dealing,
         bidding,
-        startAllPass,
         showTalon,
         drop,
         declareRound,
         whistSelection,
         selectWhistOption,
         play,
-        newTrick,
         trickTaken,
-        roundEnded,
-        idle,
-        replay,
-        newGame,
-        offer,
     }
 
     public enum RestartCommand implements Config.Queueable {
@@ -71,72 +66,96 @@ public class GameManager {
         offer,
     }
 
-    InputStream testInputStream;
+     transient InputStream testInputStream;
 
     private static GameManager instance;
 
-    private static Config config;
-    private final Util util = Util.getInstance();   // needed for testing
-    private final EventObserver eventObserver;
-    final CardSet discarded = new CardSet();
+    private transient Host host;
+    private transient EventObserver eventObserver;
 
-    private Thread gameThread;
-    Player[] players = new Player[NOP];
-    Player[] savedPlayers;
+    private transient Util util;   // needed for testing
+
+    RoundStage roundStage = RoundStage.dealing;
+
+    private int lineCount = -1;
+    private int allPassFactor = 0;
+    public boolean replayMode;
+
     private CardList deck;
-    private CardList talonCards = new CardList();   // todo: CardSet
+    private CardList talonCards = new CardList();
+    private Player[] players = new Player[NOP];
+    public int elderHand;
+
+    // bidding:
+    int passCount = 0;
+    private Bid minBid = Bid.BID_6S;
+    int nextBidder;
+
+    final CardSet discarded = new CardSet();
+    private Player[] savedPlayers;
     private final Trick trick = new Trick();
     private CardList lastTrickCards = new CardList();
     private boolean showDefendersCards;
 
-    private int lineCount = 0;
-
-    int allPassFactor = 0;
-    Bid minBid = Bid.BID_6S;
-    Player declarer;
+    private Player declarer;
     public int declarerNumber;
     CardSet declarerHand;           // with talon, as defenders know it
     CardSet initialDeclarerHand;    // with talon
-    public int elderHand;
     boolean cardsRevealed;
-    public boolean replayMode;
 
-    public GameManager(Config config, EventObserver eventObserver) {
+    public GameManager() {}
+
+    public void init(Host host) {
         instance = this;
-        GameManager.config = config;
-        this.eventObserver = eventObserver;
-        if (eventObserver == null) {
-            GameManager.BOTS[0] = true;
-            GameManager.BOTS[1] = true;
-            GameManager.BOTS[2] = true;
-        }
-        sleep(config.pauseBetweenTricks.get());
-        players = createPlayers();
-        printf(DEBUG_LOG, "GameManager constructed\n");
-    }
-
-    Player[] createPlayers() {
-        Player[] players = new Player[NOP];
-        for (int i = 0; i < NOP; ++i) {
-            if (BOTS[i]) {
-                players[i] = new Bot(i);
-            } else {
-                players[i] = new HumanPlayer(i, eventObserver);
+        this.host = host;
+        this.eventObserver = config().eventObserver;
+        util = config().util;
+        if (players[0] == null) {
+            if (eventObserver == null) {
+                GameManager.BOTS[0] = true;
+                GameManager.BOTS[1] = true;
+                GameManager.BOTS[2] = true;
+            }
+            sleep(config().pauseBetweenTricks.get());
+            for (int i = 0; i < NOP; ++i) {
+                if (BOTS[i]) {
+                    players[i] = new Bot(i);
+                } else {
+                    players[i] = new HumanPlayer(i, eventObserver);
+                }
+            }
+        } else {
+            // initiate unserialized:
+            for (int i = 0; i < NOP; ++i) {
+                Player p = players[i];
+                if (p instanceof HumanPlayer) {
+                    ((HumanPlayer)p).initTransient(eventObserver);
+                }
+                if (savedPlayers != null) {
+                    p = savedPlayers[i];
+                    if (p instanceof HumanPlayer) {
+                        ((HumanPlayer)p).initTransient(eventObserver);
+                    }
+                }
             }
         }
-        return players;
+        printf(DEBUG_LOG, "GameManager initialized\n");
     }
 
     public static GameManager getInstance() {
         return instance;
     }
 
+    public Config config() {
+        return host.config();
+    }
+ 
     public Player[] getPlayers() {
         return players;
     }
 
-    public static Config getConfig() {
-        return config;
+    public RoundStage getRoundStage() {
+        return roundStage;
     }
 
     // whisters do not know the declarer's drops
@@ -169,6 +188,14 @@ public class GameManager {
         return minBid;
     }
 
+    public void setMinBid(Bid minBid) {
+        this.minBid = minBid;
+    }
+
+    public Player getDeclarer() {
+        return declarer;
+    }
+
     public void runGame(InputStream testInputStream, int skip) {
         this.testInputStream = testInputStream;
         if (testInputStream == null) {
@@ -177,32 +204,29 @@ public class GameManager {
             try {
                 util.getList(testInputStream,
                     (res, tokens) -> {
-                        if (lineCount++ < skip) {
+                        if (++lineCount < skip) {
                             return;
                         }
                         if (!tokens.get(0).startsWith(Util.DEAL_MARK)) {
                             return;     // ignore
                         }
-                        --lineCount;
                         elderHand = (Integer.parseInt(tokens.get(tokens.size() - 1))) % NOP;
-                        CardList _deck = new CardList();
+                        deck = new CardList();
                         for (String token : tokens) {
                             if (token.endsWith(":")) {
                                 continue;
                             }
-                            _deck.addAll(util.toCardList(token));
+                            deck.addAll(util.toCardList(token));
                         }
-                        _deck.verifyDeck();
-                        deck = new CardList();
-                        for (int j = 0; j < NOP; ++j) {
-                            int k = ROUND_SIZE * ((j + NOP) % NOP);
-                            deck.addAll(_deck.subList(k, k + ROUND_SIZE));
-                        }
-                        deck.addAll(_deck.subList(30, 32));
+                        deck.verifyDeck();
                         RestartCommand next = RestartCommand.replay;
                         while (RestartCommand.replay.equals(next)) {
-                            minBid = Bid.BID_PASS;
-                            next = playRound(deck, elderHand);
+                            allPassFactor = 0;
+                            minBid = Bid.BID_6S;
+                            nextBidder = elderHand;
+                            next = playRound(deck);
+                            roundStage = RoundStage.dealing;
+                            passCount = 0;
                         }
                         int totalPool = 0;
                         for (Player player: players) {
@@ -210,7 +234,7 @@ public class GameManager {
                                 totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
                             }
                         }
-                        if (totalPool >= config.poolSize.get() * NOP) {
+                        if (totalPool >= config().poolSize.get() * NOP) {
                             // emulate endgame
                             for (Player player: players) {
                                 player.clearHistory();
@@ -226,27 +250,34 @@ public class GameManager {
     // run random rounds
     protected void runGame() {
         int totalPool;
-        elderHand = new Random().nextInt(NOP);
+        if (roundStage == RoundStage.dealing) {
+            elderHand = new Random().nextInt(NOP);
+        }
         do {
-            deck = CardList.getDeck();
-            Collections.shuffle(deck);
+            if (roundStage == RoundStage.dealing) {
+                deck = CardList.getDeck();
+                Collections.shuffle(deck);
+                minBid = Bid.BID_6S;
+            }
             RestartCommand next = RestartCommand.replay;
             while (RestartCommand.replay.equals(next)) {
-                minBid = Bid.BID_PASS;
-                next = playRound(deck, elderHand);
+                next = playRound(deck);
                 sleep(10);     // give jPrefPanel a chance to paint
+                roundStage = RoundStage.dealing;
+                minBid = Bid.BID_6S;
+                passCount = 0;
+                nextBidder = elderHand;
             }
             elderHand = ++elderHand % NOP;
-            if (next.equals(RestartCommand.newRound)) {
-                break;
-            }
+            nextBidder = elderHand;
             totalPool = 0;
             for (Player player: players) {
                 for (Player.RoundResults roundResults : player.getHistory()) {
                     totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
                 }
+                player.myHand.clear();
             }
-        } while (totalPool < config.poolSize.get() * NOP);
+        } while (totalPool < config().poolSize.get() * NOP);
         printf("game ended\n");
         // now Main will continue launching games
     }
@@ -273,7 +304,9 @@ public class GameManager {
             this.trick.minBid = null;
             return;
         }
-
+        allPassFactor = 0;
+        passCount = 0;
+        Bot.targetBot = null;
         if (declarerNum >= 0) {
             this.declarerNumber = declarerNum;
             this.declarer = this.players[declarerNum];
@@ -281,17 +314,21 @@ public class GameManager {
             this.minBid = bid;
             this.trick.setBid(bid);
         } else {
-            declarer = bidding(elderHand);
-            declarerNumber = declarer.getNumber();
+            nextBidder = elderHand;
+            declarer = bidding();
+            if (declarer != null) {
+                declarerNumber = declarer.getNumber();
+            }
         }
-        if (talonCards != null) {
-            this.declarer.takeTalon(talonCards);
-            talonCards.clear();
+        if (this.declarer != null) {
+            if (talonCards != null) {
+                this.declarer.takeTalon(talonCards);
+                this.talonCards.clear();
+            }
+            this.declarerHand = new CardSet(this.declarer.myHand);
+            printf("declarer %s, round %s, %s\n",
+                this.declarer.getName(), this.declarer.getBid(), this.declarer.toColorString());
         }
-        this.talonCards.clear();
-        this.declarerHand = new CardSet(this.declarer.myHand);
-        printf("declarer %s, round %s, %s\n",
-            this.declarer.getName(), this.declarer.getBid(), this.declarer.toColorString());
     }
 
     public boolean showDefendersCards() {
@@ -306,88 +343,77 @@ public class GameManager {
     }
 
     private void update(RoundStage roundStage) {
+        if (roundStage != null) {
+            this.roundStage = roundStage;
+        }
         if (eventObserver != null) {
             eventObserver.update(roundStage);
         }
     }
 
-    public RestartCommand playRound(CardList deck, int elderHand) {
+    public RestartCommand playRound(CardList deck) {
         if (replayMode) {
-            this.players = avatars4Round();
+            avatars4Round();
         }
-        RestartCommand next;
+        RestartCommand next = null;
         try {
-            gameThread = Thread.currentThread();
-            TrickList.getInstance().initBuild();
-            trick.clear(elderHand);
-            lastTrickCards.clear();
-            deal(deck);
-            declarer = null;
-            declarerNumber = -1;
-            cardsRevealed = false;
+            switch (roundStage) {
+                case dealing:
+                    TrickList.getInstance().initBuild();
+                    trick.clear(elderHand);
+                    lastTrickCards.clear();
+                    deal(deck);
+                    declarer = null;
+                    // fall through
 
-            this.elderHand = elderHand;
-            declarer = bidding(elderHand);
-            if (declarer == null) {
-                printf("playing all-pass\n");
-                playRoundAllPass();
-                if (replayMode) {
-                    updateFromAvatars();
-                }
-            } else {
-                printf("declarer %s: %s, %s\n",
-                    declarer.getName(), declarer.getBid(), declarer.toColorString());
-                declarerNumber = declarer.getNumber();
-                update(RoundStage.showTalon);
-                for (Player p : players) {
-                    if (p instanceof HumanPlayer) {
-                        p.acknowledge();
-                        break;
+                case bidding:
+                    declarerNumber = -1;
+                    cardsRevealed = false;
+                    declarer = bidding();
+                    // fall through
+
+                case showTalon:
+                    if (declarer != null) {
+                        printf("declarer %s: %s, %s\n",
+                                declarer.getName(), declarer.getBid(), declarer.toColorString());
+                        declarerNumber = declarer.getNumber();
+                        update(RoundStage.showTalon);
+                        for (Player p : players) {
+                            if (p instanceof HumanPlayer) {
+                                p.acknowledge();
+                                break;
+                            }
+                        }
+                        declarer.takeTalon(talonCards);
+                        declarerHand = new CardSet(declarer.myHand);
+                        initialDeclarerHand = new CardSet(declarerHand);
                     }
-                }
-                declarer.takeTalon(talonCards);
-                declarerHand = new CardSet(declarer.myHand);
-                initialDeclarerHand = new CardSet(declarerHand);
-                if (declarer instanceof HumanPlayer) {
-                    update(RoundStage.drop);
-                    sleep(10);
-                }
-                Bid bid = declarer.drop();
-                printf("%s wins bidding %s\n", declarer.getName(), bid);
-                savedPlayers = this.players;    // save
-                if (Bid.BID_MISERE.equals(bid)) {
-                    playRoundMisere();
-                } else if (!Bid.BID_WITHOUT_THREE.equals(bid)) {
-                    playRoundForTricks();
-                }
-                updateFromAvatars();
-            }
+                    // fall through
 
-            if (!replayMode) {
-                int param = 1;
-                if (declarer == null) {
-                    param = allPassFactor + 1;
-                } else if (declarer.getBid().equals(Bid.BID_WITHOUT_THREE)) {
-                    param = minBid.goal();
-                }
-                ScoreCalculator.getInstance().calculate(players, param);
-                ++lineCount;
+                case drop:
+                    if (declarer != null) {
+                        if (declarer instanceof HumanPlayer) {
+                            update(RoundStage.drop);
+                            sleep(10);
+                        }
+                        minBid = declarer.drop();
+                        this.roundStage = RoundStage.declareRound;
+                    }
+                    // fall through
+
+                default:
+                    if (declarer == null) {
+                        printf("playing all-pass\n");
+                        playRoundAllPass();
+                    } else {
+                        if (Bid.BID_MISERE.equals(minBid)) {
+                            playRoundMisere();
+                        } else if (!Bid.BID_WITHOUT_THREE.equals(minBid)) {
+                            playRoundForTricks();
+                        }
+                    }
             }
-            if (eventObserver == null) {
-                next = RestartCommand.newRound;
-            } else {
-                next = eventObserver.showScores();
-            }
-            sleep(config.pauseBetweenRounds.get());
             printf("round ended\n");
-            replayMode = RestartCommand.replay.equals(next);
-            if (!replayMode) {
-                if (minBid.equals(Bid.BID_ALL_PASS)) {
-                    allPassFactor = ++allPassFactor % 3;
-                } else {
-                    allPassFactor = 0;
-                }
-            }
         } catch (Player.PrefExceptionRerun e) {
             for (Player p : players) {
                 if (p instanceof HumanPlayer) {
@@ -397,35 +423,56 @@ public class GameManager {
             String msg = e.getMessage();
             println("round aborted for " + msg);
             next = RestartCommand.valueOf(msg);     // a little ugly
-            if (next.equals(RestartCommand.replay)) {
-                updateFromAvatars();
-            } else if (next.equals(RestartCommand.offer)) {
-                updateFromAvatars();
-                ScoreCalculator.getInstance().calculate(players, minBid.goal());
-                if (eventObserver == null) {
-                    next = RestartCommand.newRound;
-                } else {
-                    next = eventObserver.showScores();
-                }
+        }
+
+        updateFromAvatars();
+        if (!replayMode && next == null) {
+            int param = 1;
+            if (declarer == null) {
+                param = allPassFactor + 1;
+            } else if (declarer.getBid().equals(Bid.BID_WITHOUT_THREE)) {
+                param = minBid.goal();
+            }
+            ScoreCalculator.getInstance().calculate(players, param);
+            ++lineCount;
+        }
+        if (eventObserver == null) {
+            next = RestartCommand.newRound;
+        } else if (next == null) {
+            next = eventObserver.showScores();
+            sleep(config().pauseBetweenRounds.get());
+        }
+
+        replayMode = RestartCommand.replay.equals(next) && players[trick.getTurn()].myHand.isEmpty();
+        if (!replayMode) {
+            if (minBid.equals(Bid.BID_ALL_PASS)) {
+                allPassFactor = ++allPassFactor % 3;
+            } else {
+                allPassFactor = 0;
             }
         }
         return next;
     }
 
-    Player bidding(int elderHand) {
+    Player bidding() {
         // in the future bot should be able to pass even if it can declare a round
-        minBid = Bid.BID_6S;
         if (allPassFactor > 0) {
             minBid = Bid.BID_7S;
         }
         update(RoundStage.bidding);
-        int passCount = 0;
-        Player declarer = null;
         boolean misereDeclared = false;
-        while (passCount < 3 && declarer == null || passCount < 2) {
+        for (Player p : players) {
+            if (Bid.BID_MISERE.equals(p.getBid())) {
+                misereDeclared = true;
+                break;
+            }
+        }
+
+        while (declarer == null && passCount < NOP || passCount < NOP - 1) {
+            nextBidder = (nextBidder + 2) % NOP;
             for (int i = 0; i < players.length; ++i) {
-                int j = (i + elderHand) % players.length;
-                Player bidder = players[j];
+                nextBidder = (nextBidder + 1) % NOP;
+                Player bidder = players[nextBidder];
                 if (bidder.equals(declarer)) {
                     continue;
                 }
@@ -433,8 +480,9 @@ public class GameManager {
                     continue;
                 }
                 Bid savedBid = minBid;
-                if (passCount == 1 && i == 0 &&
+                if (passCount == 1 && nextBidder == elderHand &&
                         !(misereDeclared && Bid.BID_9S.equals(minBid))) {
+                    // allow 'здесь'
                     minBid = minBid.prev();
                 }
                 if (bidder instanceof HumanPlayer) {
@@ -496,17 +544,20 @@ public class GameManager {
     }
 
     void playRoundAllPass() {
+        if (!replayMode) {
+            avatars4Round();
+        }
         Card talonCard = talonCards.last();
-        for (int c = 0; c < ROUND_SIZE; ++c) {
+        for (int c = trick.number; c < ROUND_SIZE; ++c) {
             for (Player player : players) {
                 printf("%s  ", player.toColorString());
             }
             printf("\n");
             if (talonCard != null) {
-                update(RoundStage.play);
                 trick.add(talonCard, true);
             }
-            for (int j = 0; j < players.length; ++j) {
+            update(RoundStage.play);
+            for (int j = trick.size(); j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
                 Card card = player.play(trick);
                 if (card == null) {
@@ -514,11 +565,14 @@ public class GameManager {
                 }
                 trick.add(card);
                 update(RoundStage.play);
+                if (trick.size() >= NOP) {
+                    break;
+                }
             }
             println(trick.toColorString());
             lastTrickCards.clear();
             players[trick.getTop()].incrementTricks();
-            sleep(config.pauseBetweenTricks.get());
+            sleep(config().pauseBetweenTricks.get());
             printf("%s takes it, total %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
             lastTrickCards = trick.cards2List();
             if (talonCard != null) {
@@ -528,7 +582,7 @@ public class GameManager {
             talonCards.removeLast();
             talonCard = talonCards.last();
             update(RoundStage.trickTaken);
-            sleep(config.pauseBetweenTricks.get());
+            sleep(config().pauseBetweenTricks.get());
             printf(DEBUG_LOG, "trick taken\n");
         }
     }
@@ -550,22 +604,6 @@ public class GameManager {
         right.rightHand = new CardSet(left.myHand);
     }
 
-    private void updateFromAvatars() {
-        if (savedPlayers == null) {
-            return;
-        }
-        for (int i = 0; i < savedPlayers.length; ++i) {
-            Player player = savedPlayers[i];
-            Player avatar = this.players[i];
-            if (!replayMode) {
-                player.setTricks(avatar.getTricks());
-            }
-        }
-        this.players = savedPlayers;
-        savedPlayers = null;
-        this.declarer = players[declarerNumber];
-    }
-
     private void incrementTricks() {
         Player p = players[trick.getTop()];
         p.incrementTricks();
@@ -574,7 +612,10 @@ public class GameManager {
         }
     }
 
-    public Player[] avatars4Round() {
+    public void avatars4Round() {
+        if (savedPlayers != null) {
+            return;
+        }
         // replace human or bot depending on whist elections
         int i = this.declarerNumber;
         if (i < 0) {
@@ -593,161 +634,203 @@ public class GameManager {
                 new HumanPlayer(defender0, clickable);
             avatars[defender1.getNumber()] =
                 new HumanPlayer(defender1, clickable);
-            return avatars;
-        }
-
-        if (declarer instanceof HumanPlayer) {
-            avatars[declarer.getNumber()] =
-                new HumanPlayer(declarer, clickable);
-            if (defender0 instanceof HumanPlayer && defender1 instanceof HumanPlayer) {
-                avatars[defender0.getNumber()] =
-                    new HumanPlayer(defender0, clickable);
-                avatars[defender1.getNumber()] =
-                    new HumanPlayer(defender1, clickable);
-            } else {
-                avatars[defender0.getNumber()] = new Bot(defender0);
-                avatars[defender1.getNumber()] = new Bot(defender1);
-            }
         } else {
-            avatars[declarer.getNumber()] = new Bot(declarer);
-            if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
-                defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST)) {
-                avatars[defender0.getNumber()] =
-                    new HumanPlayer(defender0, clickable);
-                avatars[defender1.getNumber()] =
-                    new HumanPlayer(defender1, clickable);
+            if (declarer instanceof HumanPlayer) {
+                avatars[declarer.getNumber()] =
+                        new HumanPlayer(declarer, clickable);
+                if (defender0 instanceof HumanPlayer && defender1 instanceof HumanPlayer) {
+                    avatars[defender0.getNumber()] =
+                            new HumanPlayer(defender0, clickable);
+                    avatars[defender1.getNumber()] =
+                            new HumanPlayer(defender1, clickable);
+                } else {
+                    avatars[defender0.getNumber()] = new Bot(defender0);
+                    avatars[defender1.getNumber()] = new Bot(defender1);
+                }
             } else {
-                avatars[defender0.getNumber()] = new Bot(defender0);
-                avatars[defender1.getNumber()] = new Bot(defender1);
+                avatars[declarer.getNumber()] = new Bot(declarer);
+                if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
+                        defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST)) {
+                    avatars[defender0.getNumber()] =
+                            new HumanPlayer(defender0, clickable);
+                    avatars[defender1.getNumber()] =
+                            new HumanPlayer(defender1, clickable);
+                } else {
+                    avatars[defender0.getNumber()] = new Bot(defender0);
+                    avatars[defender1.getNumber()] = new Bot(defender1);
+                }
             }
         }
-        return avatars;
+        savedPlayers = players;
+        players = avatars;
+        if (declarerNumber >= 0) {
+            this.declarer = players[declarerNumber];
+        }
+    }
+
+    private void updateFromAvatars() {
+        if (savedPlayers == null) {
+            return;
+        }
+        if (!replayMode) {
+            for (int i = 0; i < NOP; ++i) {
+                Player player = savedPlayers[i];
+                Player avatar = this.players[i];
+                player.setTricks(avatar.getTricks());
+                player.setBid(avatar.getBid());
+            }
+        }
+        this.players = savedPlayers;
+        savedPlayers = null;
+        if (declarerNumber >= 0) {
+            this.declarer = players[declarerNumber];
+        }
     }
 
     protected void playRoundForTricks() {
-        if (declarer instanceof HumanPlayer) {
-            update(RoundStage.declareRound);
-        }
-        declarer.declareRound(minBid, elderHand);
-        this.minBid = declarer.getBid();
-        printf("%s declares %s\n", declarer.getName(), this.minBid);
-        trick.setBid(this.minBid);
+        switch (roundStage) {
+            case showTalon:
+            case declareRound:
+                if (declarer instanceof HumanPlayer) {
+                    update(RoundStage.declareRound);
+                }
+                declarer.declareRound(minBid, elderHand);
+                this.minBid = declarer.getBid();
+                printf("%s declares %s\n", declarer.getName(), this.minBid);
+                trick.setBid(this.minBid);
+                // fall through
 
-        Player p1 = players[(declarer.getNumber() + 1) % NOP];
-        Player p2 = players[(declarer.getNumber() + 2) % NOP];
-        p2.setBid(Bid.BID_UNDEFINED);
-        if ((p1 instanceof Bot) && (p2 instanceof Bot)) {
-            p1.respondOnDeclaration();  // selects pass
-            p2.respondOnDeclaration();  // selects whist
-        } else {
-            update(RoundStage.whistSelection);
-            p1.respondOnDeclaration();
-            p2.respondOnDeclaration();
-            if (p2.getBid().equals(Bid.BID_HALF_WHIST)) {
-                // 2nd chance
-                p1.respondOnDeclaration();
-                if (p1.getBid().equals(Bid.BID_WHIST)) {
-                    p2.setBid(Bid.BID_PASS);
+            case whistSelection:
+                update(RoundStage.whistSelection);
+                Player p1 = players[(declarer.getNumber() + 1) % NOP];
+                p1.setBid(Bid.BID_UNDEFINED);
+                Player p2 = players[(declarer.getNumber() + 2) % NOP];
+                p2.setBid(Bid.BID_UNDEFINED);
+                if ((p1 instanceof Bot) && (p2 instanceof Bot)) {
+                    p1.respondOnDeclaration();  // selects pass
+                    p2.respondOnDeclaration();  // selects whist
+                } else {
+                    update(RoundStage.whistSelection);
+                    p1.respondOnDeclaration();
+                    p2.respondOnDeclaration();
+                    if (p2.getBid().equals(Bid.BID_HALF_WHIST)) {
+                        // 2nd chance
+                        p1.respondOnDeclaration();
+                        if (p1.getBid().equals(Bid.BID_WHIST)) {
+                            p2.setBid(Bid.BID_PASS);
+                        }
+                    }
                 }
-            }
-        }
-        if (p1.getBid().equals(Bid.BID_PASS) && p2.getBid().equals(Bid.BID_PASS)) {
-            // when 8♠ or higher
-            declarer.setTricks(declarer.getBid().goal());
-            return;
-        }
-        sleep(10);     // give jPrefPanel a chance to paint
+                if (p1.getBid().equals(Bid.BID_PASS) && p2.getBid().equals(Bid.BID_PASS)) {
+                    // when 8♠ or higher
+                    declarer.setTricks(declarer.getBid().goal());
+                    return;
+                }
+                sleep(10);     // give jPrefPanel a chance to paint
+                // fall through
 
-        if (p1.getBid().equals(Bid.BID_PASS) && p2.getBid().equals(Bid.BID_WHIST)) {
-            if (p2 instanceof HumanPlayer) {
-                update(RoundStage.selectWhistOption);
-            }
-            sleep(100);     // give jPrefPanel a chance to paint
-            this.showDefendersCards = p2.playWhistLaying();
-        }
-        if (p2.getBid().equals(Bid.BID_PASS) && p1.getBid().equals(Bid.BID_WHIST)) {
-            if (p1 instanceof HumanPlayer) {
-                update(RoundStage.selectWhistOption);
-            }
-            sleep(100);     // give jPrefPanel a chance to paint
-            this.showDefendersCards = p1.playWhistLaying();
-        }
-        sleep(200);     // give jPrefPanel a chance to paint
+            case selectWhistOption:
+                p1 = players[(declarer.getNumber() + 1) % NOP];
+                p2 = players[(declarer.getNumber() + 2) % NOP];
+                Player p = null;
+                if (p1 instanceof HumanPlayer && p1.getBid().equals(Bid.BID_WHIST)) {
+                    p = p1;
+                }
+                if (p2 instanceof HumanPlayer && p2.getBid().equals(Bid.BID_WHIST)) {
+                    p = p2;
+                }
+                if (p != null) {
+                    update(RoundStage.selectWhistOption);
+                    sleep(100);     // give jPrefPanel a chance to paint
+                    this.showDefendersCards = p.playWhistLaying();
+                    sleep(100);     // give jPrefPanel a chance to paint
+                }
+                // fall through
 
-        if (!replayMode) {
-            this.players = avatars4Round();
-        }
-        this.declarer = this.players[this.declarerNumber];
+            default:
+                if (!replayMode) {
+                    avatars4Round();
+                }
+                this.declarer = this.players[this.declarerNumber];
 
-        update(RoundStage.play);
-        sleep(100);     // give jPrefPanel a chance to paint
-        for (int c = 0; !players[0].myHand.isEmpty(); ++c) {
-            StringBuilder sb = new StringBuilder();
-            String sep = "";
-            for (Player player : players) {
-                sb.append(sep).append(player.toColorString());
-                sep = "  ";
-            }
-            printf("\n");
-            println(sb);
-            update(RoundStage.play);
-            for (int j = 0; j < players.length; ++j) {
-                Player player = players[trick.getTurn()];
-                Card card;
-                if (c == 0 && j == 0 && player != declarer) {
-                    revealCards();
-                }
-                card = player.play(trick);
-                if (card == null) {
-                    // sanity check
-                    throw new RuntimeException(String.format("player %d, %s, trick %s", player.number, player, trick));
-                }
-                trick.add(card);
-                if (c == 0 && j == 0 && player == declarer) {
-                    revealCards();
-                }
-                if (player instanceof Bot) {
-                    sleep(config.pauseBetweenMoves.get());
-                }
                 update(RoundStage.play);
-            }
-            update(RoundStage.trickTaken);
-            sleep(config.pauseBetweenMoves.get());
-            println(trick);
-            println(trick.toColorString());
-            lastTrickCards.clear();
-            incrementTricks();
-            printf("%s takes it, total %d\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
-            lastTrickCards = trick.cards2List();
-            trick.clear();  // not to repaint
-            update(RoundStage.trickTaken);
-            sleep(config.pauseBetweenTricks.get());
-            printf(DEBUG_LOG, "trick taken\n");
+                sleep(100);     // give jPrefPanel a chance to paint
+                for (int c = trick.number; c < ROUND_SIZE; ++c) {
+                    StringBuilder sb = new StringBuilder();
+                    String sep = "";
+                    for (Player player : players) {
+                        sb.append(sep).append(player.toColorString());
+                        sep = "  ";
+                    }
+                    printf("\n");
+                    println(sb);
+                    update(RoundStage.play);
+                    for (int j = trick.size(); j < players.length; ++j) {
+                        Player player = players[trick.getTurn()];
+                        Card card;
+                        if (c == 0 && j == 0 && player != declarer) {
+                            revealCards();
+                        }
+                        card = player.play(trick);
+                        if (card == null) {
+                            // sanity check
+                            throw new RuntimeException(String.format("player %d, %s, trick %s", player.number, player, trick));
+                        }
+                        trick.add(card);
+                        if (c == 0 && j == 0 && player == declarer) {
+                            revealCards();
+                        }
+                        if (player instanceof Bot) {
+                            sleep(config().pauseBetweenMoves.get());
+                        }
+                        update(RoundStage.play);
+                    }
+                    update(RoundStage.trickTaken);
+                    sleep(config().pauseBetweenMoves.get());
+                    println(trick);
+                    println(trick.toColorString());
+                    lastTrickCards.clear();
+                    incrementTricks();
+                    printf("%s takes it, total %d\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
+                    lastTrickCards = trick.cards2List();
+                    trick.clear();  // not to repaint
+                    update(RoundStage.trickTaken);
+                    sleep(config().pauseBetweenTricks.get());
+                    printf(DEBUG_LOG, "trick taken\n");
+                }
         }
     }
 
     protected void playRoundMisere() {
-        declarer.declareRound(minBid, elderHand);
-        if (declarer instanceof Bot) {
-            Player player = players[(declarerNumber + 1) % NOP];
-            if (player instanceof Bot) {
-                player = players[(declarerNumber + 2) % NOP];
+        if (roundStage.equals(RoundStage.showTalon)) {
+            declarer.declareRound(minBid, elderHand);
+            Player player1 = players[(this.declarerNumber + 1) % NOP];
+            Player player2 = players[(this.declarerNumber + 2) % NOP];
+            if (declarer instanceof HumanPlayer) {
+                player1.setBid(Bid.BID_WHIST);
+                player2.setBid(Bid.BID_PASS);
+            } else if (player1 instanceof HumanPlayer) {
+                player1.setBid(Bid.BID_WHIST);
+                player2.setBid(Bid.BID_PASS);
+            } else {
+                player1.setBid(Bid.BID_PASS);
+                player2.setBid(Bid.BID_WHIST);
             }
-            player.bid = Bid.BID_WHIST;
+            update(RoundStage.play);
+            if (!replayMode) {
+                avatars4Round();
+            }
+            this.declarer = this.players[this.declarerNumber];
+            showDefendersCards = true;
         }
-        if (!replayMode) {
-            this.players = avatars4Round();
-        }
-        this.declarer = this.players[this.declarerNumber];
-        showDefendersCards = true;
         update(RoundStage.play);
-        for (int c = 0; c < ROUND_SIZE; ++c) {
+        for (int c = trick.number; c < ROUND_SIZE; ++c) {
             for (Player player : players) {
                 printf("%s  ", player.toColorString());
             }
             printf("\n");
             trick.minBid = this.minBid;
-            for (int j = 0; j < players.length; ++j) {
+            for (int j = trick.size(); j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
                 Card card;
                 if (c == 0 && j == 0 && player != declarer) {
@@ -772,18 +855,18 @@ public class GameManager {
             println(trick.toColorString());
             lastTrickCards.clear();
             incrementTricks();
-            sleep(config.pauseBetweenTricks.get());
+            sleep(config().pauseBetweenTricks.get());
             printf("%s takes it, total %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
             lastTrickCards = trick.cards2List();
             trick.clear();  // not to repaint
             update(RoundStage.trickTaken);
-            sleep(config.pauseBetweenTricks.get());
+            sleep(config().pauseBetweenTricks.get());
             printf(DEBUG_LOG, "trick taken\n");
         }
     }
 
     public void restart(RestartCommand command) {
-        printf(DEBUG_LOG, "this %s, game %s\n", Thread.currentThread().getName(), gameThread.getName());
+        printf(DEBUG_LOG, "this %s, game %s\n", Thread.currentThread().getName());
         for (Player player : this.getPlayers()) {
             player.abortThread(command);
         }

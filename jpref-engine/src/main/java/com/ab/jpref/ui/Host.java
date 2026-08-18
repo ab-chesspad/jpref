@@ -28,11 +28,11 @@ public interface Host {
     int SPECIAL_OPTION_SHOW_CARDS = 0x1;
     int SPECIAL_OPTION_MANUAL = 0x1;
 
-    int specialOption();
-    long buildDate();
-    Metrics getMetrics();
+    default int specialOption() {return 0;}
+    default long buildDate() {return 0;}
+    default Metrics getMetrics() {return null;}
     Config config();
-    String getLogFileName();
-    void repaintAll();
-    void updateSettings();
+    default String getLogFileName() {return null;}
+    default void repaintAll() {}
+    default void updateSettings() {}
 }

@@ -24,19 +24,25 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
+import java.io.Serializable;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import static java.lang.Thread.currentThread;
 
-public class HumanPlayer extends Player {
+public class HumanPlayer extends Player implements Serializable {
     public static final boolean DEBUG_LOG = false;
 
-    private final BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
-    final GameManager.EventObserver clickable;
+    private transient BlockingQueue<Config.Queueable> queue = new LinkedBlockingQueue<>();
+    transient GameManager.EventObserver clickable;
 
     public HumanPlayer(int number, GameManager.EventObserver clickable) {
         this.number = number;
         this.clickable = clickable;
+    }
+
+    public void initTransient(GameManager.EventObserver clickable) {
+        this.clickable = clickable;
+        queue = new LinkedBlockingQueue<>();
     }
 
     protected HumanPlayer(Player other, GameManager.EventObserver clickable) {
@@ -49,11 +55,6 @@ public class HumanPlayer extends Player {
     public void abortThread(RestartCommand restartCommand) {
         clearQueue();
         accept(restartCommand);
-    }
-
-    @Override
-    public void clear() {
-        super.clear();
     }
 
     public void clearQueue() {
@@ -73,9 +74,9 @@ public class HumanPlayer extends Player {
 
     private Config.Queueable takeFromQueue() throws Player.PrefExceptionRerun {
         try {
-            Logger.printf(DEBUG_LOG, "human %s blocking:%s\n", getName(), currentThread().getName());
+            Logger.printf(DEBUG_LOG, "%s, human blocking:%s\n", gameManager().getRoundStage().name(), currentThread().getName());
             Config.Queueable q = queue.take();
-            Logger.printf(DEBUG_LOG, "human %s unblock:%s got %s\n", getName(), currentThread().getName(), q);
+            Logger.printf(DEBUG_LOG, "%s, human unblock:%s got %s\n", gameManager().getRoundStage().name(), currentThread().getName(), q);
             if (q instanceof RestartCommand) {
                 throw new PrefExceptionRerun(((RestartCommand)q).name());   // a little ugly
             }
@@ -104,6 +105,7 @@ public class HumanPlayer extends Player {
         Logger.printf(DEBUG_LOG, "view acknowledged, %s", q.toString());
     }
 
+    // returns BID_WITHOUT_THREE or a game
     @Override
     public Config.Bid drop() {
         clickable.setCurrentPlayer(this);

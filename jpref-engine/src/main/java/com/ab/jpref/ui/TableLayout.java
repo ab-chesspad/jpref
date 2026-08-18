@@ -20,7 +20,7 @@
 package com.ab.jpref.ui;
 
 import static com.ab.jpref.config.Config.*;
-import static com.ab.jpref.config.Config.Bid.BID_XN;
+import static com.ab.jpref.config.Config.Bid.*;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.jpref.config.I18n.m;
 import static com.ab.jpref.ui.ButtonPanel.ButtonHandler;
@@ -192,18 +192,32 @@ public class TableLayout<T> implements GameManager.EventObserver {
         menuBtn = new Widget(ButtonCommand.menu, buttonCommand -> execCommand(buttonCommand));
         gui.add(menuBtn);
 
-        menuPanel = create(null, 3.5, .6,
-            new ButtonCommand[][]{
+        ButtonCommand[][] menuCommands;
+        if (config().release.get()) {
+            menuCommands = new ButtonCommand[][] {
                 {ButtonCommand.showScores},
                 {ButtonCommand.lastTrick},
                 {ButtonCommand.yourOffer},
-                {ButtonCommand.replay},
-                {ButtonCommand.newRound},
                 {ButtonCommand.comments},
                 {ButtonCommand.submitLog},
                 {ButtonCommand.settings},
                 {ButtonCommand.help},
-            });
+            };
+        } else {
+            menuCommands = new ButtonCommand[][] {
+                {ButtonCommand.showScores},
+                {ButtonCommand.lastTrick},
+                {ButtonCommand.yourOffer},
+                {ButtonCommand.comments},
+                {ButtonCommand.submitLog},
+                {ButtonCommand.settings},
+                {ButtonCommand.help},
+                {ButtonCommand.replay},
+                {ButtonCommand.newRound},
+            };
+        }
+
+        menuPanel = create(null, 3.5, .6, menuCommands);
     }
 
     private ButtonPanel create(RoundStage roundStage, double scaleW, double scaleH, ButtonCommand[][] commands) {
@@ -258,9 +272,10 @@ public class TableLayout<T> implements GameManager.EventObserver {
 
         if (this.roundStage != null) {
             if (isStage(RoundStage.declareRound)) {
-                if (currentPlayer != null && !declareRoundPanel.isVisible()) {
-                    setDeclareRoundPanel(null);
+                if (currentPlayer == null) {
+                    currentPlayer = (HumanPlayer)gameManager.getDeclarer();
                 }
+                setDeclareRoundPanel(null);
             }
             placeButtonPanels();
         }
@@ -392,9 +407,9 @@ public class TableLayout<T> implements GameManager.EventObserver {
             widget = menuPanel.getWidget(2, 0);  // yourOffer, speed vs. convenience
             widget.setEnabled(TrickList.getInstance().getEstimate() >= 0);
 
-            widget = menuPanel.getWidget(5, 0);  // comments, speed vs. convenience
+            widget = menuPanel.getWidget(3, 0);  // comments, speed vs. convenience
             widget.setEnabled(host.getLogFileName() != null);
-            widget = menuPanel.getWidget(6, 0);  // submit log, speed vs. convenience
+            widget = menuPanel.getWidget(3, 0);  // submit log, speed vs. convenience
             widget.setEnabled(host.getLogFileName() != null);
         }
     }
@@ -465,11 +480,12 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 break;
 
             case whistSelection:
-                int player1 = (gameManager.declarerNumber + 1) % NOP;
-                int player2 = (gameManager.declarerNumber + 2) % NOP;
-                boolean enable = currentPlayer.getNumber() == player2 &&
-                    gameManager.getMinBid().goal() < 8 &&
-                    gameManager.getPlayers()[player1].getBid().equals(Bid.BID_PASS);
+                Player p1 = gameManager.getPlayers()[(gameManager.getDeclarer().getNumber() + 1) % NOP];
+                Player p2 = gameManager.getPlayers()[(gameManager.getDeclarer().getNumber() + 2) % NOP];
+                boolean enable = gameManager.getMinBid().goal() < 8 &&
+                    p2 instanceof HumanPlayer &&
+                    p2.getBid().equals(BID_UNDEFINED) &&
+                    p1.getBid().equals(BID_PASS);
                 whistSelectionPanel.getWidget(ButtonCommand.halfWhist).setEnabled(enable);
                 whistSelectionPanel.getWidget(ButtonCommand.pass).setEnabled(!enable);
                 break;
@@ -697,7 +713,6 @@ public class TableLayout<T> implements GameManager.EventObserver {
             return true;
         } else {
             if (isStage(RoundStage.play)
-                || isStage(RoundStage.waitForBot)
                 || isStage(RoundStage.trickTaken)) {
                 if (gameManager.declarerNumber != index) {
                     if (gameManager.showDefendersCards()) {
@@ -891,7 +906,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 String logFilePath = host.getLogFileName();
                 File f = new File(logFilePath);
                 String fn = f.getName();
-                String res = Util.getInstance().submitLog(logFilePath);
+                String res = config().util.submitLog(logFilePath);
                 String msg = res;
                 if (res.startsWith(fn)) {
                     msg = m(msg.substring(fn.length() + 1));
@@ -1067,27 +1082,25 @@ public class TableLayout<T> implements GameManager.EventObserver {
         int minTricks, maxTricks;
         Player[] players = gameManager.getPlayers();
         Player player0 = players[0];
-        int theirTricks = players[1].getTricks() + players[2].getTricks();
+        Player player1 = players[1];
+        Player player2 = players[2];
+        int theirTricks = player1.getTricks() + player2.getTricks();
         int tricksEstimate = TrickList.getInstance().getEstimate();
 
         if (player0.getBid().equals(Bid.BID_MISERE)) {
             int _minTricks = tricksEstimate;
             maxTricks = ROUND_SIZE - theirTricks;
-            if (_minTricks > maxTricks) {
-                minTricks = maxTricks;
-            } else {
-                minTricks = _minTricks;
-            }
+            minTricks = Math.min(_minTricks, maxTricks);
         } else if (player0.getBid().equals(Bid.BID_WHIST)) {
-            int _minTricks = players[0].getTricks();
-            if (players[1].getBid() == Bid.BID_PASS) {
-                _minTricks += players[1].getTricks();
+            int _minTricks = player0.getTricks();
+            if (player1.getBid() == Bid.BID_PASS) {
+                _minTricks += player1.getTricks();
             } else {
-                _minTricks += players[2].getTricks();
+                _minTricks += player2.getTricks();
             }
             if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
                 minTricks = tricksEstimate;
-                maxTricks = ROUND_SIZE - players[gameManager.declarerNumber].getTricks();
+                maxTricks = ROUND_SIZE - player0.getTricks();
             } else {
                 minTricks = _minTricks;
                 maxTricks = ROUND_SIZE - tricksEstimate;
@@ -1102,11 +1115,11 @@ public class TableLayout<T> implements GameManager.EventObserver {
             return;     // rejected
         }
         int others = ROUND_SIZE - acceptedTricks;
-        players[0].setTricks(acceptedTricks);
-        if (players[2].getBid() == Bid.BID_PASS) {
-            players[1].setTricks(others);
+        player0.setTricks(acceptedTricks);
+        if (player2.getBid() == Bid.BID_PASS) {
+            player1.setTricks(others);
         } else {
-            players[2].setTricks(others);
+            player2.setTricks(others);
         }
         GameManager.getInstance().restart(GameManager.RestartCommand.offer);
     }

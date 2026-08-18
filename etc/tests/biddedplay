@@ -1,19 +1,31 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
-deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 6♠ 7
+deal: ♠QK ♣789XJQA ♦Q  ♠789 ♣K ♦KA ♥9XJK  ♠XJA ♦89XJ ♥8QA  ♦7 ♥7  2 -> 8♣ 8
+
+###########
+
+deal: ♠JQA ♣XK ♦XK ♥7JA  ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠9 ♦7  1 -> 6♦ 6
+
+deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится 1
+deal: ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится 0
+
+deal: ♠79X ♣8Q ♦QA ♥89X  ♠8JQKA ♣7X ♦7JK  ♣JKA ♦89X ♥7JKA  ♣9 ♥Q  2 -> 8♥ 9
+
+deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♠JQKA ♣JQ ♦XK ♥9K  ♣KA  1 -> Misère 0 # не ловится
+deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♣KA  1 -> All-pass
+
+[♠87A, ♦A7Q, ♦8K ♠9, ♠X ♣7 ♦9, ♦X ♠J ♣8, ♥KQ7, ♥X ♠Q ♥9, ♥8 ♠K ♥A, ♣9 ♦J ♣J, ♥J ♣AX]
+deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
+
+[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
+deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
+#??
+deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 7♠ 8
 
 declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
 ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79XK ♥78  ♠9JKA ♣9JK ♦Q ♥JQ  
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
 
-[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
-list build duration: 3 sec, positions 434226
-deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
-
-[♠87A, ♦A7Q, ♦8K ♠9, ♠X ♣7 ♦9, ♦X ♠J ♣8, ♥KQ7, ♥X ♠Q ♥9, ♥8 ♠K ♥A, ♣9 ♦J ♣J, ♥J ♣AX]
-list build duration: 0 sec, positions 13929
-deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
-2
 [♠K8A, ♠7X ♥8, ♣8 ♥9 ♣9, ♠9J ♥K, ♣X ♥J ♣A, ♦8 ♥7 ♦X, ♠Q ♣J ♦9, ♥X ♣Q ♦J, ♥Q ♣K ♦K, ♥A ♦QA]
 list build duration: 0 sec, positions 16800
 deal: ♠JQK ♣9A ♦7 ♥7XQA  ♠8 ♣8XJQK ♦XQ ♥8K  ♠79A ♦89JKA ♥9J  ♣7 ♠X  0 -> 6♥ 5
@@ -51,7 +63,7 @@ deal: ♠JQ ♣QA ♦XQA ♥89X  ♠8KA ♣79K ♥7JQK  ♠9X ♣8XJ ♦789J ♥
 list build duration: 0 sec, positions 10498
 deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> 8♠ 8
 
-**********
+#############
 
 [♠QA8, ♠7 ♦9 ♠9, ♣78J, ♠X ♦J ♠K, ♣9KQ, ♦A7K, ♦X8 ♣X, ♣A ♠J ♥J, ♦Q ♥7Q, ♥K8A]
 declarer: 5 tricks
@@ -100,7 +112,6 @@ deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ
 ###
 
 # invalid bid:
-#deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 1 # ловится
 #deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
 
 #deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> All-pass

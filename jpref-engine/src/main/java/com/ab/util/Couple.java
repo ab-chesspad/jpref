@@ -21,7 +21,7 @@ package com.ab.util;
 
 import java.io.Serializable;
 
-public class Couple<T> implements Cloneable, Serializable {
+public class Couple<T> implements Serializable {
     public T first;
     public T second;
 

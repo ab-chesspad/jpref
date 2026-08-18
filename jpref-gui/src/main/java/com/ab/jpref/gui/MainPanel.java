@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics> {
-    public static boolean DEBUG_LOG = false;
+    public static final boolean DEBUG_LOG = false;
 
     private final Color LBL_BG_COLOR = Color.yellow;
     private final Color LBL_SELECTED_BG_COLOR = Color.green;

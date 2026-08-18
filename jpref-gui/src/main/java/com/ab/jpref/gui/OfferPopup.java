@@ -24,10 +24,13 @@ package com.ab.jpref.gui;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.gui.config.PConfig;
+import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 
 import static com.ab.jpref.config.Config.ROUND_SIZE;
@@ -35,8 +38,10 @@ import static com.ab.jpref.config.I18n.m;
 
 public class OfferPopup extends JDialog {
     private final PUtil pUtil = PUtil.getInstance();
+    final PConfig pConfig;
     final GameManager gameManager;
     final OfferPopup popupInstance;
+    Rectangle popupRectangle;
 
     final BufferedImage lineImage = pUtil.loadImage("buttons/radio.png");
     final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
@@ -49,16 +54,32 @@ public class OfferPopup extends JDialog {
 
     public OfferPopup(int minTricks, int maxTricks) {
         super(Main.mainFrame, true);
+        pConfig = PConfig.getInstance();
         popupInstance = this;
 
         gameManager = GameManager.getInstance();
         setTitle(m("Your Offer"));
-        Rectangle mainRectangle = new Rectangle();
-        mainRectangle.width = PConfig.getInstance().mainSize.first;
-        mainRectangle.height = PConfig.getInstance().mainSize.second;
-        mainRectangle.width /= 2;
-        mainRectangle.height /= 2;
-        setSize(mainRectangle.width, mainRectangle.height);
+
+        popupRectangle = pConfig.offerPopupRectangle.get();
+        if (popupRectangle.width == 0) {
+            popupRectangle.width = PConfig.getInstance().mainSize.first / 2;
+            popupRectangle.height = PConfig.getInstance().mainSize.second / 2;
+        }
+        setSize(popupRectangle.width, popupRectangle.height);
+        this.setLocation(popupRectangle.x, popupRectangle.y);
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                popupRectangle = popupInstance.getBounds();
+                pConfig.offerPopupRectangle.set(popupRectangle);
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+                popupRectangle = popupInstance.getBounds();
+                pConfig.offerPopupRectangle.set(popupRectangle);
+            }
+        });
 
         setLocationRelativeTo(Main.mainFrame);
         Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW / 5));
@@ -74,7 +95,7 @@ public class OfferPopup extends JDialog {
         jLab.setOpaque(true);
         add(jLab, BorderLayout.NORTH);
 
-        // 1. list of settings
+        // 1. list of tricks
         final String[] values = {
             "10",
             "9",
@@ -125,7 +146,8 @@ public class OfferPopup extends JDialog {
         });
         JPanel centerPanel = new JPanel(new GridBagLayout());
         centerPanel.add(jList);
-        add(centerPanel, BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(centerPanel);
+        add(scrollPane, BorderLayout.CENTER);
 
         // 2. bottom buttons
         JPanel jPanel = new JPanel();

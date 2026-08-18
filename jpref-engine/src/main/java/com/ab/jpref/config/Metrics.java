@@ -24,8 +24,6 @@ import com.ab.jpref.cards.CardSet;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 
-import java.awt.*;
-
 public class Metrics {
     public static final boolean DEBUG_LOG = false;
 

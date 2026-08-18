@@ -26,7 +26,9 @@ import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import static com.ab.jpref.engine.Bot.targetBot;
 
-public class Trick extends BaseTrick {
+import java.io.Serializable;
+
+public class Trick extends BaseTrick implements Serializable {
     int number;
     Suit startingSuit, trumpSuit;
     Config.Bid minBid;
@@ -141,7 +143,7 @@ public class Trick extends BaseTrick {
             discardingPlayer = getTurn();
         }
 
-        Player[] players = gameManager.players;
+        Player[] players = gameManager.getPlayers();
         if (discardingPlayer >= 0) {
             CardSet remove = CardSet.getDeck(startingSuit);
             players[discardingPlayer].myHand.remove(remove);
@@ -228,7 +230,7 @@ public class Trick extends BaseTrick {
         }
 
         for (int j = 0; j < this.size(); ++j) {
-            Player player = gameManager.players[(this.getStartedBy() + j) % gameManager.players.length];
+            Player player = gameManager.getPlayers()[(this.getStartedBy() + j) % gameManager.getPlayers().length];
             sb.append(sep).append(player.getName()).append(": ")
                 .append(this.getCard(j).toColorString());
             sep = ", ";

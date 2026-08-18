@@ -25,9 +25,10 @@ import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
+import java.io.Serializable;
 import java.util.*;
 
-public abstract class Player {
+public abstract class Player implements Serializable {
     public static final boolean DEBUG_LOG = false;
     public static final int NOP = Config.NOP;   // Number of players
 //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
@@ -49,7 +50,7 @@ public abstract class Player {
     protected CardSet leftHand = new CardSet();
     protected CardSet rightHand = new CardSet();
 
-    private final List<RoundResults> history = new ArrayList<>();
+    private List<RoundResults> history = new ArrayList<>();
     protected int tricks;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
@@ -66,9 +67,7 @@ public abstract class Player {
 
     // to be implemented in a subclass e.g. human player
     // returns BID_WITHOUT_THREE or a game
-    public Config.Bid drop() {
-        return bid;
-    }
+    public abstract Config.Bid drop();
 
     // to be implemented in a subclass (human player)
     public boolean playWhistLaying() { return true; }
@@ -89,6 +88,7 @@ public abstract class Player {
             myHand = new CardSet(other.myHand);
             leftHand = new CardSet(other.leftHand);
             rightHand = new CardSet(other.rightHand);
+            history = other.history;
         }
         tricks = 0;
 
@@ -195,7 +195,7 @@ public abstract class Player {
     }
 
     protected Card anyCard(Trick trick, boolean grab) {
-        CardSet myHand = gameManager().players[this.number].myHand;
+        CardSet myHand = gameManager().getPlayers()[this.number].myHand;
         CardSet cardSet = new CardSet();
         if (trick.startingSuit != null) {
             cardSet = myHand.list(trick.startingSuit);
@@ -233,7 +233,7 @@ public abstract class Player {
         return myHand.list().size();
     }
 
-    public static class RoundResults {
+    public static class RoundResults implements Serializable {
         public final int[] points = new int[PlayerPoints.values().length];
 
         public RoundResults() {

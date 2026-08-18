@@ -69,8 +69,6 @@ public class StatusPopup extends JDialog {
         West = TableLayout.Alignment.West.ordinal(),
         East = TableLayout.Alignment.East.ordinal();
 
-    static StatusPopup instance;
-
     private final Metrics metrics = Metrics.getInstance();
 
     final JPanel buttonPanel;
@@ -78,11 +76,10 @@ public class StatusPopup extends JDialog {
     Rectangle popupRectangle;
     ScoresPanel scoresPanel;
     RestartCommand result = RestartCommand.newRound;
+    int historySize;
 
     StatusPopup(boolean withButtons) {
         super(Main.mainFrame, true);
-//        Logger.printf("instance %s\n", instance);
-        instance = this;
         setTitle(m("Scores"));
         setLayout(new BorderLayout(1, 4));
         popupRectangle = PConfig.getInstance().scoresPopupRectangle.get();
@@ -127,6 +124,11 @@ public class StatusPopup extends JDialog {
 
         scoresPanel = new ScoresPanel();
         add(scoresPanel, BorderLayout.NORTH);
+
+        historySize = GameManager.getInstance().getPlayers()[0].getHistory().size();
+        if (!withButtons) {
+            --historySize;
+        }
 
         setVisible(true);   // blocks until dialog ends
         Logger.println("StatusPopup done");
@@ -331,7 +333,6 @@ public class StatusPopup extends JDialog {
 
         @Override
         public Rectangle getBounds() {
-//            return StatusPopup.instance.getScoresRectangle();
             return StatusPopup.this.getScoresRectangle();
         }
 
@@ -419,21 +420,19 @@ public class StatusPopup extends JDialog {
         JButton goonButton = new JButton(TableLayout.ButtonCommand.goon.getName());
         goonButton.addActionListener(actionEvent -> {
             StatusPopup.this.dispose();
-            instance = null;
             result = RestartCommand.newRound;
         });
         jPanel.add(goonButton);
         JButton replayButton = new JButton(TableLayout.ButtonCommand.replay.getName());
         replayButton.addActionListener(actionEvent -> {
             StatusPopup.this.dispose();
-            instance = null;
             result = RestartCommand.replay;
         });
         jPanel.add(replayButton);
         return  jPanel;
     }
 
-    private static class PlayerArea {
+    private class PlayerArea {
         // debug:
         final Color[] bgColors = {Color.green, Color.magenta, Color.red, Color.cyan, Color.yellow};
         final SLabel[] pLabels = new SLabel[Player.PlayerPoints.values().length];
@@ -469,7 +468,7 @@ public class StatusPopup extends JDialog {
         Point p0, p1, p2, p3, p4, p5, p6, p7, p8, p9;
     }
 
-    static class SLabel extends PLabel {
+    class SLabel extends PLabel {
         final Player player;
         final Player.PlayerPoints label;
 
@@ -486,20 +485,19 @@ public class StatusPopup extends JDialog {
         }
 
         public void refresh() {
+            if (historySize == 0) {
+                return;
+            }
             List<Player.RoundResults> history = player.getHistory();
             if (label.equals(Player.PlayerPoints.status)) {
-                String text = "";
-                if (!history.isEmpty()) {
-                    Player.RoundResults roundResults = history.get(history.size() - 1);
-                    int curr = roundResults.getPoints(label);
-                    int prev = 0;
-                    if (history.size() > 1) {
-                        roundResults = history.get(history.size() - 2);
-                        prev = roundResults.getPoints(label);
-                    }
-                    text = String.format("%d (%d)", curr, curr - prev);
+                Player.RoundResults roundResults = history.get(historySize - 1);
+                int curr = roundResults.getPoints(label);
+                int prev = 0;
+                if (historySize > 1) {
+                    roundResults = history.get(historySize - 2);
+                    prev = roundResults.getPoints(label);
                 }
-                this.setText(text);
+                this.setText(String.format("%d (%d)", curr, curr - prev));
                 return;
             }
 
@@ -507,7 +505,8 @@ public class StatusPopup extends JDialog {
             StringBuilder sb = new StringBuilder();
             List<Integer> results = new ArrayList<>();
             int total = 0;
-            for (Player.RoundResults roundResults : history) {
+            for (int j = 0; j < historySize; ++j) {
+                Player.RoundResults roundResults = history.get(j);
                 int res = roundResults.getPoints(label);
                 if (res == 0) {
                     continue;
