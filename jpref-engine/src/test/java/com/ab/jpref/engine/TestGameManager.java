@@ -110,7 +110,6 @@ public class TestGameManager {
                     }
                     _deck.verifyDeck();
                     CardList _talonCards = new CardList(_deck.subList(30, 32));
-//                    Bot.debugDrop = new CardList(_talonCards);
                     for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                         printf("declarer #%d\n", declarerNum);
                         int elderHand = (_elderHand + declarerNum) % NOP;
@@ -264,7 +263,7 @@ if (++count[0] > 0) {
                 }
                 _deck.verifyDeck();
                 CardList _talonCards = new CardList(_deck.subList(30, 32));
-                for (int declarerNum = 2; declarerNum < NOP; ++declarerNum) {
+                for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                     printf("declarer #%d\n", declarerNum);
                     int elderHand = (_elderHand + declarerNum) % NOP;
                     CardList deck = new CardList();
@@ -276,10 +275,6 @@ if (++count[0] > 0) {
                     gameManager.deal(deck);
                     gameManager.elderHand = elderHand;
                     gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
-//                    gameManager.nextBidder = elderHand;
-//                    gameManager.getTrick().setNumber(0);
-//                    gameManager.passCount = 0;
-//                    gameManager.setMinBid(Config.Bid.BID_6S);
                     Bot.targetBot = null;
                     gameManager.playRound(deck);
 

@@ -1,9 +1,8 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
-deal: ♠QK ♣789XJQA ♦Q  ♠789 ♣K ♦KA ♥9XJK  ♠XJA ♦89XJ ♥8QA  ♦7 ♥7  2 -> 8♣ 8
-
 ###########
 
+deal: ♠QK ♣789XJQA ♦Q  ♠789 ♣K ♦KA ♥9XJK  ♠XJA ♦89XJ ♥8QA  ♦7 ♥7  2 -> 8♣ 8
 deal: ♠JQA ♣XK ♦XK ♥7JA  ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠9 ♦7  1 -> 6♦ 6
 
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится 1

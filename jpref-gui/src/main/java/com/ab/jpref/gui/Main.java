@@ -49,7 +49,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Main implements Logger.LogHolder, Host {
-    static final boolean release = false;
+    static final boolean release = true;
     static boolean DEBUG_LOG = false;
     public static boolean SHOW_ALL = true;
     public static final String LOG_EXT = ".log";

@@ -296,6 +296,7 @@ public class GameManager implements Serializable {
             discarded.remove(p.leftHand);
             discarded.remove(p.rightHand);
         }
+        declarer = null;
         this.trick.clear(elderHand);
         if (bid.equals(Bid.BID_ALL_PASS)) {
             this.declarerNumber = -1;
