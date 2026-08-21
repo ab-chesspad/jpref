@@ -968,6 +968,10 @@ mainLoop:
         return mask;
     }
 
+    public static int bm4buildForward(int thisBitmap) {
+        return bm4buildForward(thisBitmap, ~thisBitmap);
+    }
+
     public static int bm4buildBackward(int thisBitmap, int othersBitmap) {
         int others = ~othersBitmap;
         int bitmap = thisBitmap;

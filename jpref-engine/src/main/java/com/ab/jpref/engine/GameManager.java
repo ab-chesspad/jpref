@@ -95,13 +95,12 @@ public class GameManager implements Serializable {
     private Player[] savedPlayers;
     private final Trick trick = new Trick();
     private CardList lastTrickCards = new CardList();
-    private boolean showDefendersCards;
 
     private Player declarer;
     public int declarerNumber;
     CardSet declarerHand;           // with talon, as defenders know it
     CardSet initialDeclarerHand;    // with talon
-    boolean cardsRevealed;
+    public boolean cardsRevealed;
 
     public GameManager() {}
 
@@ -230,7 +229,7 @@ public class GameManager implements Serializable {
                         }
                         int totalPool = 0;
                         for (Player player: players) {
-                            for (Player.RoundResults roundResults : player.getHistory()) {
+                            for (Player.RoundResults roundResults : player.getGameHistory()) {
                                 totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
                             }
                         }
@@ -272,7 +271,7 @@ public class GameManager implements Serializable {
             nextBidder = elderHand;
             totalPool = 0;
             for (Player player: players) {
-                for (Player.RoundResults roundResults : player.getHistory()) {
+                for (Player.RoundResults roundResults : player.getGameHistory()) {
                     totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
                 }
                 player.myHand.clear();
@@ -330,13 +329,6 @@ public class GameManager implements Serializable {
             printf("declarer %s, round %s, %s\n",
                 this.declarer.getName(), this.declarer.getBid(), this.declarer.toColorString());
         }
-    }
-
-    public boolean showDefendersCards() {
-        if (cardsRevealed) {
-            return showDefendersCards;
-        }
-        return false;
     }
 
     public int getAllPassFactor() {
@@ -427,7 +419,7 @@ public class GameManager implements Serializable {
         }
 
         updateFromAvatars();
-        if (!replayMode && next == null) {
+        if (!replayMode && (next == null || next == RestartCommand.offer)) {
             int param = 1;
             if (declarer == null) {
                 param = allPassFactor + 1;
@@ -439,7 +431,7 @@ public class GameManager implements Serializable {
         }
         if (eventObserver == null) {
             next = RestartCommand.newRound;
-        } else if (next == null) {
+        } else if (next == null || next == RestartCommand.offer) {
             next = eventObserver.showScores();
             sleep(config().pauseBetweenRounds.get());
         }
@@ -651,7 +643,9 @@ public class GameManager implements Serializable {
             } else {
                 avatars[declarer.getNumber()] = new Bot(declarer);
                 if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
-                        defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST)) {
+                        defender0 instanceof HumanPlayer && defender0.getBid().equals(Bid.BID_WHIST_LAYING) ||
+                        defender1 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
+                    defender1 instanceof HumanPlayer && defender1.getBid().equals(Bid.BID_WHIST_LAYING)) {
                     avatars[defender0.getNumber()] =
                             new HumanPlayer(defender0, clickable);
                     avatars[defender1.getNumber()] =
@@ -717,7 +711,7 @@ public class GameManager implements Serializable {
                     if (p2.getBid().equals(Bid.BID_HALF_WHIST)) {
                         // 2nd chance
                         p1.respondOnDeclaration();
-                        if (p1.getBid().equals(Bid.BID_WHIST)) {
+                        if (p1.getBid().equals(Bid.BID_WHIST_LAYING)) {
                             p2.setBid(Bid.BID_PASS);
                         }
                     }
@@ -743,7 +737,7 @@ public class GameManager implements Serializable {
                 if (p != null) {
                     update(RoundStage.selectWhistOption);
                     sleep(100);     // give jPrefPanel a chance to paint
-                    this.showDefendersCards = p.playWhistLaying();
+                    p.playWhistLaying();
                     sleep(100);     // give jPrefPanel a chance to paint
                 }
                 // fall through
@@ -803,26 +797,27 @@ public class GameManager implements Serializable {
     }
 
     protected void playRoundMisere() {
-        if (roundStage.equals(RoundStage.showTalon)) {
+        if (roundStage.equals(RoundStage.showTalon) ||
+                roundStage.equals(RoundStage.declareRound)) {
             declarer.declareRound(minBid, elderHand);
             Player player1 = players[(this.declarerNumber + 1) % NOP];
             Player player2 = players[(this.declarerNumber + 2) % NOP];
             if (declarer instanceof HumanPlayer) {
-                player1.setBid(Bid.BID_WHIST);
+                player1.setBid(Bid.BID_WHIST_LAYING);
                 player2.setBid(Bid.BID_PASS);
             } else if (player1 instanceof HumanPlayer) {
-                player1.setBid(Bid.BID_WHIST);
+                player1.setBid(Bid.BID_WHIST_LAYING);
                 player2.setBid(Bid.BID_PASS);
             } else {
                 player1.setBid(Bid.BID_PASS);
-                player2.setBid(Bid.BID_WHIST);
+                player2.setBid(Bid.BID_WHIST_LAYING);
             }
             update(RoundStage.play);
             if (!replayMode) {
                 avatars4Round();
             }
             this.declarer = this.players[this.declarerNumber];
-            showDefendersCards = true;
+            TrickList.getInstance().initBuild();
         }
         update(RoundStage.play);
         for (int c = trick.number; c < ROUND_SIZE; ++c) {

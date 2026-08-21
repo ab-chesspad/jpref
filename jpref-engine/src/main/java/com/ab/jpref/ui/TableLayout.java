@@ -69,7 +69,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         drop("Drop"),
         without3("Without Three"),
 
-        lying("Lying"),
+        laying("Laying"),
         standing("Standing"),
 
         prevSuit("Previous Suit"),
@@ -175,7 +175,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
             });
         ButtonPanel whistOptionPanel = create(RoundStage.selectWhistOption, 4, 1,
             new ButtonCommand[][]{
-                {ButtonCommand.lying},
+                {ButtonCommand.laying},
                 {ButtonCommand.standing},
             });
         // no standing whist!
@@ -711,17 +711,26 @@ public class TableLayout<T> implements GameManager.EventObserver {
         GameManager gameManager = GameManager.getInstance();
         if (gameManager.replayMode || (host.specialOption() & Host.SPECIAL_OPTION_SHOW_CARDS) != 0) {
             return true;
-        } else {
-            if (isStage(RoundStage.play)
-                || isStage(RoundStage.trickTaken)) {
-                if (gameManager.declarerNumber != index) {
-                    if (gameManager.showDefendersCards()) {
-                        return true;
-                    }
-                }
-            }
-            return index == 0;
         }
+        Player player = gameManager.getPlayers()[index];
+        if (player instanceof HumanPlayer) {
+            return true;
+        }
+        if (player.getBid().compareTo(BID_6S) >= 0) {
+            return false;
+        }
+        if (!gameManager.cardsRevealed) {
+            return false;
+        }
+        if (player.getBid().equals(BID_WHIST_LAYING)) {
+            return true;
+        }
+        for (Player p : gameManager.getPlayers()) {
+            if (p.getBid().equals(BID_WHIST_LAYING)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -965,7 +974,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 break;
 
             // whist option panel:
-            case lying:
+            case laying:
                 currentPlayer.accept(Bid.BID_WHIST_LAYING);
                 break;
             case standing:
@@ -1091,7 +1100,9 @@ public class TableLayout<T> implements GameManager.EventObserver {
             int _minTricks = tricksEstimate;
             maxTricks = ROUND_SIZE - theirTricks;
             minTricks = Math.min(_minTricks, maxTricks);
-        } else if (player0.getBid().equals(Bid.BID_WHIST)) {
+        } else if (player0.getBid().equals(Bid.BID_WHIST) ||
+                player0.getBid().equals(BID_WHIST_LAYING) ||
+                player0.getBid().equals(BID_WHIST_STANDING)) {
             int _minTricks = player0.getTricks();
             if (player1.getBid() == Bid.BID_PASS) {
                 _minTricks += player1.getTricks();
@@ -1099,7 +1110,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 _minTricks += player2.getTricks();
             }
             if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
-                minTricks = tricksEstimate;
+                minTricks = ROUND_SIZE - tricksEstimate;
                 maxTricks = ROUND_SIZE - player0.getTricks();
             } else {
                 minTricks = _minTricks;

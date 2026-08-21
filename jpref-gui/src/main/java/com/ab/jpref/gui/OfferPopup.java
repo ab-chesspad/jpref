@@ -24,7 +24,6 @@ package com.ab.jpref.gui;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.gui.config.PConfig;
-import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 
 import javax.swing.*;

@@ -136,7 +136,7 @@ public class HumanPlayer extends Player implements Serializable {
     public boolean playWhistLaying() {
         clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();        // block
-        Config.Bid bid = (Config.Bid)q;
+        bid = (Config.Bid)q;
         return bid.equals(Config.Bid.BID_WHIST_LAYING);
     }
 

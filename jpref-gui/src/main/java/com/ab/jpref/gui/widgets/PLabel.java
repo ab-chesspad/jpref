@@ -20,47 +20,27 @@
 package com.ab.jpref.gui.widgets;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicHTML;
+import javax.swing.text.View;
 import java.awt.*;
 
 public class PLabel extends JLabel {
-    public static final double fontFactor = .4;    // relative to height
     protected final double rotation;
-
-    private static Font font;
-    private static int minSize = Integer.MAX_VALUE;
 
     public PLabel(double rotation) {
         setOpaque(false);
         this.rotation = rotation;
     }
 
-    public static void initRecalc() {
-        PLabel.font = null;
-        minSize = Integer.MAX_VALUE;
-    }
-
-    // not width and height but edge points
+    // edge points, not width and height!
     public void setPBounds(int x0, int y0, int x1, int y1) {
         int w = x1 - x0;
         int h = y1 - y0;
         super.setBounds(x0, y0, w, h);
-        int size = w;
-        if (rotation == 0) {
-            size = h;
-        }
-        if (minSize > size) {
-            minSize = size;
-        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        if (font == null && minSize != Integer.MAX_VALUE) {
-            font = new Font("Serif", Font.PLAIN, (int)(minSize * fontFactor));
-        }
-        if (font != null) {
-            g.setFont(font);
-        }
         if (rotation == 0) {
             super.paintComponent(g);
             return;
@@ -75,7 +55,6 @@ public class PLabel extends JLabel {
         }
         g2d.setColor(getForeground());
         String text = getText();
-        g2d.setFont(font);
         FontMetrics fontMetrics = g2d.getFontMetrics();
 
         int x0 = bounds.width / 2;
@@ -86,6 +65,23 @@ public class PLabel extends JLabel {
         g2d.drawLine( 0, y0, bounds.width, y0);
         g2d.drawRect(0, 0,  bounds.width,  bounds.height);  // without rotation
 //*/
+        if (BasicHTML.isHTMLString(text)) {
+            View view = BasicHTML.createHTMLView(this, text);
+
+            float viewWidth = view.getPreferredSpan(View.X_AXIS);
+            float viewHeight = view.getPreferredSpan(View.Y_AXIS);
+            int x = x0 - bounds.height / 2;
+            if (getHorizontalAlignment() == SwingConstants.CENTER) {
+                x = x0 - Math.round(viewWidth / 2);
+            }
+            int y = y0 - Math.round(viewHeight / 2);
+
+            g2d.rotate(rotation, x0, y0);
+            view.paint(g2d, new Rectangle(x, y, Math.round(viewWidth), Math.round(viewHeight)));
+            g2d.dispose();
+            return;
+        }
+
         int x = x0 - bounds.height / 2;
 
         if (getHorizontalAlignment() == SwingConstants.CENTER) {

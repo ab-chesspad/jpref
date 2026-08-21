@@ -50,7 +50,7 @@ public abstract class Player implements Serializable {
     protected CardSet leftHand = new CardSet();
     protected CardSet rightHand = new CardSet();
 
-    private List<RoundResults> history = new ArrayList<>();
+    private List<RoundResults> gameHistory = new ArrayList<>();
     protected int tricks;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
@@ -88,7 +88,7 @@ public abstract class Player implements Serializable {
             myHand = new CardSet(other.myHand);
             leftHand = new CardSet(other.leftHand);
             rightHand = new CardSet(other.rightHand);
-            history = other.history;
+            gameHistory = other.gameHistory;
         }
         tricks = 0;
 
@@ -105,7 +105,7 @@ public abstract class Player implements Serializable {
         this.leftHand.set(complement);
         this.rightHand.set(complement);
         bid = Config.Bid.BID_UNDEFINED;
-        history.add(new RoundResults());
+        gameHistory.add(new RoundResults());
     }
 
 
@@ -152,7 +152,7 @@ public abstract class Player implements Serializable {
     }
 
     public RoundResults getRoundResults() {
-        return history.get(history.size() - 1);
+        return gameHistory.get(gameHistory.size() - 1);
     }
 
     public void incrementTricks() {
@@ -178,12 +178,12 @@ public abstract class Player implements Serializable {
         return myHand;
     }
 
-    public List<RoundResults> getHistory() {
-        return history;
+    public List<RoundResults> getGameHistory() {
+        return gameHistory;
     }
 
     public void clearHistory() {
-        history.clear();
+        gameHistory.clear();
     }
 
     public Card anyCard() {

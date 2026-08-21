@@ -1,7 +1,18 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
+deal: ♠78 ♣9XQ ♦89J ♥QK  ♠9Q ♣8JA ♦7QK ♥8J  ♠XKA ♣7 ♦XA ♥79XA  ♠J ♣K  0 -> 6♥ 8 # по Утяцкому #65
+
 ###########
 
+deal: ♣79QA ♦9XKA ♥XJ  ♠89X ♣XK ♦8Q ♥79Q  ♠7JQKA ♣J ♦7J ♥8K  ♥A ♣8  0 -> 8♦ 9 # по Утяцкому #33
+deal: ♠9X ♦89XQA ♥8XK  ♠QA ♣79XJQA ♦7K  ♠7K ♣8K ♦J ♥79JQA  ♠J8  0 -> 8♣ 8
+deal: ♠89XA ♣7XK ♦KA ♥9  ♠7JK ♣89 ♦8X ♥8JA  ♠Q ♣JA ♦79J ♥7XQK  ♦Q ♣Q  1 -> All-pass # 6♣ 7
+deal: ♠XQA ♦9XKA ♥789  ♠789J ♣78K ♦J ♥JQ  ♣9XJQA ♦78 ♥XKA  ♠K ♦Q  2 -> 6♣ 7
+deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 2 # не ловится
+deal: ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠JQA ♣XK ♦XK ♥7JA  ♠9 ♦7  1 -> 6♦ 6
+deal: ♠JQA ♣XK ♦XK ♥7JA  ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠9 ♦7  1 -> 6♦ 6
+
+deal: ♠A ♣JKA ♦89 ♥8XJA  ♠7JQK ♣Q ♦XJK ♥7Q  ♠89X ♣789X ♦7Q ♥9  ♦A ♥K  2 -> 8♥ 10
 deal: ♠QK ♣789XJQA ♦Q  ♠789 ♣K ♦KA ♥9XJK  ♠XJA ♦89XJ ♥8QA  ♦7 ♥7  2 -> 8♣ 8
 deal: ♠JQA ♣XK ♦XK ♥7JA  ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠9 ♦7  1 -> 6♦ 6
 
@@ -26,21 +37,17 @@ declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
 
 [♠K8A, ♠7X ♥8, ♣8 ♥9 ♣9, ♠9J ♥K, ♣X ♥J ♣A, ♦8 ♥7 ♦X, ♠Q ♣J ♦9, ♥X ♣Q ♦J, ♥Q ♣K ♦K, ♥A ♦QA]
-list build duration: 0 sec, positions 16800
 deal: ♠JQK ♣9A ♦7 ♥7XQA  ♠8 ♣8XJQK ♦XQ ♥8K  ♠79A ♦89JKA ♥9J  ♣7 ♠X  0 -> 6♥ 5
 
 deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # не ловится
 
 [♠JK9, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
-list build duration: 1 sec, positions 303291
 deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  2 -> 6♦ 6
 
 [♠9 ♣9 ♠7, ♣J78, ♣QX ♠X, ♣K ♠8 ♦8, ♦7X9, ♠K ♦J ♣A, ♦AK ♥J, ♦Q ♠A ♥7, ♥8X9, ♥QKA]
-list build duration: 0 sec, positions 115998
 deal: ♠JQ ♣9QKA ♦7A ♥8A  ♠78KA ♣7X ♦XK ♥XQ  ♠9X ♣8 ♦89J ♥79JK  ♦Q ♣J  2 -> 7♣ 8
 
 [♠A9 ♣9, ♠7J ♣Q, ♠K ♣A ♠8, ♣X ♦9 ♠X, ♠Q ♣J ♦J, ♦K7 ♥7, ♥9A8, ♣K ♥X ♦X, ♦8 ♥J ♦A, ♥K ♦Q ♥Q]
-list build duration: 1 sec, positions 96314
 deal: ♠78XQA ♦XKA ♥9K  ♠9JK ♣XJK ♦78Q ♥A  ♣9QA ♦9J ♥7X8JQ  ♣78  0 -> 6♠ 6
 
 deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> All-pass
@@ -52,14 +59,12 @@ deal: ♠79 ♣7XQ ♦8J ♥89J  ♠XJQ ♣89 ♦9XA ♥7K  ♠8K ♣JKA ♦7QK 
 deal: ♠79XJQ ♣8A ♦XK ♥8  ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♣J ♠A  2 -> All-pass
 
 [♠97 ♣7, ♣K9J, ♣A ♠X ♣Q, ♣8 ♠Q8, ♥8X ♠K, ♦79 ♣X, ♥K7 ♠A, ♥AQ ♦X, ♥9 ♦8J, ♥J ♦AK]
-list build duration: 0 sec, positions 71834
 deal: ♠J ♣7KA ♦Q ♥89JKA   ♠9XQ ♣9 ♦78A ♥7XQ   ♠78KA ♣JQ ♦9XJK   ♣8X 1 -> 9♣ 9 #ut
 
 [♥KA8, ♠9JK, ♠AXQ, ♠7 ♣8 ♦X, ♠8 ♣XQ, ♥J ♣J ♥9, ♥Q ♦7 ♥X, ♥7 ♦8Q, ♣9 ♦9 ♣A, ♦A ♣K ♦J]
 deal: ♠JQ ♣QA ♦XQA ♥89X  ♠8KA ♣79K ♥7JQK  ♠9X ♣8XJ ♦789J ♥A  ♦K ♠7  1 -> 6♠ 7
 
 [♠A78, ♠J ♣X ♠X, ♠9 ♦7 ♣7, ♠Q ♦9 ♣9, ♠K ♥8 ♦X, ♣QK ♦J, ♣J ♦Q ♣A, ♦A ♥X ♦K, ♥QJ7, ♥KA9]
-list build duration: 0 sec, positions 10498
 deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> 8♠ 8
 
 #############
@@ -79,15 +84,12 @@ deal: ♠JK ♣9 ♦89JQKA ♥7  ♠8 ♣78JK ♦7 ♥8JQA  ♠9XQA ♣XA ♦X �
 #deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7
 
 [♥8JK, ♣X9K, ♠K97, ♠X ♣Q ♠8, ♦X8 ♣7, ♠A ♦J ♠Q, ♣A ♦Q ♣J, ♠J ♦K9, ♣8 ♥9 ♦A, ♥QXA]
-list build duration: 0 sec, positions 20545
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
 
 [♣8XQ, ♣79 ♥7, ♠9 ♥9 ♠Q, ♦AJX, ♦97Q, ♠J ♥J ♠7, ♥K8X, ♥A ♠8 ♥Q, ♣KJ ♠A, ♣A ♠X ♦K]
-list build duration: 0 sec, positions 63768
 deal: ♠K ♣QKA ♦9A ♥9JKA  ♠78XQ ♣89J ♦7J ♥8  ♠9JA ♣X ♦XQK ♥7XQ  ♦8 ♣7  1 -> 8♥ 8
 
 [♠QX8, ♠7 ♦J ♠J, ♣9A8, ♠A9 ♣7, ♦KX ♣J, ♦AQ ♣Q, ♦7 ♠K ♥J, ♦8 ♣K ♥Q, ♦9 ♥X7, ♥AK8]
-list build duration: 0 sec, positions 86946
 deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
 
 ##########################

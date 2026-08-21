@@ -43,8 +43,7 @@ public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
     public static final boolean PRINT_BEST_PATH = true;    // for debug
 
-    static final TrickList.TrickNode[] probesBestNodes = new TrickList.TrickNode[ROUND_SIZE + 1];
-
+    static TrickList.TrickNode[] probesBestNodes = new TrickList.TrickNode[ROUND_SIZE + 1];
     static TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
     static int nodeIndex = 0;
 
@@ -83,7 +82,7 @@ public class TrickList implements Serializable{
         if (bestNodes[nodeIndex] == null) {
             return;
         }
-        bestNodes[nodeIndex].trickData = 0;
+        bestNodes[nodeIndex].trickData = -1;
         bestNodes[nodeIndex].setNumber(-1);
         for (int j = 0; j < NOP; ++j) {
             bestNodes[nodeIndex].hands[j] = null;
@@ -166,7 +165,7 @@ public class TrickList implements Serializable{
     }
 
     public int getEstimate() {
-        if (gameManager().declarerNumber < 0 || bestNodes[0] == null) {
+        if (gameManager().declarerNumber < 0 || bestNodes[0] == null || bestNodes[nodeIndex].trickData == -1) {
             return -1;
         }
         return bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
@@ -211,7 +210,9 @@ public class TrickList implements Serializable{
             dropCandidates.remove(hand0.list(trumpSuit));
         }
         int bit0 = 0;
-        while ((bit0 = CardSet.next(dropCandidates.getBitmap(), bit0)) != 0) {
+        int bm = dropCandidates.getBitmap();
+        int bm0 = CardSet.bm4buildForward(bm);
+        while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
             Card card0 = Card.get(bit0);
             Card.Suit suit0 = card0.getSuit();
             dropCandidates.remove(card0);
@@ -221,7 +222,9 @@ public class TrickList implements Serializable{
             }
             int turn = (NOP - BaseTrick.getStartedBy(TrickList.bestNodes[0].trickData)) % NOP;
             int bit1 = 0;
-            while ((bit1 = CardSet.next(hand.getBitmap(), bit1)) != 0) {
+            bm = hand.getBitmap();
+            int bm1 = CardSet.bm4buildForward(bm);
+            while ((bit1 = CardSet.next(bm1, bit1)) != 0) {
                 Card card1 = Card.get(bit1);
                 Card.Suit suit1 = card1.getSuit();
                 printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
@@ -557,6 +560,7 @@ if (cards == null) {
         oos.defaultWriteObject(); // Serialize default fields
         oos.writeObject(TrickList.bestNodes);
         oos.writeObject(TrickList.nodeIndex);
+        oos.writeObject(TrickList.probesBestNodes);
         oos.writeObject(Bot.targetBot);
         oos.writeObject(Bot.playerBid);
     }
@@ -566,6 +570,7 @@ if (cards == null) {
         ois.defaultReadObject();
         TrickList.bestNodes = (TrickList.TrickNode[])ois.readObject();
         TrickList.nodeIndex = (int)ois.readObject();
+        TrickList.probesBestNodes = (TrickList.TrickNode[])ois.readObject();
         Bot.targetBot = (Bot)ois.readObject();
         Bot.playerBid = (Bidder.PlayerBid) ois.readObject();
     }

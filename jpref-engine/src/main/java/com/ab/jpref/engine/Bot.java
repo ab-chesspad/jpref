@@ -153,7 +153,7 @@ public class Bot extends Player implements Serializable {
         if (this.number == player1) {
             Bid otherBid = gameManager().getBid(player2);
             if (otherBid.equals(Bid.BID_HALF_WHIST)) {
-                bid = Bid.BID_WHIST;
+                bid = Bid.BID_WHIST_LAYING;
             } else {
                 bid = Bid.BID_PASS;
             }
@@ -162,7 +162,7 @@ public class Bot extends Player implements Serializable {
             if (otherBid.equals(Bid.BID_WHIST)) {
                 bid = Bid.BID_PASS;
             } else {
-                bid = Bid.BID_WHIST;
+                bid = Bid.BID_WHIST_LAYING;
             }
         }
         this.bid = bid;

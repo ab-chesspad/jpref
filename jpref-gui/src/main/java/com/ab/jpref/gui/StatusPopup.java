@@ -42,7 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * description in etc/doc/scores.jpg
+ *  for description look at etc/doc/scores.jpg
  */
 public class StatusPopup extends JDialog {
     static final boolean DEBUG_LOG = false;
@@ -50,6 +50,7 @@ public class StatusPopup extends JDialog {
     public static final double MAGIC_ASPECT_RATIO = 434d / 619d;
     public static final double MAGIC_HEIGHT_FACTOR = 1.1d;
 
+    public static final double fontFactor = .4;    // relative to pane height
     static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
     static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
     static final int poolPoints = Player.PlayerPoints.poolPoints.ordinal();
@@ -74,9 +75,10 @@ public class StatusPopup extends JDialog {
     final JPanel buttonPanel;
     final ScoresMetrics scoresMetrics = new ScoresMetrics();
     Rectangle popupRectangle;
-    ScoresPanel scoresPanel;
+    final ScoresPanel scoresPanel;
     RestartCommand result = RestartCommand.newRound;
     int historySize;
+    Font font;
 
     StatusPopup(boolean withButtons) {
         super(Main.mainFrame, true);
@@ -125,13 +127,13 @@ public class StatusPopup extends JDialog {
         scoresPanel = new ScoresPanel();
         add(scoresPanel, BorderLayout.NORTH);
 
-        historySize = GameManager.getInstance().getPlayers()[0].getHistory().size();
+        historySize = GameManager.getInstance().getPlayers()[0].getGameHistory().size();
         if (!withButtons) {
             --historySize;
         }
 
         setVisible(true);   // blocks until dialog ends
-        Logger.println("StatusPopup done");
+        Logger.println(DEBUG_LOG, "StatusPopup done");
     }
 
     Rectangle getScoresRectangle() {
@@ -158,31 +160,22 @@ public class StatusPopup extends JDialog {
         }
 
         public void recalc() {
-            PLabel.initRecalc();
             Rectangle scoresRectangle = getScoresRectangle();
             Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
-
-            // center:
-            scoresMetrics.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
-            scoresMetrics.tan = scoresRectangle.height * (1 - centerYOffset) / scoresMetrics.p0.getX();
-            int h = (int) (metrics.cardW * panelHeight);
-            int x = (int) (h / scoresMetrics.tan);
-            if (scoresMetrics.tan > 1) {
-                x = (int) (metrics.cardW * panelHeight);
-                h = (int) (x * scoresMetrics.tan);
-            }
-            scoresMetrics.p1 = new Point(x, scoresRectangle.height - h);
-            scoresMetrics.p2 = new Point(2 * x, scoresRectangle.height - 2 * h);
-            scoresMetrics.p3 = new Point(scoresRectangle.width - 2 * x, scoresRectangle.height - 2 * h);
-            scoresMetrics.p4 = new Point(scoresRectangle.width - x, scoresRectangle.height - h);
-            scoresMetrics.p5 = new Point(scoresRectangle.width / 2, scoresRectangle.height - h);
-            scoresMetrics.p6 = new Point(x, scoresMetrics.p0.getY());
-            scoresMetrics.p7 = new Point(scoresRectangle.width - x, scoresMetrics.p0.getY());
-            int circleRadius = (int) (metrics.cardW * centerCircleRadius) + 2;  // 2 pixels y-margin
-            int y = scoresMetrics.p0.getY() + circleRadius;
-            int _x = (int) (circleRadius / scoresMetrics.tan);
-            scoresMetrics.p8 = new Point(scoresMetrics.p0.getX() - _x, y);
-            scoresMetrics.p9 = new Point(scoresMetrics.p0.getX() + _x, y);
+            scoresMetrics.recalc(scoresRectangle);
+            int paneH = scoresMetrics.paneH;
+            int paneX = scoresMetrics.paneX;
+            Point p0 = scoresMetrics.p0;
+            Point p1 = scoresMetrics.p1;
+            Point p2 = scoresMetrics.p2;
+            Point p3 = scoresMetrics.p3;
+            Point p4 = scoresMetrics.p4;
+            Point p5 = scoresMetrics.p5;
+            Point p6 = scoresMetrics.p6;
+            Point p7 = scoresMetrics.p7;
+            Point p8 = scoresMetrics.p8;
+            Point p9 = scoresMetrics.p9;
+            font = new Font("Serif", Font.PLAIN, (int)(paneH * fontFactor));
 
 /* verification
             double d = Line2D.ptSegDist(0, scoresRectangle.height,
@@ -197,95 +190,62 @@ public class StatusPopup extends JDialog {
             // south labels:
             playerArea = playerAreas[South];
             pLabel = playerArea.pLabels[leftPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p1.getX(),
-                scoresMetrics.p1.getY(),
-                scoresMetrics.p5.getX(),
-                scoresRectangle.height);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p1.getX(), p1.getY(), p5.getX(), scoresRectangle.height);
             pLabel = playerArea.pLabels[rightPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p5.getX(),
-                scoresMetrics.p5.getY(),
-                scoresMetrics.p4.getX(),
-                scoresRectangle.height);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p5.getX(), p5.getY(), p4.getX(), scoresRectangle.height);
             pLabel = playerArea.pLabels[poolPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p2.getX(),
-                scoresMetrics.p2.getY(),
-                scoresMetrics.p3.getX(),
-                scoresMetrics.p4.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p2.getX(), p2.getY(), p3.getX(), p4.getY());
             pLabel = playerArea.pLabels[dumpPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p2.getX() + x,
-                scoresMetrics.p2.getY() - h,
-                scoresMetrics.p3.getX() - x,
-                scoresMetrics.p4.getY() - h);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p2.getX() + paneX, p2.getY() - paneH, p3.getX() - paneX, p4.getY() - paneH);
 
-            int w = scoresMetrics.p9.getX() - scoresMetrics.p8.getX();
+            int w = p9.getX() - p8.getX();
             pLabel = playerArea.pLabels[statusPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p8.getX(),
-                scoresMetrics.p8.getY(),
-                scoresMetrics.p9.getX(),
-                scoresMetrics.p9.getY() + h);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p8.getX(), p8.getY(), p9.getX(), p9.getY() + paneH);
             pLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             // west labels:
             playerArea = playerAreas[West];
             pLabel = playerArea.pLabels[leftPoints];
-            pLabel.setPBounds(0, 0,
-                scoresMetrics.p6.getX(),
-                scoresMetrics.p6.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(0, 0, p6.getX(), p6.getY());
             pLabel = playerArea.pLabels[rightPoints];
-            pLabel.setPBounds(0, scoresMetrics.p6.getY(),
-                scoresMetrics.p1.getX(), scoresMetrics.p1.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(0, p6.getY(), p1.getX(), p1.getY());
             pLabel = playerArea.pLabels[poolPoints];
-            pLabel.setPBounds(scoresMetrics.p1.getX(), 0,
-                scoresMetrics.p2.getX(),
-                scoresMetrics.p2.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p1.getX(), 0, p2.getX(), p2.getY());
             pLabel = playerArea.pLabels[dumpPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p2.getX(), 0,
-                scoresMetrics.p2.getX() + x,
-                scoresMetrics.p2.getY() - h);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p2.getX(), 0, p2.getX() + paneX, p2.getY() - paneH);
 
             pLabel = playerArea.pLabels[statusPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p8.getX() - h,
-                scoresMetrics.p8.getY() - w,
-                scoresMetrics.p8.getX(),
-                scoresMetrics.p8.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p8.getX() - paneH, p8.getY() - w, p8.getX(), p8.getY());
             pLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             // east labels:
             playerArea = playerAreas[East];
             pLabel = playerArea.pLabels[leftPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p7.getX(),
-                scoresMetrics.p7.getY(),
-                scoresRectangle.width,
-                scoresMetrics.p4.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p7.getX(), p7.getY(), scoresRectangle.width, p4.getY());
             pLabel = playerArea.pLabels[rightPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p7.getX(), 0,
-                scoresRectangle.width,
-                scoresMetrics.p7.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p7.getX(), 0, scoresRectangle.width, p7.getY());
             pLabel = playerArea.pLabels[poolPoints];
-            pLabel.setPBounds(scoresMetrics.p3.getX(), 0,
-                scoresMetrics.p4.getX(),
-                scoresMetrics.p3.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p3.getX(), 0, p4.getX(), p3.getY());
             pLabel = playerArea.pLabels[dumpPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p3.getX() - x, 0,
-                scoresMetrics.p3.getX(),
-                scoresMetrics.p3.getY() - h);
+            pLabel.setFont(font);
+            pLabel.setPBounds(p3.getX() - paneX, 0, p3.getX(), p3.getY() - paneH);
 
             pLabel = playerArea.pLabels[statusPoints];
-            pLabel.setPBounds(
-                scoresMetrics.p9.getX(),
-                scoresMetrics.p9.getY() - w,
-                scoresMetrics.p9.getX() + h,
-                scoresMetrics.p9.getY());
+            pLabel.setFont(font);
+            pLabel.setPBounds(p9.getX(), p9.getY() - w, p9.getX() + paneH, p9.getY());
             pLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             // refresh labels
@@ -456,16 +416,46 @@ public class StatusPopup extends JDialog {
             for (int i = 0; i < pLabels.length; ++i) {
                 pLabels[i] = new SLabel(rotation, player, Player.PlayerPoints.values()[i]);
                 pLabels[i].setBackground(Color.white);
-//                pLabels[i].setBackground(bgColors[i]);
+                if (DEBUG_LOG) {
+                    pLabels[i].setBackground(bgColors[i]);
+                }
                 pLabels[i].setOpaque(true);
             }
         }
     }
 
-    //  description is in etc/doc/scores.jpg
+    //  for description look at etc/doc/scores.jpg
     static class ScoresMetrics {
         double tan;     // diagonal line slope tangent
+        int paneH, paneX;
         Point p0, p1, p2, p3, p4, p5, p6, p7, p8, p9;
+        int circleRadius;
+
+        public void recalc(Rectangle scoresRectangle) {
+            Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
+            Metrics metrics = Metrics.getInstance();
+            // center:
+            this.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
+            this.tan = scoresRectangle.height * (1 - centerYOffset) / this.p0.getX();
+            paneH = (int) (metrics.cardW * panelHeight);
+            paneX = (int) (paneH / this.tan);
+            if (this.tan > 1) {
+                paneX = (int) (metrics.cardW * panelHeight);
+                paneH = (int) (paneX * this.tan);
+            }
+            this.p1 = new Point(paneX, scoresRectangle.height - paneH);
+            this.p2 = new Point(2 * paneX, scoresRectangle.height - 2 * paneH);
+            this.p3 = new Point(scoresRectangle.width - 2 * paneX, scoresRectangle.height - 2 * paneH);
+            this.p4 = new Point(scoresRectangle.width - paneX, scoresRectangle.height - paneH);
+            this.p5 = new Point(scoresRectangle.width / 2, scoresRectangle.height - paneH);
+            this.p6 = new Point(paneX, this.p0.getY());
+            this.p7 = new Point(scoresRectangle.width - paneX, this.p0.getY());
+            circleRadius = (int) (metrics.cardW * centerCircleRadius) + 2;  // 2 pixels y-margin
+            int y = this.p0.getY() + circleRadius;
+            int _x = (int) (circleRadius / this.tan);
+            this.p8 = new Point(this.p0.getX() - _x, y);
+            this.p9 = new Point(this.p0.getX() + _x, y);
+        }
     }
 
     class SLabel extends PLabel {
@@ -488,7 +478,7 @@ public class StatusPopup extends JDialog {
             if (historySize == 0) {
                 return;
             }
-            List<Player.RoundResults> history = player.getHistory();
+            List<Player.RoundResults> history = player.getGameHistory();
             if (label.equals(Player.PlayerPoints.status)) {
                 Player.RoundResults roundResults = history.get(historySize - 1);
                 int curr = roundResults.getPoints(label);
@@ -497,7 +487,15 @@ public class StatusPopup extends JDialog {
                     roundResults = history.get(historySize - 2);
                     prev = roundResults.getPoints(label);
                 }
-                this.setText(String.format("%d (%d)", curr, curr - prev));
+                String sym = "&#9650;"; // ▲
+                String color = "#00CC00";
+                if (curr < prev) {
+                    sym = "&#9660;"; // ▼
+                    color = "#FF0000";
+                }
+                String text = String.format("<html>%d <span style=\"color: %s\">%s%d</span></html>",
+                    curr, color, sym, Math.abs(curr - prev));
+                this.setText(text);
                 return;
             }
 
@@ -505,10 +503,14 @@ public class StatusPopup extends JDialog {
             StringBuilder sb = new StringBuilder();
             List<Integer> results = new ArrayList<>();
             int total = 0;
+            boolean haveChange = true;
             for (int j = 0; j < historySize; ++j) {
                 Player.RoundResults roundResults = history.get(j);
                 int res = roundResults.getPoints(label);
                 if (res == 0) {
+                    if (j == historySize - 1) {
+                        haveChange = false;
+                    }
                     continue;
                 }
                 total += res;
@@ -529,27 +531,31 @@ public class StatusPopup extends JDialog {
             if (rotation != 0) {
                 labelW = this.getBounds().height;
             }
-            if (textWidth <= labelW) {
-                this.setText(sb.toString());
-                return;
-            }
-
-            sb.delete(0, sb.length());
-            final String front = "...";
-            sb.append(front);
-            sep = trailing;
-            for (int i = results.size() - 1; i >= 0; --i) {
-                int res = results.get(i);
-                String cur = res + sep;
-                sb.insert(front.length(), cur);
-                textWidth = fontMetrics.stringWidth(sb.toString());
-                if (textWidth > labelW) {
-                    sb.delete(front.length(), front.length() + cur.length());
-                    break;
+            if (textWidth >= labelW - 10) {
+                sb.delete(0, sb.length());
+                final String front = "...";
+                sb.append(front);
+                sep = trailing;
+                for (int i = results.size() - 1; i >= 0; --i) {
+                    int res = results.get(i);
+                    String cur = res + sep;
+                    sb.insert(front.length(), cur);
+                    textWidth = fontMetrics.stringWidth(sb.toString());
+                    if (textWidth > labelW) {
+                        sb.delete(front.length(), front.length() + cur.length());
+                        break;
+                    }
+                    sep = ".";
                 }
-                sep = ".";
             }
-            this.setText(sb.toString());
+            if (haveChange) {
+                int start = sb.lastIndexOf(".");
+                String text = String.format("<html>%s<span style=\"color: #0000EE\">%s</span></html>",
+                    sb.substring(0, start + 1), sb.substring(start + 1));
+                this.setText(text);
+            } else {
+                this.setText(sb.toString());
+            }
         }
     }
 }

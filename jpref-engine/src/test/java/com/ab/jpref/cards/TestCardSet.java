@@ -134,7 +134,8 @@ public class TestCardSet {
     @Test
     public void testIterate4BuildForward() {
         String[] sources = {
-            // hands -> list
+            // hands -> list (* means empty hand
+            "♦9XKA ♥XJA  ♠789XJQKA ♦78JQ ♥789QK  * -> ♦9K ♥XA",
             "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
             "♥9JA  ♣89J  ♣Q ♥XQ -> ♥9JA",
             "♠78XQ ♣89J ♦7J ♥8  ♣7QKA ♦9A ♥9JKA  ♠9JA ♣X ♦XQK ♥7XQ -> ♠7XQ ♣8J ♦7J ♥8",
@@ -162,7 +163,11 @@ public class TestCardSet {
             String[] _parts = parts[0].split("  ");
             CardSet[] hands = new CardSet[NOP];
             for (int i = 0; i < _parts.length; ++i) {
-                hands[i] = new CardSet(util.toCardList(_parts[i]));
+                if (_parts[i].equals("*")) {
+                    hands[i] = new CardSet();
+                } else {
+                    hands[i] = new CardSet(util.toCardList(_parts[i]));
+                }
             }
             CardSet union = hands[1].union(hands[2]);
             int bitmap = CardSet.bm4buildForward(hands[0].bitmap, union.getBitmap());

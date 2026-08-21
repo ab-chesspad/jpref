@@ -248,8 +248,8 @@ public class Config implements Serializable {
         BID_WHIST(40, "Whist"),
         BID_HALF_WHIST(41, "Half"),
 
-        BID_WHIST_LAYING(43, "Whist Lying"),
-        BID_WHIST_STANDING(44, "Whist Standing"),
+        BID_WHIST_LAYING(43, "Whist"),
+        BID_WHIST_STANDING(44, "Whist"),
 
         BID_UNDEFINED(50, "?"),     // before actual bidding
         BID_ALL_PASS(55, "All-pass"),

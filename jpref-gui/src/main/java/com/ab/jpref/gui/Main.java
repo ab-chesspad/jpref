@@ -22,6 +22,7 @@ package com.ab.jpref.gui;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.HumanPlayer;
+import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.TrickList;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
@@ -125,10 +126,6 @@ public class Main implements Logger.LogHolder, Host {
         GraphicsDevice mainGD = getGraphicsDevice();
         mainFrame = new JFrame(mainGD.getDefaultConfiguration());
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        JFrame.setDefaultLookAndFeelDecorated(true);
-        mainFrame.setBounds(mainRectangle);
-        Logger.printf(DEBUG_LOG, "Main() %s\n", mainRectangle.toString());
-
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -162,6 +159,12 @@ public class Main implements Logger.LogHolder, Host {
                 config.mainSize.second = mainRectangle.height - insets.top;
             }
         });
+        JFrame.setDefaultLookAndFeelDecorated(true);
+        mainFrame.setBounds(mainRectangle);
+        Logger.printf(DEBUG_LOG, "Main() %s\n", mainRectangle.toString());
+        config.mainSize.first = mainRectangle.width;
+        config.mainSize.second = mainRectangle.height;
+        metrics.recalculateSizes();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -205,6 +208,9 @@ public class Main implements Logger.LogHolder, Host {
                 while (true) {
                     gameManager.runGame(testInputStream, 0);
                     Logger.println("game ended!");
+                    for (Player p : gameManager.getPlayers()) {
+                        p.clearHistory();
+                    }
                 }
             } catch (HumanPlayer.PrefExceptionRerun e) {
                 // ignore

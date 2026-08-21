@@ -68,6 +68,7 @@ public abstract class ScoreCalculator {
     abstract void calculateForTricks(Player[] players);
 
     public void calculate(Player[] players, int param) {
+//*
         Player declarer = null;
         for (Player player : players) {
             if (player.getBid().compareTo(Config.Bid.BID_PASS) > 0) {
@@ -75,7 +76,9 @@ public abstract class ScoreCalculator {
                 break;
             }
         }
-
+/*/     // this breaks testScoreCalculator
+        Player declarer = GameManager.getInstance().getDeclarer();
+ //*/
         if (declarer == null) {
             instance.calculateAllPass(players, param);
         } else if (Config.Bid.BID_WITHOUT_THREE.equals(declarer.getBid())) {
@@ -97,7 +100,7 @@ public abstract class ScoreCalculator {
         for (int i = 0; i < NOP; ++i) {
             Player player = players[i];
             int pool = 0;
-            for (Player.RoundResults roundResults : player.getHistory()) {
+            for (Player.RoundResults roundResults : player.getGameHistory()) {
                 pool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
             }
             if (pool > poolSize) {
@@ -121,7 +124,7 @@ public abstract class ScoreCalculator {
             helpedPlayers[0] = other;
             helpedPlayers[1] = helped;
         }
-        List<Player.RoundResults> helperHistory = helper.getHistory();
+        List<Player.RoundResults> helperHistory = helper.getGameHistory();
         Player.RoundResults helperResults = helperHistory.get(helperHistory.size() - 1);
         for (Player player : helpedPlayers) {
             int help = poolSize - pools[player.getNumber()];
@@ -136,7 +139,7 @@ public abstract class ScoreCalculator {
             }
             pools[player.getNumber()] += help;
             pools[helper.getNumber()] -= help;
-            List<Player.RoundResults> history = player.getHistory();
+            List<Player.RoundResults> history = player.getGameHistory();
             Player.RoundResults helpedResults = history.get(history.size() - 1);
             helpedResults.setPoints(poolPoints, helpedResults.getPoints(poolPoints) + help);
             extra = pools[helper.getNumber()] - poolSize;
@@ -154,7 +157,7 @@ public abstract class ScoreCalculator {
         for (int i = 0; i < totals.length; ++i) {
             totals[i] = new Player.RoundResults();
             Player player = players[i];
-            for (Player.RoundResults roundResults : player.getHistory()) {
+            for (Player.RoundResults roundResults : player.getGameHistory()) {
                 for (int j = 0; j < roundResults.points.length; ++j) {
                     Player.PlayerPoints playerPoints = Player.PlayerPoints.values()[j];
                     switch (playerPoints) {
@@ -287,6 +290,8 @@ public abstract class ScoreCalculator {
                         passNum = player.getNumber();
                         break;
                     case BID_WHIST:
+                    case BID_WHIST_LAYING:
+                    case BID_WHIST_STANDING:
                         whistNum = player.getNumber();
                         break;
                     case BID_HALF_WHIST:
@@ -322,6 +327,8 @@ public abstract class ScoreCalculator {
                         }
                         break;
                     case BID_WHIST:
+                    case BID_WHIST_LAYING:
+                    case BID_WHIST_STANDING:
                         int tricks = player.getTricks();
                         if (declarerDiff < 0) {
                             player.getRoundResults().setPoints(points,

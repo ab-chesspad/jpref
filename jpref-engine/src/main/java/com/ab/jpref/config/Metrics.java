@@ -37,7 +37,7 @@ public class Metrics {
         yVisible = .25,     // cards overlap visually
         xSuitVisible = .6,  // between suits
         ySuitVisible = .5,  // between suits
-        xHandGap = 1,       // between nands & talon
+        xHandGap = 1,       // between hands & talon
         wButton = .5,
         hButton = wButton,
         wLabel = 1.7,
