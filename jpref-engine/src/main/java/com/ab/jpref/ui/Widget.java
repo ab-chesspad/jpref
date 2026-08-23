@@ -29,12 +29,12 @@ public class Widget {
     private final ButtonCommand command;
     private final ButtonListener buttonListener;
     private final int number;
-    private String text;
-    private int color = 0;
-    private boolean enabled;
-    protected boolean visible;
-    protected int x, y;
-    protected int width, height;
+    private volatile String text;
+    private volatile int color = 0;
+    private volatile boolean enabled;
+    protected volatile boolean visible;
+    protected volatile int x, y;
+    protected volatile int width, height;
     Object userObject;  // Swing - Image, Android - Bitmap
 
     protected Widget() {

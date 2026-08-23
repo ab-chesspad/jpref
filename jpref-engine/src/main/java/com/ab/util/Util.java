@@ -90,6 +90,7 @@ public class Util {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void unserialize(String dataDirectory) {
         try (FileInputStream fis = new FileInputStream(new File(dataDirectory, DATA_FILE_NAME));
                 ObjectInputStream ois = new ObjectInputStream(fis)) {

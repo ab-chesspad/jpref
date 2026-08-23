@@ -250,117 +250,127 @@ public class TableLayout<T> implements GameManager.EventObserver {
 
     @Override
     public void update(RoundStage roundStage) {
-        Logger.printf(DEBUG_LOG, "%s %s\n", Util.currMethodName(), roundStage);
-        gameManager = GameManager.getInstance();
-        metrics.recalculateSizes();
-        if (metrics.cardW <= 0) {
-            return;
-        }
-
-        int panelWidth = config().mainSize.first;
-        int panelHeight = config().mainSize.second;
-        if (this.panelWidth == panelWidth && this.panelHeight == panelHeight && roundStage == null) {
-            gui.update();
-            return;
-        }
-
-        if (roundStage != null) {
-            this.roundStage = roundStage;
-        }
-
-        int x, y, w, h;
-
-        if (this.roundStage != null) {
-            if (isStage(RoundStage.declareRound)) {
-                if (currentPlayer == null) {
-                    currentPlayer = (HumanPlayer)gameManager.getDeclarer();
-                }
-                setDeclareRoundPanel(null);
+        boolean fullUpdate;
+        synchronized (metrics) {
+            Logger.printf(DEBUG_LOG, "%s %s\n", Util.currMethodName(), roundStage);
+            gameManager = GameManager.getInstance();
+            metrics.recalculateSizes();
+            if (metrics.cardW <= 0) {
+                return;
             }
-            placeButtonPanels();
-        }
 
-        // labels:
-        x = y = 0;
-        w = (int)(metrics.cardW * metrics.wLabel);
-        h = (int)(metrics.cardW * metrics.hLabel);
-        for (int i = 0; i < gameManager.getPlayers().length; ++i) {
-            Widget label = labels[i];
-            switch (Alignment.values()[i]) {
-                case South:
-                    x = (int)((panelWidth - metrics.cardW * metrics.wLabel) / 2 - metrics.xMargin);
-                    y = (int)(panelHeight - metrics.cardH -
-                        h - 2 * metrics.yMargin);
-                    if (i == gameManager.elderHand) {
-                        elderHandLocation.first = x + w + metrics.xMargin;
-                        elderHandLocation.second = y + h - (int)(metrics.cardW * metrics.wElderHand);
-                    }
-                    break;
+            int panelWidth = config().mainSize.first;
+            int panelHeight = config().mainSize.second;
+            if (this.panelWidth == panelWidth && this.panelHeight == panelHeight && roundStage == null) {
+                fullUpdate = false;
+            } else {
+                fullUpdate = true;
 
-                case West:
-                    y = metrics.yMargin;
-                    if (i == gameManager.elderHand) {
-                        elderHandLocation.first = (int)(metrics.cardW) + 2* metrics.xMargin;
-                        elderHandLocation.second = y + metrics.yMargin + h;
-                    }
-                    if (metrics.horizontalLayout) {
-                        x = (int)(2 * metrics.xMargin + metrics.cardW);
-                    } else {
-                        x = metrics.xMargin;
-                    }
-                    break;
-
-                case East:
-                    y = metrics.yMargin;
-                    x = panelWidth - w - metrics.xMargin;
-                    if (i == gameManager.elderHand) {
-                        elderHandLocation.first = panelWidth - (int) (metrics.cardW * (1 + metrics.wElderHand));
-                        elderHandLocation.second = y + metrics.yMargin + h;
-                    }
-                    if (metrics.horizontalLayout) {
-                        x -= (int)(metrics.xMargin + metrics.cardW);
-                    }
-                    break;
-            }
-            label.setBounds(x, y, w, h);
-        }
-
-        // menu
-        w = (int)(metrics.cardW * metrics.wButton);
-        h = (int)(metrics.cardW * metrics.hButton);
-        x = panelWidth - w - metrics.xMargin;
-        y = panelHeight - h - metrics.yMargin;
-        menuBtn.setBounds(x, y, w, h);
-        menuBtn.setVisible(true);
-        menuBtn.setEnabled(true);
-
-        if (this.roundStage != null) {
-            // labels:
-            for (int i = 0; i < gameManager.getPlayers().length; ++i) {
-                Player player = gameManager.getPlayers()[i];
-                Widget label = labels[i];
-                String text;
-
-                switch (this.roundStage) {
-                    case bidding:
-                    case showTalon:
-                    case drop:
-                    case declareRound:
-                    case whistSelection:
-                    case selectWhistOption:
-                        text = m(player.getBid().toString());
-                        break;
-                    default:
-                        text = m(player.getBid().toString()) + ", " + player.getTricks();
-                        break;
+                if (roundStage != null) {
+                    this.roundStage = roundStage;
                 }
 
-                label.setText(text);
+                int x, y, w, h;
+
+                if (this.roundStage != null) {
+                    if (isStage(RoundStage.declareRound)) {
+                        if (currentPlayer == null) {
+                            currentPlayer = (HumanPlayer) gameManager.getDeclarer();
+                        }
+                        setDeclareRoundPanel(null);
+                    }
+                    placeButtonPanels();
+                }
+
+                // labels:
+                x = y = 0;
+                w = (int) (metrics.cardW * metrics.wLabel);
+                h = (int) (metrics.cardW * metrics.hLabel);
+                for (int i = 0; i < gameManager.getPlayers().length; ++i) {
+                    Widget label = labels[i];
+                    switch (Alignment.values()[i]) {
+                        case South:
+                            x = (int) ((panelWidth - metrics.cardW * metrics.wLabel) / 2 - metrics.xMargin);
+                            y = metrics.panelY + (int) (panelHeight - metrics.cardH -
+                                h - 2 * metrics.yMargin) - (int)(metrics.ySelected * metrics.cardW);
+                            if (i == gameManager.elderHand) {
+                                elderHandLocation.first = x + w + metrics.xMargin;
+                                elderHandLocation.second = y + h - (int) (metrics.cardW * metrics.wElderHand);
+                            }
+                            break;
+
+                        case West:
+                            y = metrics.panelY + metrics.yMargin;
+                            if (i == gameManager.elderHand) {
+                                elderHandLocation.first = (int) (metrics.cardW) + 2 * metrics.xMargin;
+                                elderHandLocation.second = y + metrics.yMargin + h;
+                            }
+                            if (metrics.horizontalLayout) {
+                                x = (int) (2 * metrics.xMargin + metrics.cardW);
+                            } else {
+                                x = metrics.xMargin;
+                            }
+                            break;
+
+                        case East:
+                            y = metrics.panelY + metrics.yMargin;
+                            x = panelWidth - w - metrics.xMargin;
+                            if (i == gameManager.elderHand) {
+                                elderHandLocation.first = panelWidth - (int) (metrics.cardW * (1 + metrics.wElderHand));
+                                elderHandLocation.second = y + metrics.yMargin + h;
+                            }
+                            if (metrics.horizontalLayout) {
+                                x -= (int) (metrics.xMargin + metrics.cardW);
+                            }
+                            break;
+                    }
+                    label.setBounds(x, y, w, h);
+                }
+
+                // menu
+                w = (int)(metrics.cardW * metrics.wButton);
+                h = (int)(metrics.cardW * metrics.hButton);
+                x = panelWidth - w - metrics.xMargin;
+                y = metrics.panelY + panelHeight - h - metrics.yMargin;
+                menuBtn.setBounds(x, y, w, h);
+                Logger.printf(DEBUG_LOG, "%s: menuBtn: %dx%d, %dx%d\n", Util.currMethodName(), x, y, w, h);
+                menuBtn.setVisible(true);
+                menuBtn.setEnabled(true);
+
+                if (this.roundStage != null) {
+                    // labels:
+                    for (int i = 0; i < gameManager.getPlayers().length; ++i) {
+                        Player player = gameManager.getPlayers()[i];
+                        Widget label = labels[i];
+                        String text;
+
+                        switch (this.roundStage) {
+                            case bidding:
+                            case showTalon:
+                            case drop:
+                            case declareRound:
+                            case whistSelection:
+                            case selectWhistOption:
+                                text = m(player.getBid().toString());
+                                break;
+                            default:
+                                text = m(player.getBid().toString()) + ", " + player.getTricks();
+                                break;
+                        }
+
+                        label.setText(text);
+                    }
+                }
+                placeMenuPanel();
             }
         }
-        placeMenuPanel();
+        // gui.update() and sleep() touch Swing/Android UI components and must run
+        // outside the metrics lock, otherwise a UI-thread paint() waiting on the same
+        // lock can deadlock against this thread waiting on the UI toolkit's own lock.
         gui.update();
-        sleep(10);  // let GUI thread a chance to repaint
+        if (fullUpdate) {
+            sleep(10);  // let GUI thread a chance to repaint
+        }
     }
 
     private void placeMenuPanel() {
@@ -420,12 +430,12 @@ public class TableLayout<T> implements GameManager.EventObserver {
         double wButton = metrics.cardW * buttonPanel.getScaleW();
         space = metrics.panelWidth - (int) (2 * metrics.cardW) - 4 * metrics.xMargin;
         if (wButton * buttonPanel.getColumnCount() > space) {
-            wButton = (double)space / buttonPanel.getColumnCount();
+            wButton = (double) space / buttonPanel.getColumnCount();
         }
 
         double hButton = metrics.cardW * buttonPanel.getScaleH();
-        space = metrics.panelHeight -
-            2 * (2 * metrics.yMargin + (int) metrics.cardH) - (int) (metrics.cardW * metrics.hLabel);
+        space = metrics.panelHeight - (int)(metrics.ySelected * metrics.cardW) -
+            2 * (3 * metrics.yMargin + (int)metrics.cardH) - (int) (metrics.cardW * metrics.hLabel);
         if (hButton * buttonPanel.getRowCount() > space) {
             hButton = (double)space / buttonPanel.getRowCount();
         }
@@ -493,23 +503,26 @@ public class TableLayout<T> implements GameManager.EventObserver {
     }
 
     public void paint(T graphics) {
-        GameManager gameManager = GameManager.getInstance();
-        if (metrics.panelWidth == 0 || gameManager == null) {
-            return;
-        }
+        synchronized (metrics) {
+            GameManager gameManager = GameManager.getInstance();
+            if (metrics.panelWidth == 0 || gameManager == null) {
+                return;
+            }
 
-        cardPositions.clear();
-        currentUserCards.clear();
-        int index = 1;
-        if (currentPlayer != null) {
-            index = currentPlayer.getNumber() + 1;
+            cardPositions.clear();
+            currentUserCards.clear();
+            int index = 1;
+            if (currentPlayer != null) {
+                index = currentPlayer.getNumber() + 1;
+            }
+            for (int i = 0; i < gameManager.getPlayers().length; ++i) {
+                // paint currentPlayer the last, so her dragging cards be on the top
+                paintHand(graphics, gameManager.getPlayers()[(index + i) % NOP]);
+            }
+            paintTalon(graphics);
+            paintTrick(graphics, gameManager.getTrick().cards2List(),
+                metrics.panelX + metrics.panelWidth / 2, metrics.panelY + metrics.panelHeight / 2);
         }
-        for (int i = 0; i < gameManager.getPlayers().length; ++i) {
-            // paint currentPlayer the last, so her dragging cards be on the top
-            paintHand(graphics, gameManager.getPlayers()[(index + i) % NOP]);
-        }
-        paintTalon(graphics);
-        paintTrick(graphics, gameManager.getTrick().cards2List(), metrics.panelWidth / 2, metrics.panelHeight / 2);
     }
 
     private void paintTalon(T graphics) {
@@ -521,7 +534,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         int dx = (int) (metrics.cardW * metrics.xSuitVisible);
         int w = (int) metrics.cardW + dx;    // adjust for single card?
         int x = (metrics.panelWidth - w) / 2;
-        int y = metrics.yMargin;
+        int y = metrics.panelY + metrics.yMargin;
 
         boolean showCards = gameManager.replayMode ||
             (host.specialOption() & Host.SPECIAL_OPTION_SHOW_CARDS) != 0 ||
@@ -571,7 +584,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 x = (metrics.panelWidth - actualW) / 2;
             }
             Logger.printf(DEBUG_LOG, "panel %d, hand %d, x %d\n", metrics.panelWidth, actualW, x);
-            y = metrics.panelHeight - actualH - metrics.yMargin;
+            y = metrics.panelY + metrics.panelHeight - actualH - metrics.yMargin;
         } else {
             actualW = (int) metrics.cardW;
             dx = 0;
@@ -588,6 +601,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
             } else {
                 y = 2 * metrics.yMargin + (int) (metrics.cardW * metrics.hLabel);
             }
+            y += metrics.panelY;
             Logger.printf(DEBUG_LOG, "panel %d, hand %d, x %d\n", metrics.panelWidth, actualW, x);
         }
 
@@ -618,7 +632,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 int _x = x;
                 int _y = y;
                 if (selectedCards.contains(card)) {
-                    Logger.printf(DEBUG_LOG, "%s, selected %s\n",Util.currMethodName(), selectedCards.toColorString());
+                    Logger.printf(DEBUG_LOG, "%s, selected %s\n", Util.currMethodName(), selectedCards.toColorString());
                     if (draggingStart.first >= 0) {
                         _x += dragging.first - draggingStart.first;
                         if (_x < 0) {
@@ -641,7 +655,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                     } else {
                         switch (alignment) {
                             case South:
-                                _y -= (int) (metrics.ySelected * metrics.cardW);
+                                _y -= (int)(metrics.ySelected * metrics.cardW);
                                 break;
                             case West:
                                 _x += (int) (metrics.xSelected * metrics.cardW);
@@ -756,7 +770,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
             return;
         }
         Logger.printf(DEBUG_LOG, "%s, card %s, (%d,%d) draggingEnded=%b, %s\n",
-            Util.currMethodName(),selectedCards.toColorString(), x, y, draggingEnded, config().moveMethod.get().getSelectedValue());
+            Util.currMethodName(), selectedCards.toColorString(), x, y, draggingEnded, config().moveMethod.get().getSelectedValue());
         boolean refresh = true;
         if (selectedCards.isEmpty()) {
             if (draggingEnded) {
@@ -840,7 +854,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         }
 
         Logger.printf(DEBUG_LOG, "%s, card=%s, (%d,%d), %s\n",
-            Util.currMethodName(),selectedCards.toColorString(), x, y, config().moveMethod.get().getSelectedValue());
+            Util.currMethodName(), selectedCards.toColorString(), x, y, config().moveMethod.get().getSelectedValue());
         if (MoveMethod.DoubleClick.equals(config().moveMethod.get().getSelectedValue())) {
             if (!selectedCards.contains(card)) {
                 selectedCards.clear();
@@ -1146,5 +1160,4 @@ public class TableLayout<T> implements GameManager.EventObserver {
         GameManager.RestartCommand showScores(boolean showButtons);
         int showOffer(int minTricks, int maxTricks);
     }
-
 }

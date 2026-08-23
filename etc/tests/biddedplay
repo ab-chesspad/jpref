@@ -1,9 +1,10 @@
 #biddedplay: hands, talon, elderhand -> bid, tricks
 
-deal: ♠78 ♣9XQ ♦89J ♥QK  ♠9Q ♣8JA ♦7QK ♥8J  ♠XKA ♣7 ♦XA ♥79XA  ♠J ♣K  0 -> 6♥ 8 # по Утяцкому #65
-
 ###########
 
+deal: ♠78X ♣9JA ♦89J ♥7  ♠J ♣8XQ ♦7XKA ♥9X  ♠9K ♣7K ♦Q ♥8JQKA  ♠QA  0 -> 9♥ 9
+
+deal: ♠78 ♣9XQ ♦89J ♥QK  ♠9Q ♣8JA ♦7QK ♥8J  ♠XKA ♣7 ♦XA ♥79XA  ♠J ♣K  0 -> 6♥ 8 # по Утяцкому #65
 deal: ♣79QA ♦9XKA ♥XJ  ♠89X ♣XK ♦8Q ♥79Q  ♠7JQKA ♣J ♦7J ♥8K  ♥A ♣8  0 -> 8♦ 9 # по Утяцкому #33
 deal: ♠9X ♦89XQA ♥8XK  ♠QA ♣79XJQA ♦7K  ♠7K ♣8K ♦J ♥79JQA  ♠J8  0 -> 8♣ 8
 deal: ♠89XA ♣7XK ♦KA ♥9  ♠7JK ♣89 ♦8X ♥8JA  ♠Q ♣JA ♦79J ♥7XQK  ♦Q ♣Q  1 -> All-pass # 6♣ 7

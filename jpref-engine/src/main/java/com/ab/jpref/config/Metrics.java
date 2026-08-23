@@ -23,6 +23,7 @@ import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardSet;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
+import com.ab.util.Util;
 
 public class Metrics {
     public static final boolean DEBUG_LOG = false;
@@ -54,6 +55,7 @@ public class Metrics {
 
     public double cardAspectRatio;
 
+    public int panelX = 0, panelY = 0;
     public int panelWidth, panelHeight;
     public final int xMargin = MIN_X_MARGIN, yMargin = MIN_Y_MARGIN;
     public boolean horizontalLayout;
@@ -76,7 +78,7 @@ public class Metrics {
         this.cardAspectRatio = cardAspectRatio;
     }
 
-    public boolean recalculateSizes() {
+    public synchronized boolean recalculateSizes() {
         int panelWidth = Config.getInstance().mainSize.first;
         int panelHeight = Config.getInstance().mainSize.second;
         if (this.panelWidth == panelWidth && this.panelHeight == panelHeight) {
@@ -86,7 +88,9 @@ public class Metrics {
         return true;
     }
 
-    public void recalculateSizes(int panelWidth, int panelHeight) {
+    public synchronized void recalculateSizes(int panelWidth, int panelHeight) {
+        Logger.printf(DEBUG_LOG, "%s: screen size %dx%d\n", Util.currMethodName(),
+                panelWidth, panelHeight);
         double w, h;
         // vertical layout:
         Couple<Double> vMetrics = new Couple<>();

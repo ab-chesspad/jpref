@@ -168,7 +168,12 @@ public class TrickList implements Serializable{
         if (gameManager().declarerNumber < 0 || bestNodes[0] == null || bestNodes[nodeIndex].trickData == -1) {
             return -1;
         }
-        return bestNodes[0].getPastTricks() + bestNodes[0].getFutureTricks();
+        int pastTricks = bestNodes[0].getPastTricks();
+        // todo: fix it
+        if (targetBot instanceof MisereBot && pastTricks < targetBot.tricks) {
+            pastTricks = targetBot.tricks;
+        }
+        return pastTricks + bestNodes[0].getFutureTricks();
     }
 
     private void rebuild(Bot targetBot, Trick trick) {
