@@ -1,10 +1,14 @@
 package com.ab.jprefdata;
 
 import com.ab.jpref.config.Config;
+import static com.ab.jpref.config.Config.NOP;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
+
+import com.ab.util.Bidder;
+import static com.ab.util.Bidder.OneBid;
+import static com.ab.util.Bidder.TOTAL_BIDS;
 import com.ab.util.Pair;
-import com.ab.util.BidData;
 import com.ab.util.Tuple;
 
 import java.io.*;
@@ -48,11 +52,13 @@ public class Utyatsky {
         return src;
     }
 
+    private Map<String, OneBid[]> map;
+
     void run(String dataFileName, List<Tuple<Object>> allBidData) throws IOException {
         String dataDirName = MainData.SRC_DIR_NAME;
         File f = new File(dataDirName, dataFileName);
         println(f.getAbsolutePath());
-        Map<String, BidData> map = new HashMap<>();
+        map = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(f.toPath())))) {
             String inputLine;
@@ -202,21 +208,21 @@ public class Utyatsky {
                         } catch (NumberFormatException e) {
                             // ignore
                         }
-                        BidData.OneBid oneBid = new BidData.OneBid(bid1, drop1, drop2);
+                        OneBid oneBid = new OneBid(bid1, drop1, drop2);
 
-                        BidData bidData = map.get(key);
+                        OneBid[] bidData = map.get(key);
                         if (bidData == null) {
-                            bidData = new BidData();
+                            bidData = new OneBid[TOTAL_BIDS];
                             map.put(key, bidData);
                             allBidData.add(new Tuple<>(parts[0], key, bidData));
                         }
-                        BidData.OneBid old = null, old2 = null;
+                        OneBid old = null, old2 = null;
                         if (bidding.trim().isEmpty() || bidding.charAt(0) == 0xa0) {
-                            old = bidData.set(oneBid, i, false);
-                            old2 = bidData.set(oneBid, i, true);
+                            old = set(bidData, oneBid, i, false);
+                            old2 = set(bidData, oneBid, i, true);
                         } else {
                             boolean _bidding = bidding.equals("+");
-                            old = bidData.set(oneBid, i, _bidding);
+                            old = set(bidData, oneBid, i, _bidding);
                         }
 
                         printf(DEBUG_LOG, "%s -> hand %d: bidding %s, drop %s, declare %s",
@@ -232,13 +238,24 @@ public class Utyatsky {
         println("loaded");
     }
 
+    public OneBid set(OneBid[] bidData, OneBid oneBid, int hand, boolean withBidding) {
+        int index = 0;
+        if (withBidding) {
+            index = NOP;
+        }
+        index += hand;
+        OneBid old = bidData[index];
+        bidData[index] = oneBid;
+        return old;
+    }
+
     private String getKey(String src) {
         src = src.trim().replaceAll("10", "A");    // hexadecimal ascii code
         String[] parts = src.split("\\s+");
         StringBuilder sb = new StringBuilder();
 //        String sep = "";
         for (String part : parts) {
-            Pair<String, Integer> pair = BidData.searchTricks(part, 0);
+            Pair<String, Integer> pair = Bidder.getInstance().searchTricks(part, 0);
             sb.append(pair.first);
 //            sep = "" + part.length();
 //            part = part.replaceAll("x", "");

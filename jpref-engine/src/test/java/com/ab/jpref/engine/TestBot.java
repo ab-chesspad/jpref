@@ -20,10 +20,8 @@ import java.io.*;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Util.currMethodName;
 
-public class TestBot {
+public class TestBot extends BaseTest {
     public static final int NOP = Config.NOP;
-    static final Config config = Config.getInstance();
-    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
@@ -31,10 +29,8 @@ public class TestBot {
     public static void initClass() {
         trickList = new TrickList();
         trickList.init(new TrickPool());
-        util = new Util();
-        config.util = util;
         gameManager = new GameManager();
-        gameManager.init(() -> config);
+        gameManager.init(host);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
     }
 

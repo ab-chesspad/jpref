@@ -2,8 +2,11 @@ package com.ab.jprefdata;
 
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
+
+import com.ab.util.Logger;
 import com.ab.util.Pair;
-import com.ab.util.BidData;
+import com.ab.util.Bidder;
+import static com.ab.util.Bidder.OneBid;
 import com.ab.util.Tuple;
 
 import java.io.*;
@@ -13,7 +16,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MainData {
+public class MainData implements Logger.LogHolder {
     public static final boolean DEBUG_LOG = false;
     public static final String SRC_DIR_NAME = "etc/doc";
     public static final String OUTPUT_DIR_NAME = "jpref-engine/src/main/resources/jpref";
@@ -29,11 +32,12 @@ public class MainData {
     }
 
     void run() throws IOException {
+        Logger.setHolder(this);
         tricks = loadTricks("tricks-src");
         // BidData have loaded the old tricks already during initialization
         // so, quick and dirty
-        BidData.tricks.clear();
-        BidData.tricks.addAll(tricks);
+        Bidder.getInstance().tricks.clear();
+        Bidder.getInstance().tricks.addAll(tricks);
 
         Utyatsky utyatsky = new Utyatsky();
         utyatsky.run("utyatsky-1", allBidData);
@@ -47,11 +51,11 @@ public class MainData {
     private void complete() {
         for (Tuple<Object> bidPair : allBidData) {
             int[] drops = new int[2];
-            BidData bidData = (BidData) bidPair.getValue(2);
+            OneBid[] bidData = (OneBid[])bidPair.getValue(2);
             boolean foundNullBid = false;
             int maxTricks = 0;
             int suitNum = -1;
-            for (BidData.OneBid oneBid : bidData.allBids) {
+            for (OneBid oneBid : bidData) {
                 if (oneBid != null) {
                     int t = oneBid.bid / 10;
                     if (maxTricks < t) {
@@ -97,8 +101,8 @@ public class MainData {
                 }
 */
             }
-            for (int i = 0; i < bidData.allBids.length; ++i) {
-                BidData.OneBid oneBid = bidData.allBids[i];
+            for (int i = 0; i < bidData.length; ++i) {
+                OneBid oneBid = bidData[i];
                 if (oneBid != null) {
                     continue;
                 }
@@ -107,8 +111,8 @@ public class MainData {
                     t = maxTricks;  // sanity check
                 }
                 int bid = t * 10 + suitNum;
-                oneBid = new BidData.OneBid(bid, drops[0], drops[1]);
-                bidData.allBids[i] = oneBid;
+                oneBid = new OneBid(bid, drops[0], drops[1]);
+                bidData[i] = oneBid;
             }
 //            printf("%s -> %s\n", bidPair.first, bidData);
         }
@@ -180,9 +184,9 @@ public class MainData {
             for (Tuple<Object> bidPair : bidDataList) {
                 String lineNum = bidPair.getValue(0).toString();
                 String key = bidPair.getValue(1).toString();
-                BidData bidData = (BidData) bidPair.getValue(2);
-                printf("%s: %s -> %s\n", lineNum, key, bidData);
-                pr.printf("%s: %s -> %s\n", lineNum, key, bidData);
+                OneBid[] bidData = (OneBid[])bidPair.getValue(2);
+                printf("%s: %s -> %s\n", lineNum, key, string(bidData));
+                pr.printf("%s: %s -> %s\n", lineNum, key, string(bidData));
                 List<String> parts = new ArrayList<>();
                 Pattern p = Pattern.compile("\\d\\D*");
                 Matcher m = p.matcher(key);
@@ -202,24 +206,35 @@ public class MainData {
 
                 // distribute avail cards between free suits
 
-
 /*
                 if (!key.endsWith("2") || k > 3) {
                     continue;
                 }
 */
+
                 // for hands ending with "  xx" add endings "  x  x"
                 key = key.substring(0, key.length() - 1) + "11";
-                for (BidData.OneBid oneBid : bidData.allBids) {
+                for (OneBid oneBid : bidData) {
                     oneBid.drops[1] = oneBid.drops[0] + 1;
                 }
-                printf("%s: %s -> %s\n", lineNum + "-a", key, bidData);
-                pr.printf("%s: %s -> %s\n", lineNum + "-a", key, bidData);
+                printf("%s: %s -> %s\n", lineNum + "-a", key, string(bidData));
+                pr.printf("%s: %s -> %s\n", lineNum + "-a", key, string(bidData));
             }
         } catch (Exception e) {
             println("ERROR: " + e.getMessage());
         }
         println("done");
+    }
+
+    private String string(OneBid[] bidData) {
+        StringBuilder sb = new StringBuilder();
+        String sep = "[";
+        for (OneBid bid : bidData) {
+            sb.append(sep).append(bid.toString());
+            sep = ", ";
+        }
+        sb.append("]");
+        return new String(sb);
     }
 
     public void saveTricks(String fileName) {
@@ -238,5 +253,20 @@ public class MainData {
             println(e.getMessage());
         }
         println("done");
+    }
+
+    @Override
+    public PrintStream getLogStream() {
+        return System.out;
+    }
+
+    Logger logger;
+
+    @Override
+    public Logger logger() {
+        if (logger == null) {
+            logger = new Logger();
+        }
+        return logger;
     }
 }

@@ -35,14 +35,11 @@ public class ButtonPanel extends Widget implements Iterable<Widget> {
     private final int columns;
     private final int rows;
 
-//    private final double scaleW, scaleH;
-
-    public ButtonPanel(RoundStage roundStage, double scaleW, double scaleH, ButtonHandler[][] handlers) {
+    public ButtonPanel(RoundStage roundStage, double scaleW, double scaleH, int zOrder, boolean faceText, ButtonHandler[][] handlers) {
         this.roundStage = roundStage;
         this.scaleW = scaleW;
         this.scaleH = scaleH;
 
-//    public ButtonPanel(double scaleW, double scaleH, ButtonHandler[][] handlers) {
         rows = handlers.length;
         columns = handlers[0].length;
         widgets = new Widget[rows][columns];
@@ -54,7 +51,7 @@ public class ButtonPanel extends Widget implements Iterable<Widget> {
                 if (handler == null) {
                     continue;
                 }
-                Widget widget = new Widget(handler.buttonCommand, handler.buttonListener);
+                Widget widget = new Widget(handler.buttonCommand, handler.buttonListener, zOrder, faceText);
                 widget.setVisible(false);
                 widget.setEnabled(true);
                 widgets[j][i] = widget;
@@ -91,6 +88,14 @@ public class ButtonPanel extends Widget implements Iterable<Widget> {
             widget.setVisible(visible);
         }
         this.visible = visible;
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        for (Widget widget : this) {
+            widget.setEnabled(enabled);
+        }
+        super.setEnabled(enabled);
     }
 
     public int getColumnCount() {

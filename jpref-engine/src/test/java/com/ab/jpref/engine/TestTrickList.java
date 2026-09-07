@@ -6,6 +6,7 @@ import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
 import com.ab.jpref.trickpool.TrickPool;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Logger;
 import com.ab.util.Util;
 import org.junit.Assert;
@@ -13,22 +14,18 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class TestTrickList {
+public class TestTrickList extends BaseTest {
     public static final int NOP = Config.NOP;
 
-    static final Config config = Config.getInstance();
-    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
-    public void initClass() {
+    public void init() {
         trickList = new TrickList();
         trickList.init(new TrickPool());
-        util = new Util();
-        config.util = util;
         gameManager = new GameManager();
-        gameManager.init(() -> config);
+        gameManager.init(host);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }

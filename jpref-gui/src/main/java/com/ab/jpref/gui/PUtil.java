@@ -21,51 +21,23 @@ package com.ab.jpref.gui;
 
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Util;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URISyntaxException;
 
 public class PUtil extends Util {
-    private static PUtil instance;
 
-    public static PUtil getInstance() {
-        if (instance == null) {
-            instance = new PUtil();
-        }
-        return instance;
-    }
-
-    protected PUtil() {
-        unserialize(getDataDirectory());
-    }
-
-    public static String getDataDirectory() {
-        Config.OS os = Config.getOS();
-        File file;
-        if (os == Config.OS.windows) {
-            String userHome = System.getProperty("user.home");
-            file = new File(userHome, Config.PROJECT_NAME);
-            if (!file.exists()) {
-                file.mkdirs();
-            }
-        } else {
-            try {
-                file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-                file = new File(file.getParent());
-                file.mkdirs();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return file.getAbsolutePath();
+    public PUtil(Host host) {
+        this.host = host;
+        unserialize(host.getDataDirectory());
     }
 
     public void serialize() {
-        serialize(getDataDirectory());
+        serialize(host.getDataDirectory());
     }
 
     public BufferedImage loadImage(String path) {

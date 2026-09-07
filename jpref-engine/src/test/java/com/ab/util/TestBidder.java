@@ -2,12 +2,11 @@ package com.ab.util;
 
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config.Bid;
+import com.ab.jpref.engine.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestBidder {
-    private final Util util = Util.getInstance();
-
+public class TestBidder extends BaseTest {
     @Test
     public void testGetBid() {
         String[] sources = {

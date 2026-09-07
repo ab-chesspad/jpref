@@ -19,6 +19,8 @@
  */
 package com.ab.jpref.config;
 
+import com.ab.jpref.ui.Host;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -26,27 +28,24 @@ import java.util.HashMap;
 public class I18n {
     public static int maxPhraseLength = 50;
 
+    private static I18n instance;
+
+    private final Host host;
     private String iso639_1_2002_code;
     private LanguageMap languageMap;
 
-    private static class Holder {
-        static final I18n instance = new I18n();
+    public I18n(Host host) {
+        this.instance = this;
+        this.host = host;
+        refresh();
     }
 
     public static I18n getInstance() {
-        return Holder.instance;
+        return instance;
     }
 
-    private I18n() {
-        _refresh();
-    }
-
-    public static void refresh() {
-        Holder.instance._refresh();
-    }
-
-    private void _refresh() {
-        String lang = Config.getInstance().language.get().getSelectedValue().second;
+    public void refresh() {
+        String lang = host.config().language.get().getSelectedValue().second;
         loadLanguageMap(lang);
     }
 
@@ -65,7 +64,6 @@ public class I18n {
         if (text == null) {
             return null;
         }
-        I18n instance = getInstance();
         return instance.translate(text.toString());
     }
 
@@ -104,7 +102,7 @@ public class I18n {
     public static String loadString(String path) {
         StringBuilder sb = new StringBuilder();
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-        path = String.format("i18n/%s/%s", getInstance().iso639_1_2002_code, path);
+        path = String.format("i18n/%s/%s", instance.iso639_1_2002_code, path);
         try (InputStream is = classloader.getResourceAsStream(path);
                 BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String line;

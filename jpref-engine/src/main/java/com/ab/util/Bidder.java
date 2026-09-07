@@ -41,9 +41,10 @@ import static com.ab.jpref.cards.Card.TOTAL_SUITS;
 public class Bidder {
     private static final boolean DEBUG_LOG = false;
 
+    public static int TOTAL_BIDS = 6;
     private final Map<String, OneBid[]> allBidData = loadBidData("utyatsky-12");
     public final List<Pair<String, int[]>> tricks = loadTricks("tricks");
-    final OneBid[] allBids = new OneBid[6];
+    final OneBid[] allBids = new OneBid[TOTAL_BIDS];
 
     private static class Holder {
         static final Bidder instance = new Bidder();
@@ -65,7 +66,7 @@ public class Bidder {
                 String[] parts = line.split(": | -> ");
                 String key = parts[1];
                 String[] bidParts = parts[2].substring(1, parts[2].length() - 1).split(", |\\[|]");
-                OneBid[] allBids = new OneBid[6];
+                OneBid[] allBids = new OneBid[TOTAL_BIDS];
                 int i = -1;
                 int j = -1;
                 String[] p = new String[3];
@@ -396,7 +397,7 @@ public class Bidder {
         return tricks * 10 + suitNum + 1;
     }
 
-    private Pair<String, Integer> searchTricks(String chunk, int turn) {
+    public Pair<String, Integer> searchTricks(String chunk, int turn) {
         Pair<String, Integer> result = null;
         int len = chunk.length();
         chunk = len + chunk.replaceAll("x", "");
@@ -434,7 +435,7 @@ public class Bidder {
         return Arrays.toString(allBids);
     }
 
-    private static class OneBid {
+    public static class OneBid {
         public final int[] drops = new int[2];
         public final int bid;
 

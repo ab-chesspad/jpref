@@ -23,7 +23,8 @@ import java.io.PrintStream;
 
 public class Logger {
     public static boolean DEBUG_LOG = true;
-    private static LogHolder logHolder = new LogHolder() {};
+
+    protected static LogHolder logHolder;
 
     public static void setHolder(LogHolder logHolder) {
         Logger.logHolder = logHolder;
@@ -51,14 +52,6 @@ public class Logger {
         }
     }
 
-    public static void printf(String format, Object... args) {
-        PrintStream out = logHolder.getLogStream();
-        out.printf(format, args);
-        if (DEBUG_LOG && out != System.out) {
-            System.out.printf(format, args);
-        }
-    }
-
     public static void println(int msg) {
         printf("%d\n", msg);
     }
@@ -67,7 +60,23 @@ public class Logger {
         printf(debug, "%d\n", msg);
     }
 
+    public static void printf(String format, Object... args) {
+        logHolder.logger()._printf(format, args);
+    }
+
+    protected void _printf(String format, Object... args) {
+        PrintStream out = logHolder.getLogStream();
+        out.printf(format, args);
+        if (DEBUG_LOG && out != System.out) {
+            System.out.printf(format, args);
+        }
+    }
+
     public interface LogHolder {
+        public static final String LOG_EXT = ".log";
+        public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
+
         default PrintStream getLogStream() {return System.out; }
+        Logger logger();
     }
 }

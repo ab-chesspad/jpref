@@ -28,6 +28,7 @@ import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.gui.widgets.PLabel;
 import static com.ab.jpref.config.I18n.m;
 
+import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
 import com.ab.util.Point;
@@ -70,7 +71,8 @@ public class StatusPopup extends JDialog {
         West = TableLayout.Alignment.West.ordinal(),
         East = TableLayout.Alignment.East.ordinal();
 
-    private final Metrics metrics = Metrics.getInstance();
+    private final Metrics metrics;
+    private final PConfig pConfig;
 
     final JPanel buttonPanel;
     final ScoresMetrics scoresMetrics = new ScoresMetrics();
@@ -80,15 +82,17 @@ public class StatusPopup extends JDialog {
     int historySize;
     Font font;
 
-    StatusPopup(boolean withButtons) {
+    StatusPopup(Host host, boolean withButtons) {
         super(Main.mainFrame, true);
         setTitle(m("Scores"));
         setLayout(new BorderLayout(1, 4));
-        popupRectangle = PConfig.getInstance().scoresPopupRectangle.get();
+        metrics = host.getMetrics();
+        pConfig = (PConfig)host.config();
+        popupRectangle = pConfig.scoresPopupRectangle.get();
         if (popupRectangle.width == 0) {
             Rectangle mainRectangle = new Rectangle();
-            mainRectangle.width = PConfig.getInstance().mainSize.first;
-            mainRectangle.height = PConfig.getInstance().mainSize.second;
+            mainRectangle.width = pConfig.mainSize.first;
+            mainRectangle.height = pConfig.mainSize.second;
             popupRectangle.height = (int)(mainRectangle.width * MAGIC_HEIGHT_FACTOR);
             popupRectangle.width = (int)(popupRectangle.height / MAGIC_ASPECT_RATIO);
             popupRectangle.x = mainRectangle.x +
@@ -107,7 +111,7 @@ public class StatusPopup extends JDialog {
             public void componentResized(ComponentEvent e) {
                 Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), e);
                 popupRectangle = StatusPopup.this.getBounds();
-                PConfig.getInstance().scoresPopupRectangle.set(popupRectangle);
+                pConfig.scoresPopupRectangle.set(popupRectangle);
                 scoresPanel.recalc();
             }
 
@@ -115,7 +119,7 @@ public class StatusPopup extends JDialog {
             public void componentMoved(ComponentEvent e) {
                 Logger.printf(DEBUG_LOG, "%s -> %s\n", currMethodName(), e);
                 popupRectangle = StatusPopup.this.getBounds();
-                PConfig.getInstance().scoresPopupRectangle.set(popupRectangle);
+                pConfig.scoresPopupRectangle.set(popupRectangle);
             }
         });
 
@@ -340,7 +344,7 @@ public class StatusPopup extends JDialog {
             // pool size:
             Font font = new Font("Serif", Font.PLAIN, innerRadius);
             g2d.setFont(font);
-            String text = "" + PConfig.getInstance().poolSize.get();
+            String text = "" + pConfig.poolSize.get();
             FontMetrics fontMetrics = g2d.getFontMetrics(font);
             int _width = fontMetrics.stringWidth(text);
             int x = scoresMetrics.p0.getX() - _width / 2 - metrics.xMargin;
@@ -425,7 +429,7 @@ public class StatusPopup extends JDialog {
     }
 
     //  for description look at etc/doc/scores.jpg
-    static class ScoresMetrics {
+    class ScoresMetrics {
         double tan;     // diagonal line slope tangent
         int paneH, paneX;
         Point p0, p1, p2, p3, p4, p5, p6, p7, p8, p9;
@@ -433,7 +437,6 @@ public class StatusPopup extends JDialog {
 
         public void recalc(Rectangle scoresRectangle) {
             Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
-            Metrics metrics = Metrics.getInstance();
             // center:
             this.p0 = new Point(scoresRectangle.width / 2, (int) (scoresRectangle.height * centerYOffset));
             this.tan = scoresRectangle.height * (1 - centerYOffset) / this.p0.getX();
@@ -519,7 +522,7 @@ public class StatusPopup extends JDialog {
                 sep = ".";
             }
             String trailing = "";
-            if (label.equals(Player.PlayerPoints.poolPoints) && total >= PConfig.getInstance().poolSize.get()) {
+            if (label.equals(Player.PlayerPoints.poolPoints) && total >= pConfig.poolSize.get()) {
                 trailing = ">>";
                 sb.append(trailing);
             }

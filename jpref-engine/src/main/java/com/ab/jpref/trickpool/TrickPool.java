@@ -17,7 +17,7 @@
  *
  * Created: 5/31/26
  *
- * Trick pool used to avoid excessive memory fragmentation
+ * Trick pool helps to avoid excessive memory fragmentation on Android
  */
 
 package com.ab.jpref.trickpool;
@@ -25,8 +25,19 @@ package com.ab.jpref.trickpool;
 import com.ab.jpref.engine.TrickList;
 
 public class TrickPool implements TrickList.TrickPool {
+    public static boolean TRACE = TrickList.TRACE;
 
-    private final long[] trickPool;
+    // pool storage is split into fixed-size pages, allocated lazily. When the
+    // page table runs out of room, it is extended (just pointers, cheap);
+    // when an index falls in a not-yet-used page, that one page is allocated.
+    // Already-stored entries are never copied, unlike growing a single array
+    // with Arrays.copyOf.
+    private static final int PAGE_BITS = 17;
+    private static final int PAGE_SIZE = 1 << PAGE_BITS;
+    private static final int PAGE_MASK = PAGE_SIZE - 1;
+
+    private long[][] pages;
+    private int[][] backRefPages;
     public int nextPoolIndex;
 
     public TrickPool() {
@@ -34,7 +45,13 @@ public class TrickPool implements TrickList.TrickPool {
     }
 
     public TrickPool(int capacity) {
-        trickPool = new long[capacity];
+        int pageCount = Math.max(1, (capacity + PAGE_SIZE - 1) / PAGE_SIZE);
+        pages = new long[pageCount][];
+        pages[0] = new long[PAGE_SIZE];
+        if (TRACE) {
+            backRefPages = new int[pageCount][];
+            backRefPages[0] = new int[PAGE_SIZE];
+        }
     }
 
     @Override
@@ -43,22 +60,50 @@ public class TrickPool implements TrickList.TrickPool {
     }
 
     @Override
-    public int alloc(long trickData) {
-        if (nextPoolIndex >= trickPool.length) {
-            throw new RuntimeException("exceeded trick pool size " + trickPool.length);
+    public int alloc(long trickData, int prevIndex) {
+        ++nextPoolIndex;
+        int page = nextPoolIndex >>> PAGE_BITS;
+        int offset = nextPoolIndex & PAGE_MASK;
+        if (page >= pages.length) {
+            // extend the (small) page table itself; existing pages are untouched
+            long[][] extendedPages = new long[page + 1][];
+            System.arraycopy(pages, 0, extendedPages, 0, pages.length);
+            pages = extendedPages;
+            if (TRACE) {
+                int[][] extendedBackRefPages = new int[page + 1][];
+                System.arraycopy(backRefPages, 0, extendedBackRefPages, 0, backRefPages.length);
+                backRefPages = extendedBackRefPages;
+            }
         }
-        trickPool[++nextPoolIndex] = trickData;
+        if (pages[page] == null) {
+            pages[page] = new long[PAGE_SIZE];
+            if (TRACE) {
+                backRefPages[page] = new int[PAGE_SIZE];
+            }
+        }
+        pages[page][offset] = trickData;
+        if (TRACE) {
+            backRefPages[page][offset] = prevIndex;
+        }
         return nextPoolIndex;
     }
 
     @Override
     public void set(int index, long trickData) {
-        trickPool[index] = trickData;
+        pages[index >>> PAGE_BITS][index & PAGE_MASK] = trickData;
     }
 
     @Override
     public long get(int index) {
-        return trickPool[index];
+        return pages[index >>> PAGE_BITS][index & PAGE_MASK];
+    }
+
+    @Override
+    public int getPrev(int index) {
+        if (!TRACE) {
+            throw new RuntimeException("invalid use of debugging option");
+        }
+        return backRefPages[index >>> PAGE_BITS][index & PAGE_MASK];
     }
 
     @Override
@@ -68,6 +113,6 @@ public class TrickPool implements TrickList.TrickPool {
 
     @Override
     public int capacity() {
-        return trickPool.length;
+        return pages.length * PAGE_SIZE;
     }
 }

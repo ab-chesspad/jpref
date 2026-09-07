@@ -21,6 +21,7 @@ package com.ab.jpref.config;
 
 import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardSet;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 import com.ab.util.Util;
@@ -55,6 +56,7 @@ public class Metrics {
 
     public double cardAspectRatio;
 
+    protected Host host;
     public int panelX = 0, panelY = 0;
     public int panelWidth, panelHeight;
     public final int xMargin = MIN_X_MARGIN, yMargin = MIN_Y_MARGIN;
@@ -62,16 +64,10 @@ public class Metrics {
     public double cardW, cardH;
     public double fontSize;
 
-    protected static Object instance;
+    protected Metrics() {}
 
-    public static Metrics getInstance() {
-        if (instance == null) {
-            instance = new Metrics();
-        }
-        return (Metrics)instance;
-    }
-
-    public Metrics() {
+    public Metrics(Host host) {
+        this.host = host;
     }
     
     public void setCardAspectRatio(double cardAspectRatio) {
@@ -79,8 +75,8 @@ public class Metrics {
     }
 
     public synchronized boolean recalculateSizes() {
-        int panelWidth = Config.getInstance().mainSize.first;
-        int panelHeight = Config.getInstance().mainSize.second;
+        int panelWidth = host.config().mainSize.first;
+        int panelHeight = host.config().mainSize.second;
         if (this.panelWidth == panelWidth && this.panelHeight == panelHeight) {
             return false;
         }

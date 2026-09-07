@@ -27,8 +27,11 @@ public class SimpleLongIntMap {
     public static final int KEY_MASK_LEN = 34;  // 3 hands + top
     public static final long KEY_MASK = (1L << KEY_MASK_LEN) - 1;
 //    public static final int CAPACITY = 500009;     // prime number
-    public static final int CAPACITY = 1000003;     // prime number
-//    public static final int CAPACITY = 3000017;     // prime number
+//    public static final int CAPACITY = 1000003;     // prime number
+    // with alpha-beta pruning (see TrickList.PRUNE) the worst observed no-trump,
+    // defender-leads-trick-1 case needs ~791,000 distinct positions; this keeps
+    // load factor comfortably low (~0.26) so collision chains stay short
+    public static final int CAPACITY = 3000017;     // prime number
 //    public static final long BUCKET_MARK = 1L << KEY_MASK_LEN;
     public static final int VALUE_SHIFT = KEY_MASK_LEN;
 
@@ -44,7 +47,13 @@ public class SimpleLongIntMap {
     }
 */
 
-    public static final int COLLISIONS_CAPACITY = 100000;
+    // collision chain storage is split into fixed-size chunks. When the
+    // current chunk fills up, a new chunk is allocated and appended to the
+    // (small) chunk table - already-stored entries are never copied, unlike
+    // growing a single array with Arrays.copyOf.
+    private static final int BUCKET_CHUNK_BITS = 17;
+    private static final int BUCKET_CHUNK_SIZE = 1 << BUCKET_CHUNK_BITS;
+    private static final int BUCKET_CHUNK_MASK = BUCKET_CHUNK_SIZE - 1;
 
     public static final long NULL_KEY = 0;
     public static final int NULL_VALUE = 0;
@@ -59,38 +68,55 @@ public class SimpleLongIntMap {
     final long[] keys;
     final int[] values;
 
-    final long[] bucketsKeys;
-    final int[] bucketsValues;
+    private long[][] bucketsKeyChunks;
+    private int[][] bucketsValueChunks;
     private int lastBucketsIndex = 0;
 
     public SimpleLongIntMap() {
         int capacity = CAPACITY;
         keys = new long[capacity];
         values = new int[capacity];
-        bucketsKeys = new long[COLLISIONS_CAPACITY];
-        bucketsValues = new int[COLLISIONS_CAPACITY];
+        bucketsKeyChunks = new long[][] { new long[BUCKET_CHUNK_SIZE] };
+        bucketsValueChunks = new int[][] { new int[BUCKET_CHUNK_SIZE] };
         clear();
     }
 
     public void put(long key, int value) {
+        // every call is a genuinely new key (callers only put() after a get() miss),
+        // so size grows by one on every call, not just when the slot is empty
+        ++size;
+        if (maxSize < size) {
+            maxSize = size;
+        }
         int index = hash(key);
         long mapKey = keys[index];
         if (mapKey == NULL_KEY) {
             keys[index] = key;
             values[index] = value;
-            ++size;
-            if (maxSize < size) {
-                maxSize = size;
-            }
             return;
         }
         // do not check if the key is there already
         ++lastBucketsIndex;
+        int chunk = lastBucketsIndex >>> BUCKET_CHUNK_BITS;
+        int offset = lastBucketsIndex & BUCKET_CHUNK_MASK;
+        if (chunk >= bucketsKeyChunks.length) {
+            // extend the chunk table itself (just pointers, cheap); existing chunks are untouched
+            long[][] extendedKeyChunks = new long[chunk + 1][];
+            int[][] extendedValueChunks = new int[chunk + 1][];
+            System.arraycopy(bucketsKeyChunks, 0, extendedKeyChunks, 0, bucketsKeyChunks.length);
+            System.arraycopy(bucketsValueChunks, 0, extendedValueChunks, 0, bucketsValueChunks.length);
+            bucketsKeyChunks = extendedKeyChunks;
+            bucketsValueChunks = extendedValueChunks;
+        }
+        if (bucketsKeyChunks[chunk] == null) {
+            bucketsKeyChunks[chunk] = new long[BUCKET_CHUNK_SIZE];
+            bucketsValueChunks[chunk] = new int[BUCKET_CHUNK_SIZE];
+        }
         if (maxCollisions < lastBucketsIndex) {
             maxCollisions = lastBucketsIndex;
         }
-        bucketsKeys[lastBucketsIndex] = mapKey;
-        bucketsValues[lastBucketsIndex] = values[index];
+        bucketsKeyChunks[chunk][offset] = mapKey;
+        bucketsValueChunks[chunk][offset] = values[index];
         keys[index] = key & KEY_MASK | ((long)lastBucketsIndex & 0x0ffffffffL) << VALUE_SHIFT;
         values[index] = value;
     }
@@ -112,9 +138,11 @@ public class SimpleLongIntMap {
             if (maxSearchCount < search_count) {
                 maxSearchCount = search_count;
             }
-            mapKey = bucketsKeys[bucketIndex];
+            int chunk = bucketIndex >>> BUCKET_CHUNK_BITS;
+            int offset = bucketIndex & BUCKET_CHUNK_MASK;
+            mapKey = bucketsKeyChunks[chunk][offset];
             if ((mapKey & KEY_MASK) == key) {
-                return bucketsValues[bucketIndex];
+                return bucketsValueChunks[chunk][offset];
             }
             bucketIndex = (int)((mapKey >>> VALUE_SHIFT) & 0x0ffffffffL);
         }

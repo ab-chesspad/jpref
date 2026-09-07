@@ -23,22 +23,18 @@ import org.junit.Test;
 
 import java.io.*;
 
-public class TestGameManager {
+public class TestGameManager extends BaseTest {
     public static final int NOP = Config.NOP;
 
-    static Config config = Config.getInstance();
-    static Util util;
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
-    public void initClass() {
+    public void init() {
         trickList = new TrickList();
         trickList.init(new TrickPool());
-        util = new Util();
-        config.util = util;
         gameManager = new GameManager();
-        gameManager.init(() -> config);
+        gameManager.init(host);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }
@@ -158,7 +154,7 @@ if (++count[0] > 0) {
 
     @Test
     // enforce bid and drop
-    public void testPlay() throws IOException {
+    public void testFixedPlay() throws IOException {
         println("running: " + currMethodName());
         final int[] count = {0};
         final InputStream testInputStream = getInputStream("fixedplay");

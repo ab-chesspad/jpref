@@ -234,8 +234,9 @@ public class ForTricksBot extends Bot {
 
     @Override
     long bm4Iteration(TrickList.TrickNode trickNode) {
+        final int[] bitmaps = new int[NOP];
         int num = trickNode.getTurn();
-        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
+        int bitmap = trickNode.hands[num].list(trickNode.startingSuit).getBitmap();
         if (bitmap == 0 && trickNode.trumpSuit != null) {
             bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.trumpSuit);
         }
@@ -243,34 +244,39 @@ public class ForTricksBot extends Bot {
             bitmap = trickNode.hands[num].getBitmap();
         }
 
-        int n1 = (num + 1) % NOP;
-        int n2 = (num + 2) % NOP;
-        int declarerNumber = 0; // when building TrickList
-        if (num == declarerNumber) {
-            // todo: refactor
-            int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
-            for (int i = 0; i < trickNode.size(); ++i) {
-                Card card = trickNode.getCard(i);
-                int bit = 1 << CardSet.offset(card);
-                others |= bit;
-            }
-            return (long)CardSet.bm4buildForward(bitmap, others) & 0x0ffffffffL;
-        }
-
-        int friend = n1;
-        int foe = n2;
-        if (n1 == declarerNumber) {
-            friend = n2;
-            foe = n1;
-        }
-        int foeHand = trickNode.hands[foe].getBitmap();
+        bitmaps[0] = bitmap;
+        bitmaps[1] = trickNode.hands[(num + 1) % NOP].getBitmap();
+        bitmaps[2] = trickNode.hands[(num + 2) % NOP].getBitmap();
         for (int i = 0; i < trickNode.size(); ++i) {
             Card card = trickNode.getCard(i);
             int bit = 1 << CardSet.offset(card);
-            foeHand |= bit;
+            int n = (i + 3 - trickNode.size()) % NOP;
+            bitmaps[n] |= bit;
         }
-        long res = (long)CardSet.bm4build(bitmap, trickNode.hands[friend].getBitmap(), foeHand) & 0x0ffffffffL;
-        return res | BACKWARD_FLAG;
+
+        int declarerNumber = 0; // when building TrickList
+        if (num == declarerNumber) {
+            int others = bitmaps[1] | bitmaps[2];
+            return ((long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL | BACKWARD_FLAG);
+        }
+
+        int friend = 1;
+        int foe = 2;
+        if ((num + 1) % NOP == declarerNumber) {
+            friend = 2;
+            foe = 1;
+        }
+        int trumpBM = 0;
+        Suit trump = trickNode.minBid.getTrump();
+        if (trump != null) {
+            trumpBM = CardSet.listBitMap(bitmaps[0], trump);
+        }
+        bitmaps[0] &= ~trumpBM;     // excluding trump
+        // trump suit needs a special treatment, e.g.
+        // deal: ♠8J ♣7KA ♦78A ♥7A  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♥J9  1 -> 6♥ 6
+        int res = CardSet.bm4build(bitmaps[0], bitmaps[friend], bitmaps[foe]) |
+            CardSet.bm4buildForward(trumpBM, bitmaps[foe]);
+        return ((long)res & 0x0ffffffffL) | BACKWARD_FLAG;
     }
 
     @Override
@@ -287,6 +293,7 @@ public class ForTricksBot extends Bot {
 
         int diff = 10 * (bestSoFarTricks - probeTricks);
         if (diff != 0) {
+            // deside on total past + future tricks
             if (num == 0) {
                 return diff;
             }
@@ -294,6 +301,7 @@ public class ForTricksBot extends Bot {
         }
         diff = bestSoFarPastTricks - probePastTricks;
         if (diff != 0) {
+            // deside on past tricks
             if (num == 0) {
                 return diff;
             }
@@ -301,12 +309,13 @@ public class ForTricksBot extends Bot {
         }
         int _bestSoFarTop = BaseTrick.getTop(bestSoFarTrickData);
         int _probeTop = BaseTrick.getTop(probeTrickData);
+        // todo?
         if (_bestSoFarTop == 0 && _probeTop != 0 ||
-            _bestSoFarTop != 0 && _probeTop == 0) {
+                _bestSoFarTop != 0 && _probeTop == 0) {
             return diff;
         } else {
             // todo
+            return diff;
         }
-        return diff;
     }
 }

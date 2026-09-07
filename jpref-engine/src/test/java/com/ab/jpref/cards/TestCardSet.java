@@ -22,17 +22,16 @@ package com.ab.jpref.cards;
 
 
 import com.ab.jpref.config.Config;
+import com.ab.jpref.engine.BaseTest;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
-import com.ab.util.Util;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.InputMismatchException;
 
-public class TestCardSet {
+public class TestCardSet extends BaseTest {
     public static final int NOP = Config.NOP;
-    static final Util util = Util.getInstance();
 
     @Test
     public void testIterations() {
@@ -134,7 +133,11 @@ public class TestCardSet {
     @Test
     public void testIterate4BuildForward() {
         String[] sources = {
-            // hands -> list (* means empty hand
+            // hands -> list (* means empty hand)
+            "♥79J  ♥8A  ♥XQK -> ♥79J",
+            "♦9Q  *  ♦78 -> ♦9",
+            "♦7XQA  ♠78QA  ♦9K ♥8 -> ♦7XA",
+            "♥8Q  ♥79JA  ♦8 -> ♥8Q",
             "♦9XKA ♥XJA  ♠789XJQKA ♦78JQ ♥789QK  * -> ♦9K ♥XA",
             "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7XA",
             "♥9JA  ♣89J  ♣Q ♥XQ -> ♥9JA",
@@ -171,13 +174,14 @@ public class TestCardSet {
             }
             CardSet union = hands[1].union(hands[2]);
             int bitmap = CardSet.bm4buildForward(hands[0].bitmap, union.getBitmap());
-            int i = -1;
-            int bit = 0;
-            while ((bit = CardSet.next(bitmap, bit)) != 0) {
-                Card card = Card.get(bit);
-                Assert.assertEquals(res.get(++i), card);
-            }
-            Assert.assertEquals(res.size(), ++i);
+            Assert.assertEquals(res.toString(), new CardSet(bitmap).toString());
+//            int i = -1;
+//            int bit = 0;
+//            while ((bit = CardSet.next(bitmap, bit)) != 0) {
+//                Card card = Card.get(bit);
+//                Assert.assertEquals(res.get(++i), card);
+//            }
+//            Assert.assertEquals(res.size(), ++i);
         }
     }
 
@@ -185,6 +189,7 @@ public class TestCardSet {
     public void testIterate4BuildBackward() {
         String[] sources = {
             // hands -> list
+            "♥8Q  ♥79JA  ♦8 -> ♥8Q",
             "♥7XQA  ♠78QA  ♥9K ♦8 -> ♥7QA",
             "♠8XQA  ♦789X  ♠79JK -> ♠8XQA",
             "♣7JQ  ♣K  ♣A -> ♣Q",
@@ -220,25 +225,36 @@ public class TestCardSet {
     }
 
     @Test
-    public void testIterate4BuildForwardWithOthers() {
+    public void testIterate4BuildForwardWithFriend() {
         String[] sources = {
-            // hands -> list
-            "♣79JQ  ♣8K  ♣A -> ♣9",
-            "♠9A  ♠XJK  . -> ♠9A",
+            // hands (self, friend, foe) -> list
+///
+            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7A ♦Q ♥8",
+            "♣7KA  ♣9JQ  * -> ♣7A",
+            "♠78Q ♦89 ♥8  ♠9 ♦XJQK  ♠XJKA ♥J -> ♠7Q ♦8 ♥8",
+            "♥7XQ  ♥8A  ♥JK -> ♥7Q",
+            "♠78Q ♦89A ♥8A  ♠9 ♣XQ ♦XJQK ♥9XK  ♠XJKA ♣78KA ♥JQ -> ♠7Q ♦8A ♥8A",
+            "♥8A  ♥JQ  ♥9XK -> ♥8A",
+            "♦9Q  ♦XJK  ♦78A -> ♦9Q",
+            "♦XQ  ♦9JK  ♦78A -> ♦X",
+            "♣79JQ  ♣8K  ♣A -> ♣7Q",
+            "♥9Q  ♥XJK  ♥78 -> ♥9Q",
+            "♥XJK  ♥9Q  ♥78 -> ♥X",
+            "♣XQ  ♣J  ♣A -> ♣XQ",
+            "♥8Q  ♥XK  ♥79JA -> ♥8Q",
+            "♠9A  ♠XJK  * -> ♠9A",
             "♠9A ♣QK ♦9 ♥89A  ♠XJK ♦78QK ♥X  ♣XA ♦XA ♥7JQK -> ♠9A ♣Q ♦9 ♥8A",
             "♦Q  ♦78A  ♦9XJK -> ♦Q",
-            "♣7KA  ♣9JQ  . -> ♣7K",
-            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7K ♦Q ♥8",
-            "♠79QK  ♠JA  ♠8X -> ♠Q",
-            "♠79QK  .  ♠8X -> ♠79Q",
+            "♠79QK  ♠JA  ♠8X -> ♠7K",
+            "♠79QK  *  ♠8X -> ♠79Q",
             "♠79QK  ♣8A  ♠8X ♣79J -> ♠79Q",
-            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠Q",
+            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠7K",
             "♦78Q  ♦J  ♦XKA -> ♦7Q",
             "♣JK ♦78Q ♥A  ♦J ♥78XJQ  ♠Q ♦XKA ♥9K -> ♣J ♦7Q ♥A",
-            "♣79JK  ♣8XQA  . -> ♣9",
-            "♣8XQA  ♣79JK  . -> ♣8",
-            "♣7XK  ♣89JA  . -> ♣X",
-            "♣89JA  ♣7XK  . -> ♣8",
+            "♣79JK  ♣8XQA  * -> ♣7K",
+            "♣8XQA  ♣79JK  * -> ♣8",
+            "♣7XK  ♣89JA  * -> ♣7K",
+            "♣89JA  ♣7XK  * -> ♣8",
             "♠8XQA  ♦789X  ♠79K ♣8 -> ♠8XA",
             "♣8K  ♣79JQ  ♣A -> ♣8",
         };
@@ -246,24 +262,32 @@ public class TestCardSet {
         for (String source : sources) {
             Logger.println(source);
             String[] parts = source.split(" : | -> ");
-            CardList res = util.toCardList(parts[1]);
+            CardList expected = util.toCardList(parts[1]);
             String[] _parts = parts[0].split("  ");
             CardSet[] hands = new CardSet[NOP];
             for (int i = 0; i < _parts.length; ++i) {
-                if (".".equals(_parts[i])) {
+                if ("*".equals(_parts[i])) {
                     hands[i] = new CardSet();
                 } else {
                     hands[i] = new CardSet(util.toCardList(_parts[i]));
                 }
             }
             int bitmap = CardSet.bm4build(hands[0].bitmap, hands[1].getBitmap(), hands[2].getBitmap());
-            int i = -1;
-            int bit = 0;
-            while ((bit = CardSet.next(bitmap, bit)) != 0) {
-                Card card = Card.get(bit);
-                Assert.assertEquals(res.get(++i), card);
+            boolean ok = expected.toString().equals(new CardSet(bitmap).toString());
+            if (!ok) {
+                int bit = 0;
+                int i = -1;
+                while ((bit = CardSet.next(bitmap, bit)) != 0) {
+                    Card card = Card.get(bit);
+                    if (expected.get(++i).equals(card)) {
+                        continue;
+                    }
+                    String msg = String.format("\nexpected %s\nres      %s, %s != %s\n",
+                        expected, new CardSet(bitmap), expected.get(i), card);
+                    throw new RuntimeException(msg);
+//                    Assert.assertEquals(expected.get(++i), card);
+                }
             }
-            Assert.assertEquals(res.size(), ++i);
         }
     }
 

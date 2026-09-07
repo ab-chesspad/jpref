@@ -24,6 +24,7 @@ package com.ab.jpref.gui;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.gui.config.PConfig;
+import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 
 import javax.swing.*;
@@ -36,14 +37,14 @@ import static com.ab.jpref.config.Config.ROUND_SIZE;
 import static com.ab.jpref.config.I18n.m;
 
 public class OfferPopup extends JDialog {
-    private final PUtil pUtil = PUtil.getInstance();
+    private final PUtil pUtil;
     final PConfig pConfig;
     final GameManager gameManager;
     final OfferPopup popupInstance;
     Rectangle popupRectangle;
 
-    final BufferedImage lineImage = pUtil.loadImage("buttons/radio.png");
-    final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
+    final BufferedImage lineImage;
+    final BufferedImage selectedLineImage;
 
     final JList<String> jList;
     int selectedIndex = -1;
@@ -51,9 +52,12 @@ public class OfferPopup extends JDialog {
     JButton acceptButton = null;
     int result = -1;
 
-    public OfferPopup(int minTricks, int maxTricks) {
+    public OfferPopup(Host host, int minTricks, int maxTricks) {
         super(Main.mainFrame, true);
-        pConfig = PConfig.getInstance();
+        pConfig = (PConfig)host.config();
+        pUtil = (PUtil)host.getUtil();
+        lineImage = pUtil.loadImage("buttons/radio.png");
+        selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
         popupInstance = this;
 
         gameManager = GameManager.getInstance();
@@ -61,8 +65,8 @@ public class OfferPopup extends JDialog {
 
         popupRectangle = pConfig.offerPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle.width = PConfig.getInstance().mainSize.first / 2;
-            popupRectangle.height = PConfig.getInstance().mainSize.second / 2;
+            popupRectangle.width = pConfig.mainSize.first / 2;
+            popupRectangle.height = pConfig.mainSize.second / 2;
         }
         setSize(popupRectangle.width, popupRectangle.height);
         this.setLocation(popupRectangle.x, popupRectangle.y);
@@ -81,7 +85,7 @@ public class OfferPopup extends JDialog {
         });
 
         setLocationRelativeTo(Main.mainFrame);
-        Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW / 5));
+        Font font = new Font("Serif", Font.PLAIN, (int) (host.getMetrics().cardW / 5));
         int size = font.getSize();
         BufferedImage scaledLineImage = pUtil.scale(lineImage, size, size);
         Icon lineIcon = new ImageIcon(scaledLineImage);

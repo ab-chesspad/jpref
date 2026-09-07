@@ -33,6 +33,7 @@ package com.ab.jpref.config;
 
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.engine.GameManager;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Couple;
 import com.ab.util.Point;
 import com.ab.util.Util;
@@ -40,15 +41,15 @@ import com.ab.util.Util;
 import java.io.*;
 import java.util.Locale;
 
-public class Config implements Serializable {
+public abstract class Config implements Serializable {
     private static final long serialVersionUID = 11L;
+
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.1";
+    public static final String VERSION = "0.1.1";
 
     public final Property<Boolean> release = new Property<>("", true);
 
     public transient GameManager.EventObserver eventObserver;
-    public transient Util util;
     public final Point mainPosition = new Point(0, 0);
     public final Couple<Integer> mainSize = new Couple<>(0, 0);
     public int insetsTop;
@@ -69,6 +70,7 @@ public class Config implements Serializable {
             return values();
         }
     }
+
     public final Property<Selection<GameType>> gameType =
         new Property<>("Game Type", new Selection<>(GameType.values()));
 
@@ -112,34 +114,29 @@ public class Config implements Serializable {
     public static final int ROUND_SIZE = 10;    // total tricks == initial hand size
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
     public static final char NO_TRUMP = '-';
-
-    protected static Config instance;
     public final String GUID;
 
-    public static Config getInstance() {
-        if (instance == null) {
-            instance = new Config();
-        }
-        return instance;
-    }
+    protected transient Host host;
 
-    protected Config() {
+    protected Config(Host host) {
+        this.host = host;
         GUID = java.util.UUID.randomUUID().toString();
     }
 
-    public static Config unserialize(String dir) {
-        Object object = null;
-        try (FileInputStream fis = new FileInputStream(new File(dir, CONFIG_FILENAME));
-                ObjectInputStream ois = new ObjectInputStream(fis)) {
-            object = ois.readObject();
+    public static Config unserialize(Host host) {
+        Config config = null;
+        try (FileInputStream fis = new FileInputStream(new File(host.getDataDirectory(), CONFIG_FILENAME));
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            config = (Config)ois.readObject();
+            config.host = host;
         } catch (IOException | ClassNotFoundException e) {
             System.out.println(e.getMessage());
         }
-        return (Config)object;
+        return config;
     }
 
-    public void serialize(String dir) {
-        try (FileOutputStream fos = new FileOutputStream(new File(dir, CONFIG_FILENAME));
+    public void serialize() {
+        try (FileOutputStream fos = new FileOutputStream(new File(host.getDataDirectory(), CONFIG_FILENAME));
                 ObjectOutputStream oot = new ObjectOutputStream(fos) ) {
             oot.writeObject(this);
         } catch (IOException e) {
@@ -211,6 +208,14 @@ public class Config implements Serializable {
     }
 
     public static class Property<T> implements Serializable {
+        // Field initializers run top-to-bottom in declaration order (JLS-guaranteed),
+        // so this sequence number reproduces declaration order without relying on
+        // reflection enumeration order (unspecified by the JLS, and not preserved by
+        // ART) or a separately maintained list that has to be updated by hand
+        // whenever a property is added.
+        private static int nextOrder = 0;
+        private final int order = nextOrder++;
+
         private final String label;
         private final boolean visual;
         private T value;
@@ -225,6 +230,10 @@ public class Config implements Serializable {
             this.visual = visual;
             this.label = label;
             this.value = value;
+        }
+
+        public int getOrder() {
+            return order;
         }
 
         public String getLabel() {
@@ -245,16 +254,15 @@ public class Config implements Serializable {
     }
 
     public enum Bid implements Comparable<Bid>, Queueable {
+        BID_UNDEFINED(30, "?"),     // before actual bidding
+        BID_HALF_WHIST(39, "Half"),
         BID_WHIST(40, "Whist"),
-        BID_HALF_WHIST(41, "Half"),
+        BID_WHIST_LAYING(41, "Whist"),
+        BID_WHIST_STANDING(42, "Whist"),
 
-        BID_WHIST_LAYING(43, "Whist"),
-        BID_WHIST_STANDING(44, "Whist"),
-
-        BID_UNDEFINED(50, "?"),     // before actual bidding
-        BID_ALL_PASS(55, "All-pass"),
-        BID_PASS(59, "Pass"),
-        BID_WITHOUT_THREE(60, "Without 3"),
+        BID_PASS(58, "Pass"),
+        BID_WITHOUT_THREE(59, "Without 3"),
+        BID_ALL_PASS(60, "All-pass"),
         BID_6S(61, "6♠"),
         BID_6C(62, "6♣"),
         BID_6D(63, "6♦"),
@@ -332,7 +340,7 @@ public class Config implements Serializable {
 
         public Card.Suit getTrump() {
             int suitNum = this.value % 10;
-            if (suitNum >= 5) {
+            if (suitNum == 0 || suitNum >= 5) {
                 return null;
             }
             return Card.Suit.fromValue(suitNum - 1);
@@ -410,6 +418,19 @@ public class Config implements Serializable {
                 Runtime.getRuntime().totalMemory() / 1000000,
                 Runtime.getRuntime().freeMemory() / 1000000);
         return res;
+    }
+
+    static String ansi_head = "\u001B";
+    static String ansi_tail = "m";
+    static String ansi_reset = ansi_head + "[0" + ansi_tail;
+    static String ansi_red = ansi_head + "[31" + ansi_tail;
+    public static String ANSI_HEAD = ansi_head;
+    public static String ANSI_TAIL = ansi_tail;
+    public static String ANSI_RESET = ansi_reset;
+    public static String ANSI_RED = ansi_red;
+
+    public static void setNonColoredLog() {
+        ANSI_HEAD = ANSI_TAIL = ANSI_RESET = ANSI_RED = "";
     }
 
 }

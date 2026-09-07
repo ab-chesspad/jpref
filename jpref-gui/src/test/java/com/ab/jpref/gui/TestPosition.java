@@ -36,6 +36,7 @@ import java.awt.event.ComponentEvent;
 
 import static com.ab.jpref.config.Config.*;
 import com.ab.jpref.ui.Host;
+import com.ab.util.Util;
 
 // convenience GUI program to test intermediate positions for TrickList search
 // add/modify sources using hands from either a breakpoint in buildSubList(CardList cards)
@@ -49,7 +50,7 @@ public class TestPosition implements Host {
     }
     final PConfig config;
     final Metrics metrics;
-    final PUtil pUtil = PUtil.getInstance();
+    final PUtil pUtil;
     final TestGameManager gameManager;
     final CardSet[] hands = new CardSet[NOP];
     final Container mainContainer;
@@ -68,8 +69,9 @@ public class TestPosition implements Host {
     }
 
     public TestPosition() {
-        metrics = Metrics.getInstance();
-        config = PConfig.getInstance();
+        pUtil = new PUtil(this);
+        metrics = new Metrics(this);
+        config = (PConfig)Config.unserialize(this);
 
         mainFrame = new JFrame();
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -79,17 +81,17 @@ public class TestPosition implements Host {
                 Insets insets = mainFrame.getInsets();
                 mainRectangle = ((JFrame)e.getSource()).getBounds();
                 mainRectangle.height -= insets.top;
-                PConfig.getInstance().mainSize.first = mainRectangle.width;
-                PConfig.getInstance().mainSize.second = mainRectangle.height;
-                Metrics.getInstance().recalculateSizes();
+                config.mainSize.first = mainRectangle.width;
+                config.mainSize.second = mainRectangle.height;
+                metrics.recalculateSizes();
                 repaintAll();
             }
         });
 
         JFrame.setDefaultLookAndFeelDecorated(true);
         Rectangle mainRectangle = new Rectangle();
-        mainRectangle.width = PConfig.getInstance().mainSize.first;
-        mainRectangle.height = PConfig.getInstance().mainSize.second;
+        mainRectangle.width = config.mainSize.first;
+        mainRectangle.height = config.mainSize.second;
         mainFrame.setBounds(mainRectangle);
         mainContainer = mainFrame.getContentPane();
         mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.X_AXIS));
@@ -144,7 +146,12 @@ public class TestPosition implements Host {
 
     @Override
     public Config config() {
-        return PConfig.getInstance();
+        return config;
+    }
+
+    @Override
+    public Util getUtil() {
+        return pUtil;
     }
 
     @Override

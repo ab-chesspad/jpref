@@ -2,16 +2,16 @@ package com.ab.jpref.gui.config;
 
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Metrics;
+import com.ab.jpref.config.I18n;
+import static com.ab.jpref.config.I18n.m;
+import com.ab.jpref.ui.TableLayout;
+import com.ab.jpref.ui.Host;
 import com.ab.jpref.gui.Main;
 import com.ab.jpref.gui.PUtil;
-import com.ab.jpref.config.I18n;
 
-import static com.ab.jpref.config.I18n.m;
 import com.ab.util.Logger;
 import com.ab.util.Tuple;
 import static com.ab.util.Util.currMethodName;
-import com.ab.jpref.ui.TableLayout;
-import com.ab.jpref.ui.Host;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -26,12 +26,13 @@ public class SettingsPopup extends JDialog {
 
     static final int MAX_NUMBER_SIZE = 4;
 
-    private final PUtil pUtil = PUtil.getInstance();
+    private final PUtil pUtil;
+    private final Metrics metrics;
     final String popupTitle = "Settings";
     final PConfig pConfig;
     final SettingsPopup popupInstance;
-    final BufferedImage lineImage = pUtil.loadImage("buttons/radio.png");
-    final BufferedImage selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
+    final BufferedImage lineImage;
+    final BufferedImage selectedLineImage;
     final JButton okButton;
     final JButton cancelButton;
 
@@ -41,15 +42,20 @@ public class SettingsPopup extends JDialog {
     public SettingsPopup(Host host) {
         super(Main.mainFrame, true);
         this.host = host;
-        pConfig = PConfig.getInstance();
+        pConfig = (PConfig)host.config();
+        pConfig.serialize();
+        pUtil = (PUtil)host.getUtil();
+        lineImage = pUtil.loadImage("buttons/radio.png");
+        selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
+        metrics = host.getMetrics();
         popupInstance = this;
         setTitle(m(popupTitle));
 
         setLayout(new BorderLayout(1, 4));
         popupRectangle = pConfig.settingsPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle.width = PConfig.getInstance().mainSize.first;
-            popupRectangle.height = PConfig.getInstance().mainSize.second;
+            popupRectangle.width = pConfig.mainSize.first;
+            popupRectangle.height = pConfig.mainSize.second;
         }
         this.setBounds(popupRectangle);
         this.setLocation(popupRectangle.x, popupRectangle.y);
@@ -92,8 +98,8 @@ public class SettingsPopup extends JDialog {
     }
 
     private void cancel() {
-        PConfig.refresh();  // restore configuration
-        I18n.refresh(); // restore
+        pConfig.refresh();  // restore configuration
+        I18n.getInstance().refresh();
         host.repaintAll();
         popupInstance.dispose();
     }
@@ -128,7 +134,7 @@ public class SettingsPopup extends JDialog {
         final Config.Property<?> property = (Config.Property<?>)p;
         JPanel section = new JPanel();
         section.setLayout(new FlowLayout(FlowLayout.LEFT));
-        Font font = new Font("Serif", Font.PLAIN, (int) (Metrics.getInstance().cardW * .3));
+        Font font = new Font("Serif", Font.PLAIN, (int) (metrics.cardW * .3 * 0.7));  // 30% smaller
         int size = font.getSize();
         BufferedImage scaledLineImage = pUtil.scale(lineImage, size, size);
         Icon lineIcon = new ImageIcon(scaledLineImage);
@@ -188,7 +194,7 @@ public class SettingsPopup extends JDialog {
                 ((Config.Selection<?>) propValue).setSelected(((JList<?>) listSelectionEvent.getSource()).getSelectedIndex());
                 if (property.isVisual()) {
                     // in case of changing the language
-                    I18n.refresh();
+                    I18n.getInstance().refresh();
                     popupInstance.setTitle(m(popupTitle));
                     okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
                     cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
@@ -198,7 +204,7 @@ public class SettingsPopup extends JDialog {
                     thisContainer.repaint();
 
                     // repaint main panel too
-                    host.repaintAll();
+                    pConfig.eventObserver.update(null);
                 }
             });
             editor = jList;

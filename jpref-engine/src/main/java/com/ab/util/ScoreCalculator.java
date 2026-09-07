@@ -29,21 +29,21 @@ import java.util.Map;
 
 public abstract class ScoreCalculator {
     public static final int NOP = Config.NOP;   // Number of players
-    static final Config config = Config.getInstance();
     static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
     static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
     static final int poolPoints = Player.PlayerPoints.poolPoints.ordinal();
     static final int dumpPoints = Player.PlayerPoints.dumpPoints.ordinal();
     static final int statusPoints = Player.PlayerPoints.status.ordinal();
 
+    Config config;
     protected static ScoreCalculator instance;
 
-    private static ScoreCalculator getScoreCalculator() {
+    private static ScoreCalculator getScoreCalculator(Config config) {
         ScoreCalculator instance = null;
         Config.GameType gameType = config.gameType.get().getSelectedValue();
         switch (gameType) {
             case Miami:   // Сочи
-                instance = new MiamiScoreCalculator();
+                instance = new MiamiScoreCalculator(config);
                 break;
 //            case Peter:   // Ленинград
 //                instance = null;    // to do
@@ -55,9 +55,9 @@ public abstract class ScoreCalculator {
         return instance;
     }
 
-    public static ScoreCalculator getInstance() {
+    public static ScoreCalculator getInstance(Config config) {
         if (instance == null) {
-            instance = getScoreCalculator();
+            instance = getScoreCalculator(config);
         }
         return instance;
     }
@@ -232,6 +232,10 @@ public abstract class ScoreCalculator {
             put(10, 10);
             put(86, 10);
         }};
+
+        MiamiScoreCalculator(Config config) {
+            this.config = config;
+        }
 
         @Override
         void calculateAllPass(Player[] players, int trickCost) {

@@ -22,6 +22,7 @@ package com.ab.util;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
+import com.ab.jpref.ui.Host;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -35,19 +36,11 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class Util {
+public abstract class Util {
     public static final String DATA_FILE_NAME = Config.PROJECT_NAME + ".state";
     public static final String DEAL_MARK = "deal:";
 
-    private static Util instance;
-    public static synchronized Util getInstance() {
-        if (instance == null) {
-            instance = new Util();
-        }
-        return instance;
-    }
-
-    public Util() {}
+    protected Host host;
 
     private List<Serializable> serializables;
 
@@ -112,7 +105,7 @@ public class Util {
         InputStream is = null;
         File f = new File(filePath);
         String fileName = f.getName();
-        String GUID = Config.getInstance().GUID;
+        String GUID = host.config().GUID;
         String remoteFileName = GUID + "-" + fileName.substring(0, fileName.length() - 3) + "zip";
         System.out.printf("log %s, sending as %s\n", fileName, remoteFileName);
         try {
@@ -202,14 +195,14 @@ public class Util {
 
     public void getList(InputStream is, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
-            Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
+            Config.ANSI_HEAD + ".*?" + Config.ANSI_TAIL + "->", // strip "\u001B.*?m"
         };
         getList(is, charMap, lineHandler);
     }
 
     public void getList(String filePath, LineHandler lineHandler) throws IOException {
         final String[] charMap = {
-            Card.ANSI_HEAD + ".*?" + Card.ANSI_TAIL + "->", // strip "\u001B.*?m"
+            Config.ANSI_HEAD + ".*?" + Config.ANSI_TAIL + "->", // strip "\u001B.*?m"
         };
         File f = new File(filePath);
         String s = f.getAbsolutePath();

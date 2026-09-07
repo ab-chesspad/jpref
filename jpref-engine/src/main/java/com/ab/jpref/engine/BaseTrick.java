@@ -21,6 +21,7 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+import com.ab.jpref.config.Config;
 
 import java.io.Serializable;
 
@@ -59,23 +60,6 @@ public class BaseTrick implements Serializable {
     private static final long FORECAST_DONE_BIT = (1L << 63);                               // 63
 
     long trickData = 0;
-
-    // debug-only fields: call refresh() in the debugger when needed
-    int _nextIndex;
-    int _pastTricks;
-    int _futureTricks;
-    int _startedBy;
-    int _turn;
-    int _top;
-
-    public void refresh() {
-        _pastTricks = getPastTricks();
-        _futureTricks = getFutureTricks();
-        _startedBy = getStartedBy();
-        _turn = getTurn();
-        _top = getTop();
-        _nextIndex = getNextIndex();
-    }
 
     public BaseTrick() {}
 
@@ -339,16 +323,16 @@ public class BaseTrick implements Serializable {
             if (!s.equals(suit)) {
                 suit = s;
                 if (s.equals(Card.Suit.DIAMOND) || s.equals(Card.Suit.HEART)) {
-                    sb.append(Card.ANSI_RED);
+                    sb.append(Config.ANSI_RED);
                 } else {
-                    sb.append(Card.ANSI_RESET);
+                    sb.append(Config.ANSI_RESET);
                 }
                 sb.append(sep).append(suit);
                 sep = " ";
             }
             sb.append(c.getRank());
         }
-        sb.append(Card.ANSI_RESET);
+        sb.append(Config.ANSI_RESET);
         return new String(sb);
     }
 }

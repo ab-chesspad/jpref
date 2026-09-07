@@ -150,37 +150,34 @@ public class TableLayout<T> implements GameManager.EventObserver {
         instance = this;
         metrics = host.getMetrics();
 
-        create(RoundStage.bidding, 4, 1,
-            new ButtonCommand[][]{
+        create(RoundStage.bidding, 4, 1, 1,
+            new ButtonCommand[][] {
                 {ButtonCommand.minBid},
                 {ButtonCommand.misere},
                 {ButtonCommand.pass},
             });
-        create(RoundStage.drop, 4, 1,
-            new ButtonCommand[][]{
+        create(RoundStage.drop, 4, 1, 1,
+            new ButtonCommand[][] {
                 {ButtonCommand.drop},
                 {ButtonCommand.without3},
             });
-        declareRoundPanel = create(RoundStage.declareRound, 1.5, 1.5,
-            new ButtonCommand[][]{
+        declareRoundPanel = create(RoundStage.declareRound, 1.5, 1.5, 1, true,
+            new ButtonCommand[][] {
                 {null, ButtonCommand.greaterGame, null},
                 {ButtonCommand.prevSuit, ButtonCommand.select, ButtonCommand.nextSuit},
                 {null, ButtonCommand.lesserGame, null},
             });
-        whistSelectionPanel = create(RoundStage.whistSelection, 4, 1,
-            new ButtonCommand[][]{
+        whistSelectionPanel = create(RoundStage.whistSelection, 4, 1, 1,
+            new ButtonCommand[][] {
                 {ButtonCommand.whist},
                 {ButtonCommand.halfWhist},
                 {ButtonCommand.pass},
             });
-        ButtonPanel whistOptionPanel = create(RoundStage.selectWhistOption, 4, 1,
-            new ButtonCommand[][]{
+        ButtonPanel whistOptionPanel = create(RoundStage.selectWhistOption, 4, 1, 1,
+            new ButtonCommand[][] {
                 {ButtonCommand.laying},
                 {ButtonCommand.standing},
             });
-        // no standing whist!
-        Widget standing = whistOptionPanel.getWidget(1, 0);
-        standing.setEnabled(false);
 
         // labels
         for (int i = 0; i < NOP; ++i) {
@@ -189,7 +186,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         }
 
         // menu
-        menuBtn = new Widget(ButtonCommand.menu, buttonCommand -> execCommand(buttonCommand));
+        menuBtn = new Widget(ButtonCommand.menu, buttonCommand -> execCommand(buttonCommand), 2, false);
         gui.add(menuBtn);
 
         ButtonCommand[][] menuCommands;
@@ -217,10 +214,14 @@ public class TableLayout<T> implements GameManager.EventObserver {
             };
         }
 
-        menuPanel = create(null, 3.5, .6, menuCommands);
+        menuPanel = create(null, 3.5, .6, 3, menuCommands);
     }
 
-    private ButtonPanel create(RoundStage roundStage, double scaleW, double scaleH, ButtonCommand[][] commands) {
+    private ButtonPanel create(RoundStage roundStage, double scaleW, double scaleH, int zOrder, ButtonCommand[][] commands) {
+        return create(roundStage, scaleW, scaleH, zOrder, false, commands);
+    }
+
+    private ButtonPanel create(RoundStage roundStage, double scaleW, double scaleH, int zOrder, boolean textFace, ButtonCommand[][] commands) {
         ButtonHandler[][] handlers = new ButtonHandler[commands.length][commands[0].length];
         for (int j = 0; j < commands.length; ++j) {
             ButtonHandler[] row = new ButtonHandler[commands[0].length];
@@ -239,7 +240,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
             roundStageName = roundStage.toString();
         }
         Logger.printf(DEBUG_LOG, "%s, widget start # %d\n", roundStageName, Widget.count + 1);
-        ButtonPanel res = new ButtonPanel(roundStage, scaleW, scaleH, handlers);
+        ButtonPanel res = new ButtonPanel(roundStage, scaleW, scaleH, zOrder, textFace, handlers);
         for (Widget w : res) {
             gui.add(w);
         }
@@ -252,7 +253,8 @@ public class TableLayout<T> implements GameManager.EventObserver {
     public void update(RoundStage roundStage) {
         boolean fullUpdate;
         synchronized (metrics) {
-            Logger.printf(DEBUG_LOG, "%s %s\n", Util.currMethodName(), roundStage);
+            Logger.printf(DEBUG_LOG, "%s, %s %s\n", Thread.currentThread().getName(),
+                    Util.currMethodName(), roundStage);
             gameManager = GameManager.getInstance();
             metrics.recalculateSizes();
             if (metrics.cardW <= 0) {
@@ -273,7 +275,12 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 int x, y, w, h;
 
                 if (this.roundStage != null) {
-                    if (isStage(RoundStage.declareRound)) {
+                    // only reset on an actual transition INTO declareRound (a non-null
+                    // roundStage param) - isStage() checks the persisted this.roundStage,
+                    // which stays declareRound across later resize-only refreshes
+                    // (roundStage == null), and would otherwise wipe out currentBid
+                    // every time the user resizes the window mid-declaration
+                    if (RoundStage.declareRound.equals(roundStage)) {
                         if (currentPlayer == null) {
                             currentPlayer = (HumanPlayer) gameManager.getDeclarer();
                         }
@@ -357,8 +364,14 @@ public class TableLayout<T> implements GameManager.EventObserver {
                                 text = m(player.getBid().toString()) + ", " + player.getTricks();
                                 break;
                         }
-
-                        label.setText(text);
+                        Suit trump = player.getBid().getTrump();
+                        int color;
+                        if (Suit.DIAMOND.equals(trump) || HEART.equals(trump)) {
+                            color = Widget.RED_COLOR;
+                        } else {
+                            color = Widget.BLACK_COLOR;
+                        }
+                        label.setText(text, color);
                     }
                 }
                 placeMenuPanel();
@@ -398,7 +411,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         int wPanel = (int) (wButton * menuPanel.getColumnCount());
 
         int x = panelWidth - metrics.xMargin - wPanel;
-        int y = panelHeight - metrics.yMargin - hPanel;
+        int y = panelHeight + metrics.panelY - metrics.yMargin - hPanel;
         menuPanel.setBounds(x, y, wPanel, hPanel);
     }
 
@@ -406,6 +419,11 @@ public class TableLayout<T> implements GameManager.EventObserver {
         for (ButtonPanel buttonPanel : buttonPanels) {
             if (this.roundStage.equals(buttonPanel.getRoundStage())) {
                 placeButtonPanel(buttonPanel);
+                if (menuPanel.isVisible() && host.needsMenuOverlapWorkaround()) {
+                    // stays visible, but must not be clickable while the menu
+                    // overlay is up on hosts that need this workaround
+                    buttonPanel.setEnabled(false);
+                }
             } else if (buttonPanel != menuPanel) {
                 buttonPanel.setVisible(false);
             }
@@ -451,7 +469,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         int hPanel = (int) (hButton * buttonPanel.getRowCount());
 
         x = (metrics.panelWidth - wPanel) / 2;
-        y = 2 * metrics.yMargin + (int) metrics.cardH + (space - hPanel) / 2;
+        y = 2 * metrics.yMargin + metrics.panelY + (int) metrics.cardH + (space - hPanel) / 2;
         buttonPanel.setBounds(x, y, wPanel, hPanel);
         buttonPanel.setEnabled(true);
         buttonPanel.setVisible(true);
@@ -461,6 +479,12 @@ public class TableLayout<T> implements GameManager.EventObserver {
             case bidding:
                 widget = buttonPanel.getWidget(0, 0);  // min bid, speed vs. convenience
                 widget.setText(gameManager.getMinBid().toString());
+                Suit trump = gameManager.getMinBid().getTrump();
+                if (Suit.DIAMOND.equals(trump) || HEART.equals(trump)) {
+                    widget.setColor(Widget.RED_COLOR);
+                } else {
+                    widget.setColor(Widget.BLACK_COLOR);
+                }
                 if (currentPlayer != null) {
                     widget = buttonPanel.getWidget(1, 0);  // misere, speed vs. convenience
                     widget.setEnabled(Bid.BID_UNDEFINED.equals(currentPlayer.getBid()) &&
@@ -498,6 +522,11 @@ public class TableLayout<T> implements GameManager.EventObserver {
                     p1.getBid().equals(BID_PASS);
                 whistSelectionPanel.getWidget(ButtonCommand.halfWhist).setEnabled(enable);
                 whistSelectionPanel.getWidget(ButtonCommand.pass).setEnabled(!enable);
+                break;
+
+            case selectWhistOption:
+                widget = buttonPanel.getWidget(1, 0);  // standing, speed vs. convenience
+                widget.setEnabled(false);        // no standing whist!
                 break;
         }
     }
@@ -627,7 +656,9 @@ public class TableLayout<T> implements GameManager.EventObserver {
             mask |= bit;
             int bm = myHand.list(suit).getBitmap();
             bit = 0;
+            boolean nonEmpty = false;
             while ((bit = CardSet.next(bm, bit)) != 0) {
+                nonEmpty = true;
                 Card card = Card.get(bit);
                 int _x = x;
                 int _y = y;
@@ -678,7 +709,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 x += (int)dx;
                 y += (int)dy;
             }
-            if (showCards) {
+            if (showCards && nonEmpty) {
                 x += (int)(dxSuit - dx);
                 y += (int)(dySuit - dy);
             }
@@ -929,7 +960,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 String logFilePath = host.getLogFileName();
                 File f = new File(logFilePath);
                 String fn = f.getName();
-                String res = config().util.submitLog(logFilePath);
+                String res = host.getUtil().submitLog(logFilePath);
                 String msg = res;
                 if (res.startsWith(fn)) {
                     msg = m(msg.substring(fn.length() + 1));
@@ -1003,8 +1034,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         final String versionVar = "<!-- *** VERSION ***-->";
         final String remoteMark = "<!--*** REMOTE ***-->";
         String version = Config.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(host.buildDate());
-        String src = I18n.loadString("index.html")
-            .replace(versionVar, version);
+        String src = I18n.loadString("index.html").replace(versionVar, version);
         StringBuilder sb = new StringBuilder();
         int start = 0;
         int end;

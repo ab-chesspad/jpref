@@ -27,26 +27,32 @@ import com.ab.jpref.ui.Host;
 import com.ab.util.Logger;
 import com.ab.util.ScoreCalculator;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestScoreCalculator {
+public class TestScoreCalculator extends BaseTest {
     public static final int NOP = Config.NOP;
-    static final Config config = Config.getInstance();
     static GameManager gameManager;
 
-    @BeforeClass
-    public static void initClass() {
+    @Before
+    public void init() {
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         gameManager = new GameManager();
-        gameManager.init(() -> config);
+        gameManager.init(host);
         config.pauseBetweenRounds.set(0);
     }
 
     @Test
     public void testScoreCalculator() {
         String[] sources = {
+            // w - whist
+            // p - pass
+            // m - miser
+            // h - half whist
+            // f - without 3
             // for each: {bid, tricks} -> results
+            "7f 7 p 0 p 0 -> -80 40 40",
             "p 7 p 2 p 1 -> -37 13 24",
             "6 5 w 3 w 2 -> -28 14 14",   // ?
             "6 5 w 2 w 3 -> -28 12 16",   // ?
@@ -55,7 +61,6 @@ public class TestScoreCalculator {
             "10 10 w 0 w 0 -> 100 0 -100",
             "8 10 w 0 w 0 -> 60 0 -60",
             "6 7 w 2 w 1 -> 14 4 -18",
-            "7f 7 p 0 p 0 -> -80 40 40",
             "7 9 h 1 p 0 -> 23 -9 -14",
             "7 9 w 1 p 0 -> 36 -36 0",
             "7 9 w 1 w 0 -> 36 4 -40",
@@ -104,7 +109,7 @@ public class TestScoreCalculator {
                 }
                 p.setTricks(Integer.parseInt(params[2 * i + 1]));
             }
-            ScoreCalculator.getInstance().calculate(players, declarerGoal);
+            ScoreCalculator.getInstance(config).calculate(players, declarerGoal);
             params = parts[1].split("\\s+");
             for (int i = 0; i < NOP; ++i) {
                 Player p = players[i];

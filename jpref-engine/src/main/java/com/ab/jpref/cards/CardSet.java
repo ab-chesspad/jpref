@@ -26,6 +26,7 @@ package com.ab.jpref.cards;
 
 import com.ab.jpref.cards.Card.Rank;
 import com.ab.jpref.cards.Card.Suit;
+import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Bot;
 import com.ab.util.Pair;
 
@@ -50,7 +51,7 @@ public class CardSet implements Serializable {
     public static final int TOTAL_BITS = _count + 1;
     public static final int MSB = 1 << _count;
     public static final int SUIT_LIST_LENGTH = TOTAL_BITS / 4;
-    public static final int SUIT_LIST_MASK = (1 << (SUIT_LIST_LENGTH)) - 1;
+    public static final int SUIT_MASK = (1 << (SUIT_LIST_LENGTH)) - 1;
 
     public static final int[] suitMasks = {0xff, 0xff00, 0xff0000, 0xff000000};
 
@@ -98,6 +99,10 @@ public class CardSet implements Serializable {
 
     public CardSet(int bitmap) {
         this.bitmap = bitmap;
+    }
+
+    public CardSet(long bitmap) {
+        this.bitmap = (int)bitmap;
     }
 
     public static CardSet getDeck() {
@@ -168,11 +173,11 @@ public class CardSet implements Serializable {
         if (suit == null) {
             return -1;      // all suits
         }
-        return SUIT_LIST_MASK << (suit.getValue() * SUIT_LIST_LENGTH);
+        return SUIT_MASK << (suit.getValue() * SUIT_LIST_LENGTH);
     }
 
     // https://www.geeksforgeeks.org/dsa/find-significant-set-bit-number/
-    public static int lastBit(int bitmap) {
+    public static int msb(int bitmap) {
         if (bitmap == 0) {
             return -1;
         }
@@ -298,11 +303,11 @@ public class CardSet implements Serializable {
     }
 
     public CardSet list(Suit suit) {
-        CardSet cardSet = new CardSet(this);
-        if (suit != null) {
-            cardSet.bitmap = cardSet.bitmap & suitMask(suit);
-        }
-        return cardSet;
+        return new CardSet(listBitMap(this.bitmap, suit));
+    }
+
+    public static int listBitMap(int bitmap, Suit suit) {
+        return bitmap & suitMask(suit);
     }
 
     public void set(CardSet cardSet) {
@@ -329,7 +334,7 @@ public class CardSet implements Serializable {
             index = random.nextInt(size);
             return Card.fromValue(index);
         }
-        return Card.get(lastBit(bitmap));
+        return Card.get(msb(bitmap));
     }
 
     public void add(CardSet cardSet) {
@@ -415,7 +420,7 @@ public class CardSet implements Serializable {
     }
 
     public static Card last(int bitmap) {
-        return Card.get(lastBit(bitmap));
+        return Card.get(msb(bitmap));
     }
 
     public Card last() {
@@ -423,7 +428,7 @@ public class CardSet implements Serializable {
     }
 
     public Card removeLast() {
-        int bit = lastBit(bitmap);
+        int bit = msb(bitmap);
         if (bit == 0) {
             return null;
         }
@@ -473,7 +478,7 @@ public class CardSet implements Serializable {
 
         // clear all bits greater than card
         int bitmap = this.bitmap & (bit - 1);
-        return Card.get(lastBit(bitmap));
+        return Card.get(msb(bitmap));
     }
 
     public boolean isClean4Misere() {
@@ -831,9 +836,9 @@ mainLoop:
                 suit = s;
                 if (color) {
                     if (s.equals(Suit.DIAMOND) || s.equals(Suit.HEART)) {
-                        sb.append(Card.ANSI_RED);
+                        sb.append(Config.ANSI_RED);
                     } else {
-                        sb.append(Card.ANSI_RESET);
+                        sb.append(Config.ANSI_RESET);
                     }
                 }
                 sb.append(sep).append(suit);
@@ -842,7 +847,7 @@ mainLoop:
             sb.append(c.getRank());
         }
         if (color) {
-            sb.append(Card.ANSI_RESET);
+            sb.append(Config.ANSI_RESET);
         }
         return sb.toString();
     }
@@ -882,7 +887,7 @@ mainLoop:
         if (bitmap == 0) {
             return 0;
         }
-        bit = lastBit(bitmap);
+        bit = msb(bitmap);
         return bit;
     }
 
@@ -943,29 +948,33 @@ mainLoop:
 
     // skipping consecutive cards, e.g. for ♠KA ♣7JQA ♦XJQKA ♥7 -> ♠K ♣7JA ♦X ♥7
     public static int bm4buildForward(int thisBitmap, int othersBitmap) {
-        int others = ~othersBitmap;
+        // ♦7XQA  ♠78QA  ♦9K ♥8 -> ♦7XA
+        // 0xA90000, 0x24400A3
         int bitmap = thisBitmap;
-        int bit = bitmap ^ (bitmap & (bitmap - 1));
-        others &= -bit;
-        others &= ((lastBit(bitmap) << 1) - 1);
-        bitmap |= others;
-        int suitListMask = SUIT_LIST_MASK;
-        int mask = 0;
+        int bit = bitmap ^ (bitmap & (bitmap - 1)); // bitmap lsb, 0x10000
+        int others = ~othersBitmap;                 // reverted othersBitmap, 0xFDBBFF5C
+        others &= -bit;                             // remove all bits right from bit, 0xFDBB0000
+        others &= ((msb(bitmap) << 1) - 1);         // remove all bits left from bitmap, 0xBB0000
+        bitmap |= others;                           // add bits missing in othersBitmap, 0xBB0000
+        int suitMask = SUIT_MASK;
+        int res = 0;
         while (bit != 0) {
-            mask |= bit;
-            while ((bit & suitListMask) == 0) {
-                suitListMask <<= SUIT_LIST_LENGTH;
+            res |= bit;                             // 0x10000
+            while ((bit & suitMask) == 0) {
+                suitMask <<= SUIT_LIST_LENGTH;
             }
-            int m0 = (bitmap + bit) & suitListMask;
-            m0 &= (m0 - 1);
-            bitmap = bitmap & ~suitListMask | m0;
-            bit = bitmap ^ (bitmap & (bitmap - 1));
+            // suitMask = 0xFF0000
+            int m0 = (bitmap + bit) & suitMask;     // clear bit and adjucent bits, 0xBC0000
+            m0 &= (m0 - 1);                         // remove lsb set by previous line, 0xB80000
+            bitmap = bitmap & ~suitMask | m0;       // bitmap without bit and adjucent bits, 0xB80000
+            bit = bitmap ^ (bitmap & (bitmap - 1)); // new lsb, 0x80000
+            // clear bits not in thisBitmap:
             while (bit != 0 && (bit & thisBitmap) == 0) {
                 bitmap &= ~bit;
                 bit <<= 1;
             }
         }
-        return mask;
+        return res;
     }
 
     public static int bm4buildForward(int thisBitmap) {
@@ -977,10 +986,10 @@ mainLoop:
         int bitmap = thisBitmap;
         int bit = bitmap ^ (bitmap & (bitmap - 1));
         others &= -bit;
-        others &= ((lastBit(bitmap) << 1) - 1);
+        others &= ((msb(bitmap) << 1) - 1);
         bitmap |= others;
-        int suitListMask = SUIT_LIST_MASK;
-        int mask = 0;
+        int suitListMask = SUIT_MASK;
+        int res = 0;
         while (bit != 0) {
             while ((bit & suitListMask) == 0) {
                 suitListMask <<= SUIT_LIST_LENGTH;
@@ -988,75 +997,65 @@ mainLoop:
             int m0 = (bitmap + bit) & suitListMask;
             int groupMSB;
             if (m0 == 0) {
-                groupMSB = lastBit(suitListMask);
+                groupMSB = msb(suitListMask);
             } else {
                 groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
             }
             while (groupMSB != 0 && (groupMSB & thisBitmap) == 0) {
                 groupMSB >>>= 1;
             }
-            mask |= groupMSB;
+            res |= groupMSB;
             m0 &= (m0 - 1);
             bitmap = bitmap & ~suitListMask | m0;
             bit = bitmap ^ (bitmap & (bitmap - 1));
         }
-        return mask;
+        return res;
     }
 
     public static int bm4build(int thisBitmap, int friendBitmap, int foeBitmap) {
-        int union = thisBitmap | friendBitmap;
+        // ♥7XQ  ♥8A  ♥JK -> ♥7Q
+        // 0x29000000 0x82000000 0x50000000
+        int bitmap = thisBitmap;
+        int bit = bitmap ^ (bitmap & (bitmap - 1)); // bitmap lsb, 0x1000000
+        int others = ~foeBitmap;                    // reverted othersBitmap, 0xAFFFFFFF
+        others &= -bit;                             // remove all bits right from bit, 0xAF000000
+        others &= (msb(bitmap) << 1) - 1;           // remove all bits left from bitmap, 0x2F000000
+        bitmap |= others;                           // add bits missing in othersBitmap, 0x2F000000
+        int suitMask = SUIT_MASK;
         int res = 0;
-        int suitListMask = SUIT_LIST_MASK;
-        int lsb = union ^ (union & (union - 1));
-        union |= ~foeBitmap;
-        union &= -lsb;
-        while (lsb != 0) {
-            while ((lsb & suitListMask) == 0) {
-                suitListMask <<= SUIT_LIST_LENGTH;
+        while (bit != 0) {
+            res |= bit;                             // 0x1000000
+            while ((bit & suitMask) == 0) {
+                bitmap &= ~suitMask;
+                suitMask <<= SUIT_LIST_LENGTH;
             }
-            int u = union & suitListMask;
-            int msb = lastBit(u);
-            int m0 = (u + lsb) & suitListMask;
-            int groupMSB;
-            if (m0 == 0) {
-                groupMSB = msb;
-            } else {
-                groupMSB = (m0 ^ (m0 & (m0 - 1))) >>> 1;
-            }
-            if ((thisBitmap & lsb) != 0) {
-                int friendSuitBitmap = friendBitmap & suitListMask;
-                int b = friendSuitBitmap & -(lsb << 1);
-                int friendLSB = b ^ (b & (b - 1));
-                int friendMSB = lastBit(b);
-                if ((friendLSB & suitListMask) == 0) {
-                    res |= lsb;
-                } else {
-                    b = thisBitmap & -(friendLSB << 1);
-                    int thisLSB = b ^ (b & (b - 1));
-                    if (compare(friendMSB, thisLSB) < 0) {
-                        res |= lsb;
-                        res |= thisLSB;
-                    }
-                    if (thisLSB == 0 || thisLSB == msb || thisLSB == groupMSB) {
-                        res |= lsb;
-                    } else {
-                        res |= thisLSB;
-                    }
+            // suitMask = 0xFF000000
+            int _friendBitmap = friendBitmap & suitMask;        // 0x82000000
+            int friendLsb = _friendBitmap ^ (_friendBitmap & (_friendBitmap - 1)); // 0x2000000
+            if (friendLsb != 0 && ((friendLsb - 1) & bit) != 0) {
+                // bit is smaller, add suit msb (m.b group of 1s?)
+                int msb = msb(thisBitmap & suitMask);
+                if (msb != 0 && ((msb - 1) & friendLsb) != 0) {
+                    res |= msb;
                 }
-            } else {
-                int b = thisBitmap & -(lsb << 1);
-                b &= (groupMSB << 1) - 1;
-                int next = b ^ (b & (b - 1));
-                if (next != 0) {
-                    res |= next;
+                int nextSuitMask = suitMask << SUIT_LIST_LENGTH;
+                if (nextSuitMask == 0) {
+                    break;  // last suit ♥
                 }
+                // go to next suit, m.b. next group??
+                int _bitmap = thisBitmap & ~suitMask & ~(suitMask - 1);
+                bit = _bitmap ^ (_bitmap & (_bitmap - 1)); // new lsb, 0x80000
+                continue;
             }
-            m0 &= (m0 - 1);
-            union = union & ~suitListMask | m0;
-            if ((thisBitmap & union) == 0) {
-                break;
+            int m0 = (bitmap + bit) & suitMask;     // clear bit and adjucent bits, 0xBC0000
+            m0 &= (m0 - 1);                         // remove lsb set by previous line, 0xB80000
+            bitmap = bitmap & ~suitMask | m0;       // bitmap without bit and adjucent bits, 0xB80000
+            bit = bitmap ^ (bitmap & (bitmap - 1)); // new lsb, 0x80000
+            // clear bits not in thisBitmap:
+            while (bit != 0 && (bit & thisBitmap) == 0) {
+                bitmap &= ~bit;
+                bit <<= 1;
             }
-            lsb = union ^ (union & (union - 1));
         }
         return res;
     }

@@ -20,6 +20,7 @@
 package com.ab.jpref.config;
 
 //import com.ab.pref.config.PConfig;
+import com.ab.jpref.engine.BaseTest;
 import com.ab.util.Logger;
 import org.junit.Assert;
 import org.junit.Before;
@@ -30,12 +31,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Ignore
-public class TestI18 {
-    public static Config config;
+public class TestI18 extends BaseTest {
+    I18n i18n;
 
     @Before
-    public void initClass() {
-        config = Config.getInstance();
+    public void init() {
+        i18n = new I18n(host);
     }
 
     @Test
@@ -53,8 +54,8 @@ public class TestI18 {
             "Misère -> мизер",
         };
 
-        config.language.get().setSelected(1);  // russian
-        I18n.refresh();
+// ??       config.language.get().setSelected(1);  // russian
+        i18n.refresh();
         for (String source : sources) {
             Logger.println(source);
             String[] parts = source.split("\\s*->\\s*");

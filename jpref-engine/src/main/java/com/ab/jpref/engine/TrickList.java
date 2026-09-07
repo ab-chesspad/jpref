@@ -22,6 +22,8 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+import static com.ab.jpref.cards.Card.TOTAL_RANKS;
+import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.util.Bidder;
@@ -30,7 +32,6 @@ import com.ab.util.SimpleLongIntMap;
 import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 
-import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
 
@@ -42,6 +43,14 @@ import java.io.Serializable;
 public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
     public static final boolean PRINT_BEST_PATH = true;    // for debug
+
+//static final String testPath = "[♣A8 ♦8, ♥X8";
+static final String testPath = null;
+
+    public static final boolean TRACE = testPath != null;
+
+    // alpha-beta style cutoffs in buildSubList(); toggle to A/B the search
+    public static boolean PRUNE = true;
 
     static TrickList.TrickNode[] probesBestNodes = new TrickList.TrickNode[ROUND_SIZE + 1];
     static TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
@@ -209,7 +218,7 @@ public class TrickList implements Serializable{
         int maxSize = TOTAL_RANKS + 1;
         probesBestNodes[0].trickData = 0;
         CardSet dropCandidates = new CardSet(hand0);
-        Card.Suit trumpSuit = gameManager().getMinBid().getTrump();
+        Suit trumpSuit = gameManager().getMinBid().getTrump();
         if (trumpSuit != null) {
             // don't consider dropping trump cards
             dropCandidates.remove(hand0.list(trumpSuit));
@@ -219,7 +228,7 @@ public class TrickList implements Serializable{
         int bm0 = CardSet.bm4buildForward(bm);
         while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
             Card card0 = Card.get(bit0);
-            Card.Suit suit0 = card0.getSuit();
+            Suit suit0 = card0.getSuit();
             dropCandidates.remove(card0);
             CardSet hand = dropCandidates;
             if (diff == 1) {
@@ -231,7 +240,7 @@ public class TrickList implements Serializable{
             int bm1 = CardSet.bm4buildForward(bm);
             while ((bit1 = CardSet.next(bm1, bit1)) != 0) {
                 Card card1 = Card.get(bit1);
-                Card.Suit suit1 = card1.getSuit();
+                Suit suit1 = card1.getSuit();
                 printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
                 hand0.remove(card0);
                 hand0.remove(card1);
@@ -309,7 +318,10 @@ public class TrickList implements Serializable{
             this.setFutureTricks(futureTricks);
         }
 
-        private int buildSubList(CardList cards) {
+int testNumber = -2;
+String path;
+
+        private int buildSubList(CardList cards, int prevIndex) {
             if (this.hands[0].size() <= 0) {
                 return 0;
             }
@@ -320,50 +332,84 @@ if (cards == null) {
 }
             long trickData = this.trickData;
             int trickNum = this.number;
-            Card.Suit startingSuit = this.startingSuit;
+            Suit startingSuit = this.startingSuit;
             Card topCard = this.topCard;
 
             this.clear();
 
-/* remove Claude-suggested pruning, no speed gain
             // alpha-beta style cutoffs: T = pastTricks + futureTricks is always in [pastTricks, pastTricks + remaining];
             // reaching either bound uniquely fixes (pastTricks, futureTricks), so once bestNodeX hits the bound
             // favored at that level, no sibling can ever replace it.
-            int pastTricks = this.getPastTricks();
-            int remaining = this.hands[0].size();   // tricks left to play, including this one
-            int maxTricks = pastTricks + remaining;
-            long lowExtreme = setFutureTricks(this.trickData, 0);
-            long highExtreme = setFutureTricks(this.trickData, remaining);
-            boolean dir0 = targetBot.compare(lowExtreme, highExtreme, 0) < 0;
-            boolean dir1 = targetBot.compare(lowExtreme, highExtreme, 1) < 0;
-            boolean dir2 = targetBot.compare(lowExtreme, highExtreme, 2) < 0;
-*/
+            int pastTricks = 0;
+            int maxTricks = 0;
+            boolean dir0 = false, dir1 = false, dir2 = false;
+            if (PRUNE) {
+                pastTricks = this.getPastTricks();
+                int remaining = this.hands[0].size();   // tricks left to play, including this one
+                maxTricks = pastTricks + remaining;
+                long lowExtreme = setFutureTricks(this.trickData, 0);
+                long highExtreme = setFutureTricks(this.trickData, remaining);
+                dir0 = targetBot.compare(lowExtreme, highExtreme, 0) < 0;
+                dir1 = targetBot.compare(lowExtreme, highExtreme, 1) < 0;
+                dir2 = targetBot.compare(lowExtreme, highExtreme, 2) < 0;
+            }
             int bestNode0 = 0;
             long bm0 = this.bm4Iteration(cards);
             int bit0 = 0;
             while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
                 Card card0 = Card.get(bit0);
                 this.add(card0);
+                if (TRACE) {
+                    path = path(prevIndex);
+                    if (testNumber < 0 && path.startsWith(testPath)) {
+                        println(path);
+                    }
+                }
                 int bestNode1 = 0;
                 long bm1 = this.bm4Iteration(cards);
                 int bit1 = 0;
                 while ((bit1 = CardSet.next(bm1, bit1)) != 0) {
                     Card card1 = Card.get(bit1);
                     this.add(card1);
+                    if (TRACE) {
+                        path = path(prevIndex);
+                        if (testNumber < 0 && path.startsWith(testPath)) {
+                            println(path);
+                        }
+                    }
                     int bestNode2 = 0;
                     long bm2 = this.bm4Iteration(cards);
                     int bit2 = 0;
                     while ((bit2 = CardSet.next(bm2, bit2)) != 0) {
                         Card card2 = Card.get(bit2);
                         this.add(card2);
-                        int probeIndex = trickPool.alloc(this.getTrickData());
+                        if (TRACE) {
+                            path = path(prevIndex);
+                            if (testNumber < 0 && path.startsWith(testPath)) {
+                                println(path);
+                                testNumber = this.number;
+                            }
+                        }
+                        int probeIndex = trickPool.alloc(this.getTrickData(), prevIndex);
                         long probeData = this.getTrickData();
                         int oldIndex;
                         int nextIndex;
                         if ((oldIndex = this.addPosition(probeIndex)) == 0) {
-                            nextIndex = this.buildSubList(null);
+                            if (TRACE) {
+                                path = path(prevIndex);
+                                if (this.number == testNumber) {
+                                    println(path);
+                                    testNumber = this.number;
+                                }
+                            }
+                            nextIndex = this.buildSubList(null, probeIndex);
                         } else {
                             ++similar;
+                            if (TRACE) {
+                                if (this.number == testNumber) {
+                                    printf("old: %s\n", fullPath(oldIndex));
+                                }
+                            }
                             long oldData = trickPool.get(oldIndex);
                             nextIndex = getNextIndex(oldData);
                         }
@@ -378,19 +424,55 @@ if (cards == null) {
                         }
                         trickPool.set(probeIndex, probeData);
                         if (compare(bestNode2, probeIndex, 2) < 0) {
+                            if (TRACE) {
+                                if (this.number == testNumber) {
+                                    printf("2: %s\n", fullPath(probeIndex, bestNode2));
+                                }
+                            }
                             bestNode2 = probeIndex;
                         }
                         this.removeLast();   // remove 2
+                        if (PRUNE && bestNode2 != 0) {
+                            long bestData2 = trickPool.get(bestNode2);
+                            int total2 = getPastTricks(bestData2) + getFutureTricks(bestData2);
+                            if (dir2 ? total2 >= maxTricks : total2 <= pastTricks) {
+                                break;   // no remaining card2 choice can beat this one
+                            }
+                        }
                     }
                     if (compare(bestNode1, bestNode2, 1) < 0) {
+                        if (TRACE) {
+                            if (this.number == testNumber) {
+                                printf("1: %s\n", fullPath(bestNode2, bestNode1));
+                            }
+                        }
                         bestNode1 = bestNode2;
                     }
                     this.removeLast();   // remove 1
+                    if (PRUNE && bestNode1 != 0) {
+                        long bestData1 = trickPool.get(bestNode1);
+                        int total1 = getPastTricks(bestData1) + getFutureTricks(bestData1);
+                        if (dir1 ? total1 >= maxTricks : total1 <= pastTricks) {
+                            break;   // no remaining card1 choice can beat this one
+                        }
+                    }
                 }
                 if (compare(bestNode0, bestNode1, 0) < 0) {
+                    if (TRACE) {
+                        if (this.number == testNumber) {
+                            printf("0: %s\n", fullPath(bestNode1, bestNode0));
+                        }
+                    }
                     bestNode0 = bestNode1;
                 }
                 this.removeLast();   // remove 0
+                if (PRUNE && bestNode0 != 0) {
+                    long bestData0 = trickPool.get(bestNode0);
+                    int total0 = getPastTricks(bestData0) + getFutureTricks(bestData0);
+                    if (dir0 ? total0 >= maxTricks : total0 <= pastTricks) {
+                        break;   // no remaining card0 choice can beat this one
+                    }
+                }
             }
             // restore this:
             this.setTrickData(trickData);
@@ -419,7 +501,7 @@ if (cards == null) {
             printf("analyzing: %s\n", CardSet.toString(hands));
 
             start = System.currentTimeMillis();
-            int nextIndex = buildSubList(trick.cards2List());
+            int nextIndex = buildSubList(trick.cards2List(), 0);
             long nextTrickData = trickPool.get(nextIndex);
             int pastTricks = getPastTricks(nextTrickData);
             this.setPastTricks(pastTricks);
@@ -468,6 +550,68 @@ if (cards == null) {
             }
             positions.clear();
             nodeIndex = 0;
+        }
+
+        // debugging, return path to this
+        String prePath(int prevIndex) {
+            StringBuilder sb = new StringBuilder();
+            String sep = "";
+            while (prevIndex != 0) {
+                long trickData = trickPool.get(prevIndex);
+                sb.insert(0, sep).insert(0, BaseTrick.toString(trickData));
+                sep = ", ";
+                prevIndex = trickPool.getPrev(prevIndex);
+            }
+            if (sb.length() == 0) {
+                return "";
+            }
+            return new String(sb);
+        }
+
+        // debugging, return path to this including this
+        String path(int prevIndex) {
+            StringBuilder sb = new StringBuilder(prePath(prevIndex));
+            String sep = ", ";
+            if (sb.length() == 0) {
+                sep = "";
+            }
+            String self = this.toString();
+            if (!self.isEmpty()) {
+                sb.append(sep).append(self);
+            }
+            if (sb.length() == 0) {
+                return "";
+            }
+            return "[" + new String(sb) + "]";
+        }
+
+        // debugging, return full path to this and append with path from it
+        String fullPath(int... indexes) {
+            int index = indexes[0];
+            String path = prePath(index);
+            StringBuilder sb = new StringBuilder("(" + index + ") [" + path);
+            String sep = ", ";
+            if (path.isEmpty()) {
+                sep = "";
+            }
+            long trickData = trickPool.get(index);
+            long _trickData = trickData;
+            while ((index = BaseTrick.getNextIndex(_trickData)) != 0) {
+                _trickData = trickPool.get(index);
+                sb.append(sep).append(BaseTrick.toString(_trickData));
+                sep = ", ";
+            }
+            sb.append("] cur: ").append(BaseTrick.toString(trickData))
+                .append(" ").append(BaseTrick.getPastTricks(trickData))
+                .append("+").append(BaseTrick.getFutureTricks(trickData));
+
+            if (indexes.length > 1 && (index = indexes[1]) != 0) {
+                trickData = trickPool.get(index);
+                sb.append(" vs. ").append(BaseTrick.toString(trickData))
+                    .append(" ").append(BaseTrick.getPastTricks(trickData))
+                    .append("+").append(BaseTrick.getFutureTricks(trickData));
+            }
+            return new String(sb);
         }
 
         void init(TrickNode that) {
@@ -534,7 +678,7 @@ if (cards == null) {
                 int top = -1;
                 for (int i = 0; i < size(); ++i) {
                     Card card = getCard(i);
-                    Card.Suit suit = card.getSuit();
+                    Suit suit = card.getSuit();
                     turn = ++turn % NOP;
                     if (startingSuit == null) {
                         startingSuit = suit;
@@ -581,11 +725,15 @@ if (cards == null) {
     }
 
     public interface TrickPool {
-        int DEFAULT_CAPACITY = 7000000;
+        // starting size, sized by page (see trickpool.TrickPool); grows on demand for decks
+        // that need more. With alpha-beta pruning (see PRUNE) the worst observed no-trump,
+        // defender-leads-trick-1 case needs ~4,924,000; this leaves headroom without pruning too.
+        int DEFAULT_CAPACITY = 6000000;
         void clear();
-        int alloc(long trickData);
+        int alloc(long trickData, int prevIndex);
         void set(int index, long trickData);
         long get(int index);
+        int getPrev(int index);
         int size();
         int capacity();
     }

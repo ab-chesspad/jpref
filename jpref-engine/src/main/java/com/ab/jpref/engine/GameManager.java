@@ -108,7 +108,7 @@ public class GameManager implements Serializable {
         instance = this;
         this.host = host;
         this.eventObserver = config().eventObserver;
-        util = config().util;
+        util = host.getUtil();
         if (players[0] == null) {
             if (eventObserver == null) {
                 GameManager.BOTS[0] = true;
@@ -426,7 +426,7 @@ public class GameManager implements Serializable {
             } else if (declarer.getBid().equals(Bid.BID_WITHOUT_THREE)) {
                 param = minBid.goal();
             }
-            ScoreCalculator.getInstance().calculate(players, param);
+            ScoreCalculator.getInstance(config()).calculate(players, param);
             ++lineCount;
         }
         if (eventObserver == null) {
@@ -454,15 +454,20 @@ public class GameManager implements Serializable {
         }
         update(RoundStage.bidding);
         boolean misereDeclared = false;
+        boolean adjustMinBid = true;    // to allow 'здесь'
         for (Player p : players) {
-            if (Bid.BID_MISERE.equals(p.getBid())) {
+            Bid bid = p.getBid();
+            if (Bid.BID_MISERE.equals(bid)) {
                 misereDeclared = true;
-                break;
+            }
+            if (!Bid.BID_UNDEFINED.equals(bid)) {
+                adjustMinBid = false;
             }
         }
 
+        nextBidder = (nextBidder + 2) % NOP;
+loop:
         while (declarer == null && passCount < NOP || passCount < NOP - 1) {
-            nextBidder = (nextBidder + 2) % NOP;
             for (int i = 0; i < players.length; ++i) {
                 nextBidder = (nextBidder + 1) % NOP;
                 Player bidder = players[nextBidder];
@@ -473,11 +478,15 @@ public class GameManager implements Serializable {
                     continue;
                 }
                 Bid savedBid = minBid;
-                if (passCount == 1 && nextBidder == elderHand &&
+                if (adjustMinBid && passCount == 1 && nextBidder == elderHand &&
                         !(misereDeclared && Bid.BID_9S.equals(minBid))) {
                     // allow 'здесь'
                     minBid = minBid.prev();
+                    if (savedBid.equals(Bid.BID_9S)) {
+                        minBid = minBid.prev();
+                    }
                 }
+                adjustMinBid = true;
                 if (bidder instanceof HumanPlayer) {
                     update(null);
                 }
@@ -492,7 +501,13 @@ public class GameManager implements Serializable {
                         ++passCount;
                     }
                     declarer = bidder;
+                    if (bid.equals(Bid.BID_XN)) {
+                        break loop;
+                    }
                     minBid = bid.next();
+                    if (bid.equals(Bid.BID_8N)) {
+                        minBid = minBid.next();     // skip Misere
+                    }
                 } else {
                     minBid = savedBid;
                     bidder.setBid(Bid.BID_PASS);

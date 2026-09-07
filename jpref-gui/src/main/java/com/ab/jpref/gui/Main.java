@@ -20,6 +20,7 @@
 package com.ab.jpref.gui;
 
 import com.ab.jpref.config.Config;
+import com.ab.jpref.config.I18n;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.HumanPlayer;
 import com.ab.jpref.engine.Player;
@@ -33,6 +34,7 @@ import com.ab.jpref.trickpool.TrickPool;
 import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
+import com.ab.util.Util;
 
 import static com.ab.util.Util.currMethodName;
 
@@ -53,12 +55,7 @@ public class Main implements Logger.LogHolder, Host {
     static final boolean release = true;
     static boolean DEBUG_LOG = false;
     public static boolean SHOW_ALL = true;
-    public static final String LOG_EXT = ".log";
-    public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
-    public static final double MAGIC_ASPECT_RATIO = 722d / 505d;
-    static {
-         PConfig.getInstance().release.set(release);
-    }
+    public static final double MAGIC_ASPECT_RATIO = 1109d / 1297d;
     static {
         GameManager.RELEASE = release;
         if (release) {
@@ -71,21 +68,24 @@ public class Main implements Logger.LogHolder, Host {
         }
     }
 
-    public static JFrame mainFrame;
+    private PConfig config;
+    private final PUtil pUtil;
+    private final Metrics metrics;
 
-    private final Config config;
+    private Logger logger;
+    private String logFileName;
+    private PrintStream logStream;
+    private long logStartDate;
+    private final TableLayout<Graphics> tableLayout;
+
+    private InputStream testInputStream;
+
+    public static JFrame mainFrame;
     private final Container mainContainer;
 
     private Rectangle mainRectangle = new Rectangle();
     private Insets insets;
 
-    private String logFileName;
-    private PrintStream logStream;
-    private long logStartDate;
-
-    private InputStream testInputStream;
-    private final TableLayout<Graphics> tableLayout;
-    private final Metrics metrics;
     private final GameManager gameManager;
 
     /**
@@ -101,12 +101,16 @@ public class Main implements Logger.LogHolder, Host {
     }
 
     public Main(String[] args) {
-        PUtil pUtil = PUtil.getInstance();
-        config = PConfig.getInstance();
-        config.util = pUtil;
-        metrics = Metrics.getInstance();
-
         Logger.setHolder(this);
+        pUtil = new PUtil(this);
+        config = (PConfig)Config.unserialize(this);
+        if (config == null) {
+            config = new PConfig(this);
+        }
+        config.release.set(release);
+        metrics = new Metrics(this);
+        new I18n(this);
+
         String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
         Logger.printf("%s %s, options 0x%x\n", PConfig.PROJECT_NAME, version, specialOption());
         Logger.println(String.format("running on %s, %d cores\n", PConfig.getOS(),
@@ -225,9 +229,10 @@ public class Main implements Logger.LogHolder, Host {
             return;
         }
         saved = true;
-        ((PUtil)config.util).serialize();
-        ((PConfig)config).serialize();
+        pUtil.serialize();
+        config.serialize();
         closeLog();
+        logCleanup();
     }
 
     private GraphicsDevice getGraphicsDevice() {
@@ -292,41 +297,18 @@ public class Main implements Logger.LogHolder, Host {
         return logStream;
     }
 
+    @Override
+    public Logger logger() {
+        if (logger == null) {
+            logger = new Logger();
+        }
+        return logger;
+    }
+
     private PrintStream getNewOutput(String date) throws IOException {
-        String dataDir = PUtil.getDataDirectory();
+        String dataDir = this.getDataDirectory();
         File logDir = new File(dataDir, "logs");
         logDir.mkdir();
-        int deleteTimeout = config.deleteLogsAfter.get();
-        Calendar c = new GregorianCalendar();
-        c.add(Calendar.HOUR, -24 * deleteTimeout);
-        long threshold = c.getTimeInMillis();
-        final int[] lastNum = {0};
-        logDir.list((file, itemName) -> {
-            String name = itemName;
-            if (name.endsWith(LOG_EXT)) {
-                name = name.substring(0, name.length() - LOG_EXT.length());
-                File f = new File(file, itemName);
-                long fileTS = f.lastModified();
-                long diff = fileTS - threshold;
-                if (diff < 0) {
-                    f.delete();
-                }
-            }
-            if (!name.startsWith(date)) {
-                return false;
-            }
-            name = name.substring(date.length());
-            int num;
-            try {
-                num = Integer.parseInt(name);
-            } catch (NumberFormatException e) {
-                return false;
-            }
-            if (lastNum[0] < num) {
-                lastNum[0] = num;
-            }
-            return false;
-        });
         logFileName = logDir + File.separator + String.format("%s%s", date, LOG_EXT);
         FileOutputStream f = new FileOutputStream(logFileName, true);
         System.out.println("output to " + logFileName);
@@ -338,6 +320,48 @@ public class Main implements Logger.LogHolder, Host {
             logStream.close();
             logStream = null;
         }
+    }
+
+    private void logCleanup() {
+        String dataDir = this.getDataDirectory();
+        File logDir = new File(dataDir, "logs");
+        int deleteTimeout = config.deleteLogsAfter.get();
+        Calendar c = new GregorianCalendar();
+        c.add(Calendar.HOUR, -24 * deleteTimeout);
+        long threshold = c.getTimeInMillis();
+        logDir.list((file, itemName) -> {
+            if (itemName.endsWith(LOG_EXT)) {
+                File f = new File(file, itemName);
+                long fileTS = f.lastModified();
+                long diff = fileTS - threshold;
+                if (diff < 0) {
+                    f.delete();
+                }
+            }
+            return false;
+        });
+    }
+
+    @Override
+    public String getDataDirectory() {
+        Config.OS os = Config.getOS();
+        File file;
+        if (os == Config.OS.windows) {
+            String userHome = System.getProperty("user.home");
+            file = new File(userHome, Config.PROJECT_NAME);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+        } else {
+            try {
+                file = new File(GameManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                file = new File(file.getParent());
+                file.mkdirs();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return file.getAbsolutePath();
     }
 
     @Override
@@ -354,6 +378,16 @@ public class Main implements Logger.LogHolder, Host {
     @Override
     public Config config() {
         return config;
+    }
+
+    @Override
+    public void setConfig(Config config) {
+        this.config = (PConfig)config;
+    }
+
+    @Override
+    public Util getUtil() {
+        return pUtil;
     }
 
     @Override

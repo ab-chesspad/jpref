@@ -22,6 +22,8 @@
 
 package com.ab.jpref.cards;
 
+import com.ab.jpref.config.Config;
+
 import java.util.*;
 
 public class CardList extends ArrayList<Card> {
@@ -130,9 +132,9 @@ public class CardList extends ArrayList<Card> {
                 suit = s;
                 if (color) {
                     if (s.equals(Card.Suit.DIAMOND) || s.equals(Card.Suit.HEART)) {
-                        sb.append(Card.ANSI_RED);
+                        sb.append(Config.ANSI_RED);
                     } else {
-                        sb.append(Card.ANSI_RESET);
+                        sb.append(Config.ANSI_RESET);
                     }
                 }
                 sb.append(sep).append(suit);
@@ -141,7 +143,7 @@ public class CardList extends ArrayList<Card> {
             sb.append(c.getRank());
         }
         if (color) {
-            sb.append(Card.ANSI_RESET);
+            sb.append(Config.ANSI_RESET);
         }
         return sb.toString();
     }

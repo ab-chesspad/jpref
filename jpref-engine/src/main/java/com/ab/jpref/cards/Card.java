@@ -31,25 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Card implements Comparable<Card>, Config.Queueable, Serializable {
-    public static boolean COLORED_LOG = true;
-
-    static String ansi_head = "\u001B";
-    static String ansi_tail = "m";
-    static String ansi_red = ansi_head + "[31" + ansi_tail;
-    static String ansi_reset = ansi_head + "[0" + ansi_tail;
-    static {
-        if (!COLORED_LOG) {
-            ansi_head = ansi_tail = ansi_red = ansi_reset = "";
-        }
-    }
-
-    public static final String ANSI_HEAD = ansi_head;
-    public static final String ANSI_TAIL = ansi_tail;
-    public static final String ANSI_RED = ansi_red;
-    public static final String ANSI_RESET = ansi_reset;
-
-//    public static String ANSI_RED = "\u001B[31m";
-//    public static String ANSI_RESET = "\u001B[0m";
 
     public static final int TOTAL_SUITS = Suit.values().length;
     public static final int TOTAL_RANKS = Rank.values().length - 1;
@@ -89,7 +70,7 @@ public class Card implements Comparable<Card>, Config.Queueable, Serializable {
         public String toColorString() {
 /*  IntelliJ debugger does not handle ansi colors, so I make a special method for logging output */
             if (this.equals(DIAMOND) || this.equals(HEART)) {
-                return ANSI_RED + code + ANSI_RESET;
+                return Config.ANSI_RED + code + Config.ANSI_RESET;
             }
             return String.valueOf(code);
         }
@@ -299,7 +280,7 @@ public class Card implements Comparable<Card>, Config.Queueable, Serializable {
         Suit suit = this.getSuit();
         String s;
         if (suit.equals(Suit.DIAMOND) || suit.equals(Suit.HEART)) {
-            s = Card.ANSI_RED + suit + rank + Card.ANSI_RESET;
+            s = Config.ANSI_RED + suit + rank + Config.ANSI_RESET;
         } else {
             s = "" + suit + rank;
         }

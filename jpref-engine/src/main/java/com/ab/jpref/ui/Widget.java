@@ -24,6 +24,7 @@ import static com.ab.jpref.ui.TableLayout.ButtonCommand;
 public class Widget {
     public static final int BLACK_COLOR = 0;
     public static final int RED_COLOR = 1;
+
     static int count = -1;      // for debugging
 
     private final ButtonCommand command;
@@ -36,6 +37,8 @@ public class Widget {
     protected volatile int x, y;
     protected volatile int width, height;
     Object userObject;  // Swing - Image, Android - Bitmap
+    int zOrder;
+    boolean textFace;
 
     protected Widget() {
         number = ++count;
@@ -44,12 +47,14 @@ public class Widget {
     }
 
     // button;
-    public Widget(ButtonCommand command, ButtonListener buttonListener) {
+    public Widget(ButtonCommand command, ButtonListener buttonListener, int zOrder, boolean textFace) {
         this.command = command;
-        this.buttonListener = buttonListener;
         if (command != null) {
             text = command.getName();
         }
+        this.buttonListener = buttonListener;
+        this.zOrder = zOrder;
+        this.textFace = textFace;
         number = ++count;
     }
 
@@ -61,6 +66,7 @@ public class Widget {
         this.buttonListener = null;
         this.enabled = false;
         this.visible = true;
+        this.zOrder = 0;
     }
 
     public ButtonCommand getCommand() {
@@ -69,6 +75,14 @@ public class Widget {
 
     public int getNumber() {
         return number;
+    }
+
+    public int getZOrder() {
+        return zOrder;
+    }
+
+    public boolean getTextFace() {
+        return textFace;
     }
 
     public String getText() {

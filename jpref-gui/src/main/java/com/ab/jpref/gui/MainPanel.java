@@ -21,6 +21,7 @@ package com.ab.jpref.gui;
 
 import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import static com.ab.jpref.cards.Card.TOTAL_SUITS;
+import static com.ab.jpref.ui.TableLayout.ButtonCommand.showScores;
 import static com.ab.jpref.ui.TableLayout.getInstance;
 
 import com.ab.jpref.cards.Card;
@@ -54,8 +55,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
     private final Color LBL_BG_COLOR = Color.yellow;
     private final Color LBL_SELECTED_BG_COLOR = Color.green;
 
-    private final PUtil pUtil = PUtil.getInstance();
-    final Metrics metrics = Metrics.getInstance();
+    private final PUtil pUtil;
+    final Metrics metrics;
 
     final Host host;
     final BufferedImage[] suitImages = new BufferedImage[TOTAL_SUITS];
@@ -64,7 +65,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
     final Image[][] cardImages = new Image[TOTAL_SUITS][TOTAL_RANKS];
     BufferedImage backImage;
 
-    final BufferedImage sourceElderHandImage = pUtil.loadImage("buttons/hand.png");
+    final BufferedImage sourceElderHandImage;
     BufferedImage elderHandImage;
 
     int panelWidth = -1, panelHeight = -1;
@@ -78,6 +79,9 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
 
     public MainPanel(Host host) {
         this.host = host;
+        pUtil = (PUtil)host.getUtil();
+        metrics = host.getMetrics();
+        sourceElderHandImage = pUtil.loadImage("buttons/hand.png");
         this.setLayout(null);
         this.setOpaque(false);
         loadImages();
@@ -157,15 +161,19 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
     public void add(Widget widget) {
         JComponent view;
         String text = widget.getText();
+        int zOrder;
         if (widget.getCommand() == null) {
             JLabel lbl = new JLabel();
             lbl.setOpaque(true);
-//            lbl.setBackground(Color.yellow);
-            lbl.setForeground(Color.red);
             lbl.setHorizontalAlignment(JLabel.CENTER);
-            lbl.setText(text);
             view = lbl;
+            zOrder = 1;
         } else {
+            if (widget.getCommand().equals(showScores)) {
+                zOrder = 0;
+            } else {
+                zOrder = 1;
+            }
             JButton b = new JButton();
             Image image = pUtil.loadImage(String.format("buttons/%s.png", widget.getCommand().toString()));
             if (image != null) {
@@ -176,7 +184,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
             b.addActionListener(actionEvent -> widget.onClick());
             view = b;
         }
-        this.add(view, 0);
+        this.add(view, zOrder);
         widgets.add(new Pair<>(widget, view));
     }
 
@@ -185,8 +193,15 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
         if (host == null) {
             return;
         }
-        int fontSize = (int)(metrics.cardW * .3);
-        Font font = new Font("Serif", Font.PLAIN, fontSize);
+        if (!SwingUtilities.isEventDispatchThread()) {
+            // TableLayout.update() (the caller) runs on the game-logic thread as well
+            // as on the EDT (mouse/resize events); mutating Swing components from off
+            // the EDT here is a real Swing-threading violation and the likely cause of
+            // intermittent freezes - marshal onto the EDT instead.
+            SwingUtilities.invokeLater(this::update);
+            return;
+        }
+        // todo: zOrder
         for (Pair<Widget, JComponent> pair : widgets) {
             Widget widget = pair.first;
             JComponent jComponent = pair.second;
@@ -195,6 +210,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
                 continue;
             }
             jComponent.setVisible(true);
+            int fontSize = (int)(metrics.cardW * .3);
+            Font font = new Font("Serif", Font.PLAIN, fontSize);
             jComponent.setFont(font);
             if (widget.getColor() == Widget.RED_COLOR) {
                 jComponent.setForeground(Color.red);
@@ -217,10 +234,12 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
                 if (image != null) {
                     image = image.getScaledInstance(widget.getWidth(), widget.getHeight(), Image.SCALE_DEFAULT);
                     ((JButton)jComponent).setIcon(new ImageIcon(image));
+                }
+                if (image == null || widget.getTextFace()) {
                     Font _font = new Font("Serif", Font.PLAIN, fontSize);
                     jComponent.setFont(_font);
+                    ((JButton) jComponent).setText(text);
                 }
-                ((JButton)jComponent).setText(text);
             }
         }
         host.repaintAll();
@@ -281,9 +300,19 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
 
     @Override
     public void showLastTrick(CardList cards) {
-        JDialog dialog = new JDialog(Main.mainFrame, null, true);
+        // non-modal: a modal dialog blocks input to the owner frame entirely, so a
+        // click outside the dialog would never even reach it to dismiss anything
+        JDialog dialog = new JDialog(Main.mainFrame, null, false);
         dialog.setUndecorated(true);
         dialog.setLayout(new BorderLayout());
+        dialog.addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowLostFocus(WindowEvent e) {
+                // clicking the main frame (or anywhere else) shifts focus away
+                // from this undecorated dialog - treat that as "dismiss"
+                dialog.dispose();
+            }
+        });
 
         int pw = (int)(metrics.cardW * 2);
         int ph = (int)(metrics.cardH * 2);
@@ -296,11 +325,13 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
         };
         trickPanel.setBackground(Color.green);
         trickPanel.setPreferredSize(new Dimension(pw, ph));
+        trickPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dialog.dispose();
+            }
+        });
         dialog.add(trickPanel, BorderLayout.CENTER);
-
-        JButton okButton = new JButton(m("Continue"));
-        okButton.addActionListener(e -> dialog.dispose());
-        dialog.add(okButton, BorderLayout.SOUTH);
         dialog.pack();
         dialog.setLocationRelativeTo(Main.mainFrame);
         dialog.setVisible(true);
@@ -308,13 +339,29 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
 
     @Override
     public GameManager.RestartCommand showScores(boolean showButtons) {
-        StatusPopup statusPopup = new StatusPopup(showButtons);
-        return statusPopup.result;
+        if (SwingUtilities.isEventDispatchThread()) {
+            return new StatusPopup(host, showButtons).result;
+        }
+        // playRound() (the caller) runs on the game-logic thread and needs the
+        // user's choice before it can continue, so the modal dialog must be built
+        // and shown on the EDT via invokeAndWait rather than off-EDT - constructing
+        // a modal JDialog off the EDT is a Swing-threading violation that can freeze
+        // the UI (this thread's ad-hoc event pump racing the real EDT).
+        GameManager.RestartCommand[] result = new GameManager.RestartCommand[1];
+        try {
+            SwingUtilities.invokeAndWait(() -> result[0] = new StatusPopup(host, showButtons).result);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
+        }
+        return result[0];
     }
 
     @Override
     public int showOffer(int minTricks, int maxTricks) {
-        OfferPopup offerPopup = new OfferPopup(minTricks, maxTricks);
+        OfferPopup offerPopup = new OfferPopup(host, minTricks, maxTricks);
         return offerPopup.result;
     }
 
@@ -326,7 +373,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
         }
 
         recalculateSizes();
-        g.setColor(PConfig.getInstance().bgColor.getColor());
+        g.setColor(((PConfig)host.config()).bgColor.getColor());
         g.fillRect(0, 0, metrics.panelWidth, metrics.panelHeight);
 
         tableLayout().paint(g);

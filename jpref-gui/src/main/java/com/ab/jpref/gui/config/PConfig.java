@@ -20,6 +20,7 @@
 package com.ab.jpref.gui.config;
 
 import com.ab.jpref.config.Config;
+import com.ab.jpref.ui.Host;
 import com.ab.util.Couple;
 import com.ab.jpref.gui.PUtil;
 
@@ -40,18 +41,8 @@ public class PConfig extends Config {
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");
 
-    public static PConfig getInstance() {
-        if (instance == null) {
-            instance = PConfig.unserialize();
-        }
-        if (instance == null) {
-            instance = new PConfig();
-        }
-        return (PConfig)instance;
-    }
-
-    protected PConfig() {
-        super();
+    public PConfig(Host host) {
+        super(host);
         Locale locale = Locale.getDefault();
         String lang = locale.getLanguage();
         int defaultLang = 0;
@@ -65,31 +56,19 @@ public class PConfig extends Config {
         this.language.get().setSelected(defaultLang);
     }
 
-    public static PConfig unserialize() {
-        return (PConfig)unserialize(PUtil.getDataDirectory());
-    }
-
-    public void serialize() {
-        serialize(PUtil.getDataDirectory());
-    }
-
-    public static void refresh() {
-        PConfig _instance = (PConfig)instance;
-        instance = PConfig.unserialize();
-        if (instance == null) {
-            instance = new PConfig();
-        }
-        if (_instance != null) {
-            // restore
-            instance.mainSize.first = _instance.mainSize.first;
-            instance.mainSize.second = _instance.mainSize.second;
-            instance.mainPosition.setX(_instance.mainPosition.getX());
-            instance.mainPosition.setY(_instance.mainPosition.getY());
-            instance.mainSize.second = _instance.mainSize.second;
-            ((PConfig)instance).scoresPopupRectangle.set(_instance.scoresPopupRectangle.get());
-            ((PConfig)instance).settingsPopupRectangle.set(_instance.settingsPopupRectangle.get());
-            ((PConfig)instance).helpPopupRectangle.set(_instance.helpPopupRectangle.get());
-        }
+    public PConfig refresh() {
+        PConfig instance = (PConfig)unserialize(host);
+        // restore
+        instance.mainSize.first = this.mainSize.first;
+        instance.mainSize.second = this.mainSize.second;
+        instance.mainPosition.setX(this.mainPosition.getX());
+        instance.mainPosition.setY(this.mainPosition.getY());
+        instance.mainSize.second = this.mainSize.second;
+        instance.scoresPopupRectangle.set(this.scoresPopupRectangle.get());
+        instance.settingsPopupRectangle.set(this.settingsPopupRectangle.get());
+        instance.helpPopupRectangle.set(this.helpPopupRectangle.get());
+        host.setConfig(instance);
+        return instance;
     }
 
     public static class ColorProperty extends Property<String> {

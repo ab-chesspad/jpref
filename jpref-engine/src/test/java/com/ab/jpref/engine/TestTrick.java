@@ -31,20 +31,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestTrick {
-    static final Config config = Config.getInstance();
-    static Util util;
+public class TestTrick extends BaseTest {
     static GameManager gameManager;
     static TrickList trickList;
 
     @Before
-    public void initClass() {
+    public void init() {
         trickList = new TrickList();
         trickList.init(new TrickPool());
-        util = new Util();
-        config.util = util;
         gameManager = new GameManager();
-        gameManager.init(() -> config);
+        gameManager.init(host);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga
         config.pauseBetweenRounds.set(0);
     }
