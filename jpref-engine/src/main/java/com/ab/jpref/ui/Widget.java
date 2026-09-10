@@ -19,6 +19,8 @@
  */
 package com.ab.jpref.ui;
 
+import com.ab.util.Point;
+
 import static com.ab.jpref.ui.TableLayout.ButtonCommand;
 
 public class Widget {
@@ -185,6 +187,20 @@ public class Widget {
         this.y = y;
         this.width = width;
         this.height = height;
+    }
+
+    public void setPBounds(int xTop, int yTop, int xBottom, int yBottom) {
+        this.x = xTop;
+        this.y = yTop;
+        this.width = xBottom - x;
+        this.height = yBottom - y;
+    }
+
+    public void setPBounds(Point top, Point bottom) {
+        this.x = top.getX();
+        this.y = top.getY();
+        this.width = bottom.getX() - x;
+        this.height = bottom.getY() - y;
     }
 
     public ButtonListener getButtonListener() {

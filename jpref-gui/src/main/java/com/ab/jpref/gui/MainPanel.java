@@ -42,6 +42,7 @@ import com.ab.jpref.ui.Host;
 
 import javax.swing.*;
 import javax.swing.text.html.HTMLEditorKit;
+import java.awt.Graphics;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -49,7 +50,7 @@ import java.awt.image.RasterFormatException;
 import java.util.List;
 import java.util.ArrayList;
 
-public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics> {
+public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     public static final boolean DEBUG_LOG = false;
 
     private final Color LBL_BG_COLOR = Color.yellow;
@@ -72,10 +73,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
 
     final List<Pair<Widget, JComponent>> widgets = new ArrayList<>();
 
-    @SuppressWarnings("unchecked")
-    private TableLayout<Graphics> tableLayout() {
-        return (TableLayout<Graphics>)TableLayout.getInstance();
-    }
+    private TableLayout tableLayout() {
+        return TableLayout.getInstance();    }
 
     public MainPanel(Host host) {
         this.host = host;
@@ -384,14 +383,14 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI<Graphics>
     }
 
     @Override
-    public void paint(Graphics g, Card card, int x, int y) {
+    public <T> void paint(T g, Card card, int x, int y) {
         Logger.printf(DEBUG_LOG, "paint %s, %d, %d\n", card, x, y);
         Image image = getCardImage(card);
-        g.drawImage(image, x, y, this);
+        ((Graphics)g).drawImage(image, x, y, this);
     }
 
     @Override
-    public void paintBack(Graphics g, int x, int y) {
-        g.drawImage(backImage, x, y, this);
+    public <T> void paintBack(T g, int x, int y) {
+        ((Graphics)g).drawImage(backImage, x, y, this);
     }
 }

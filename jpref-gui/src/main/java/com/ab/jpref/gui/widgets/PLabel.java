@@ -33,10 +33,19 @@ public class PLabel extends JLabel {
     }
 
     // edge points, not width and height!
-    public void setPBounds(int x0, int y0, int x1, int y1) {
+    public void setPBounds(int _x0, int _y0, int _x1, int _y1) {
+        int x0 = Math.min(_x0, _x1);
+        int x1 = Math.max(_x0, _x1);
+        int y0 = Math.min(_y0, _y1);
+        int y1 = Math.max(_y0, _y1);
         int w = x1 - x0;
         int h = y1 - y0;
         super.setBounds(x0, y0, w, h);
+    }
+
+    public void setFontSize(int size) {
+        Font f = this.getFont();
+        this.setFont(new Font(f.getName(), f.getStyle(), size));
     }
 
     @Override

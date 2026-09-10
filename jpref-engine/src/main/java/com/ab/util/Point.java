@@ -4,6 +4,11 @@
 package com.ab.util;
 
 public class Point extends Pair<Integer, Integer> {
+
+    public Point() {
+        super(0, 0);
+    }
+
     /**
      * Constructor for a Point.
      *
@@ -28,5 +33,10 @@ public class Point extends Pair<Integer, Integer> {
 
     public void setY(int value) {
         second = value;
+    }
+
+    public void set(int first, int second) {
+        this.first = first;
+        this.second = second;
     }
 }

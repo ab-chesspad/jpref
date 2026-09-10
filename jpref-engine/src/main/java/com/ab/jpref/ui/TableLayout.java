@@ -52,7 +52,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TableLayout<T> implements GameManager.EventObserver {
+public class TableLayout implements GameManager.EventObserver {
     public static final boolean DEBUG_LOG = false;
 
     public enum ButtonCommand {
@@ -115,7 +115,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
     final Point draggingStart = new Point(-1, -1);
     final Point dragging = new Point(-1, -1);
 
-    final GUI<T> gui;
+    final GUI gui;
     final Host host;
     final Metrics metrics;
 
@@ -139,12 +139,12 @@ public class TableLayout<T> implements GameManager.EventObserver {
         return host.config();
     }
 
-    private static TableLayout<?> instance;
-    public static TableLayout<?> getInstance() {
+    private static TableLayout instance;
+    public static TableLayout getInstance() {
         return instance;
     }
 
-    public TableLayout(Host host, GUI<T> gui) {
+    public TableLayout(Host host, GUI gui) {
         this.host = host;
         this.gui = gui;
         instance = this;
@@ -531,7 +531,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         }
     }
 
-    public void paint(T graphics) {
+    public <T> void paint(T graphics) {
         synchronized (metrics) {
             GameManager gameManager = GameManager.getInstance();
             if (metrics.panelWidth == 0 || gameManager == null) {
@@ -549,12 +549,13 @@ public class TableLayout<T> implements GameManager.EventObserver {
                 paintHand(graphics, gameManager.getPlayers()[(index + i) % NOP]);
             }
             paintTalon(graphics);
-            paintTrick(graphics, gameManager.getTrick().cards2List(),
-                metrics.panelX + metrics.panelWidth / 2, metrics.panelY + metrics.panelHeight / 2);
+            int centerX = metrics.panelX + metrics.panelWidth / 2;
+            int centerY = (labels[0].y - labels[1].y - labels[1].height) / 2;
+            paintTrick(graphics, gameManager.getTrick().cards2List(), centerX, centerY);
         }
     }
 
-    private void paintTalon(T graphics) {
+    private <T> void paintTalon(T graphics) {
         GameManager gameManager = GameManager.getInstance();
         CardList talonCards = gameManager.getTalonCards();
         if (talonCards.isEmpty()) {
@@ -587,7 +588,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
         }
     }
 
-    private void paintHand(T graphics, Player player) {
+    private <T> void paintHand(T graphics, Player player) {
         int actualW, actualH;
         double cardW, cardH, dx, dy, dxSuit, dySuit;
         int x, y;
@@ -717,7 +718,7 @@ public class TableLayout<T> implements GameManager.EventObserver {
 
     }
 
-    public void paintTrick(T graphics, CardList trickCards, int centerX, int centerY) {
+    public <T> void paintTrick(T graphics, CardList trickCards, int centerX, int centerY) {
         Point[] positions = {
             new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .9)),
             new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .25)),
@@ -1179,10 +1180,10 @@ public class TableLayout<T> implements GameManager.EventObserver {
         GameManager.getInstance().restart(GameManager.RestartCommand.offer);
     }
 
-    public interface GUI<T> {
+    public interface GUI {
         void update();
-        void paint(T graphics, Card card, int x, int y);
-        void paintBack(T graphics, int x, int y);
+        <T> void paint(T graphics, Card card, int x, int y);
+        <T> void paintBack(T graphics, int x, int y);
         void add(Widget widget);
         String getUserComments();
         void showMessage(String text);

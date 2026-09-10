@@ -54,8 +54,10 @@ public class SettingsPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = pConfig.settingsPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle.width = pConfig.mainSize.first;
+            popupRectangle.width = pConfig.mainSize.first / 2;
             popupRectangle.height = pConfig.mainSize.second;
+            popupRectangle.x = pConfig.mainPosition.first + pConfig.mainSize.first / 4;
+            popupRectangle.y = pConfig.mainPosition.second;
         }
         this.setBounds(popupRectangle);
         this.setLocation(popupRectangle.x, popupRectangle.y);

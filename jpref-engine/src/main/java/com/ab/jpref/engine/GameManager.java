@@ -416,6 +416,7 @@ public class GameManager implements Serializable {
             String msg = e.getMessage();
             println("round aborted for " + msg);
             next = RestartCommand.valueOf(msg);     // a little ugly
+            trick.setNumber(9);
         }
 
         updateFromAvatars();
@@ -436,7 +437,7 @@ public class GameManager implements Serializable {
             sleep(config().pauseBetweenRounds.get());
         }
 
-        replayMode = RestartCommand.replay.equals(next) && players[trick.getTurn()].myHand.isEmpty();
+        replayMode = RestartCommand.replay.equals(next) && trick.getNumber() == 9;
         if (!replayMode) {
             if (minBid.equals(Bid.BID_ALL_PASS)) {
                 allPassFactor = ++allPassFactor % 3;

@@ -76,7 +76,7 @@ public class Main implements Logger.LogHolder, Host {
     private String logFileName;
     private PrintStream logStream;
     private long logStartDate;
-    private final TableLayout<Graphics> tableLayout;
+    private final TableLayout tableLayout;
 
     private InputStream testInputStream;
 
@@ -190,7 +190,7 @@ public class Main implements Logger.LogHolder, Host {
 
         MainPanel mainPanel = new MainPanel(this);
         mainContainer.add(mainPanel);
-        tableLayout = new TableLayout<>(this, mainPanel);
+        tableLayout = new TableLayout(this, mainPanel);
         config.eventObserver = tableLayout;
         TrickList trickList;
         if (testInputStream == null) {
