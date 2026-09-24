@@ -25,7 +25,6 @@ import com.ab.jpref.engine.*;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.gui.config.SettingsPopup;
-import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.Bidder;
 import com.ab.util.Logger;
 
@@ -63,7 +62,7 @@ public class TestPosition implements Host {
 
     public static void main(String[] args) {
         trickList = new TrickList();
-        trickList.init(new TrickPool());
+        trickList.init();
         javax.swing.SwingUtilities.invokeLater(TestPosition::new);
         throw new RuntimeException("fix gameMan.eventObserver");
     }
@@ -218,7 +217,7 @@ public class TestPosition implements Host {
                         Bid _bid = gameManager.getPlayers()[0].drop();
                         Logger.println(_bid.toString());
 //                        hands[0] = gameManager.getPlayers()[0].getMyHand();
-                        Bidder.PlayerBid playerBid = forTricksBot.getDrop(elderHand, hands[0].size() - hands[1].size());
+                        Bidder.PlayerBid playerBid = forTricksBot.getDrop(elderHand, hands[0].size() - hands[1].size(), null);
                         forTricksBot.drop(playerBid.drops);
                         hands[0] = forTricksBot.getMyHand();
                     }

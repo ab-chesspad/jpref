@@ -20,7 +20,6 @@
 
 package com.ab.jpref.gui;
 
-import com.ab.jpref.engine.GameManager;
 import static com.ab.jpref.engine.GameManager.RestartCommand;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.config.Metrics;
@@ -68,8 +67,8 @@ public class StatusPopup extends JDialog {
     final JPanel buttonPanel;
     Rectangle popupRectangle;
     final ScoresPanel scoresPanel;
+    final GameOverOverlay gameOverOverlay;
     RestartCommand result = RestartCommand.newRound;
-    int historySize;
 
     StatusPopup(Host host, boolean withButtons) {
         super(Main.mainFrame, true);
@@ -105,6 +104,9 @@ public class StatusPopup extends JDialog {
                 popupRectangle = StatusPopup.this.getBounds();
                 pConfig.scoresPopupRectangle.set(popupRectangle);
                 scoresPanel.recalc();
+                if (gameOverOverlay != null) {
+                    gameOverOverlay.setBounds(0, 0, popupRectangle.width, popupRectangle.height);
+                }
                 repaint();
             }
 
@@ -128,9 +130,12 @@ public class StatusPopup extends JDialog {
         scoresPanel = new ScoresPanel();
         add(scoresPanel, BorderLayout.NORTH);
 
-        historySize = GameManager.getInstance().getPlayers()[0].getGameHistory().size();
-        if (!withButtons) {
-            --historySize;
+        if (scoresheet.isGameOver()) {
+            gameOverOverlay = new GameOverOverlay();
+            getLayeredPane().add(gameOverOverlay, JLayeredPane.PALETTE_LAYER);
+            gameOverOverlay.setBounds(0, 0, popupRectangle.width, popupRectangle.height);
+        } else {
+            gameOverOverlay = null;
         }
 
         setVisible(true);   // blocks until dialog ends
@@ -152,6 +157,11 @@ public class StatusPopup extends JDialog {
             this.setBackground(Color.white);
             for (Widget widget : Scoresheet.widgets) {
                 PLabel pLabel = new PLabel(widget.getRotation());
+                if (widget.getLabel().equals(Player.PlayerPoints.status)) {
+                    pLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                } else {
+                    pLabel.setHorizontalAlignment(SwingConstants.LEFT);
+                }
                 pLabel.setBackground(Color.white);
                 labels.add(new Pair<>(pLabel, widget));
                 add(pLabel);
@@ -290,15 +300,43 @@ public class StatusPopup extends JDialog {
         }
     }
 
+    // half-transparent diagonal watermark spanning the whole dialog (scores area
+    // and, when present, the button panel) - added to the layered pane rather
+    // than the content pane so it draws on top of both regions from one place,
+    // mirroring the Android StatusPopup's frame-level overlay
+    private static class GameOverOverlay extends JComponent {
+        GameOverOverlay() {
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            String text = m("Game Over");
+            Font font = new Font("SansSerif", Font.BOLD, (int) (getWidth() * 0.12));
+            g2d.setFont(font);
+            FontMetrics fontMetrics = g2d.getFontMetrics(font);
+            int textWidth = fontMetrics.stringWidth(text);
+            int textHeight = fontMetrics.getAscent();
+            g2d.setColor(new Color(255, 0, 0, 76));   // red, ~0.3 alpha
+            g2d.translate(getWidth() / 2, getHeight() / 2);
+            g2d.rotate(Math.toRadians(-25));
+            g2d.drawString(text, -textWidth / 2, textHeight / 2);
+            g2d.dispose();
+        }
+    }
+
     private JPanel createButtonPanel() {
         JPanel jPanel = new JPanel();
-        JButton goonButton = new JButton(TableLayout.ButtonCommand.goon.getName());
+        JButton goonButton = new JButton(m(TableLayout.ButtonCommand.goon.getName()));
         goonButton.addActionListener(actionEvent -> {
             StatusPopup.this.dispose();
             result = RestartCommand.newRound;
         });
         jPanel.add(goonButton);
-        JButton replayButton = new JButton(TableLayout.ButtonCommand.replay.getName());
+        JButton replayButton = new JButton(m(TableLayout.ButtonCommand.replay.getName()));
         replayButton.addActionListener(actionEvent -> {
             StatusPopup.this.dispose();
             result = RestartCommand.replay;

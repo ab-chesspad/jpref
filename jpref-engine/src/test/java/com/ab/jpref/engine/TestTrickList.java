@@ -5,10 +5,7 @@ import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
-import com.ab.jpref.trickpool.TrickPool;
-import com.ab.jpref.ui.Host;
 import com.ab.util.Logger;
-import com.ab.util.Util;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -23,7 +20,6 @@ public class TestTrickList extends BaseTest {
     @Before
     public void init() {
         trickList = new TrickList();
-        trickList.init(new TrickPool());
         gameManager = new GameManager();
         gameManager.init(host);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga

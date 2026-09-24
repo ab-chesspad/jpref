@@ -73,6 +73,7 @@ public class Scoresheet {
     private int fontSize;
     private int poolSize;
     private boolean fullHistory;
+    private boolean gameOver;
 
     public Scoresheet() {
         instance = this;
@@ -131,6 +132,12 @@ public class Scoresheet {
         this.p11.set(width - 4 * paneX, height - 4 * paneH);
 
         updateLines();
+        List<Player.RoundResults> history = GameManager.getInstance().getPlayers()[0].getGameHistory();
+        int historySize = history.size();
+        if (!instance.fullHistory) {
+            --historySize;
+        }
+        this.gameOver = historySize > 0;
         allAreas[0].setPBounds(leftPoints, p1, new Point(p0.getX(), height));
         allAreas[0].setPBounds(rightPoints, p4, new Point(p0.getX(), height));
         allAreas[0].setPBounds(poolPoints, p2, new Point(p3.getX(), p1.getY()));
@@ -187,6 +194,10 @@ public class Scoresheet {
 
     public Line[] getLines() {
         return lines;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
     }
 
     public static class Line {
@@ -273,8 +284,12 @@ public class Scoresheet {
                 sb.append(sep).append(total);
                 sep = ".";
             }
-            if (labelIndex == poolPoints && total >= Scoresheet.instance.poolSize) {
-                sb.append(POOL_COMPLETE);
+            if (labelIndex == poolPoints) {
+                if (total >= Scoresheet.instance.poolSize) {
+                    sb.append(POOL_COMPLETE);
+                } else {
+                    Scoresheet.instance.gameOver = false;
+                }
             }
             widget.setText(new String(sb));
         }

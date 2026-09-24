@@ -1,14 +1,17 @@
-#biddedplay: hands, talon, elderhand -> bid, tricks
+biddedplay: hands, talon, elderhand -> bid, tricks
 
+# only 6 cards make 9♠
+#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ  ♥KA  1 -> 9♠ 10
+
+deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 10
+
+############
+deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole 7-10
-
 deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
 deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7
-
 deal: ♠9A ♣9X ♦79X ♥79X  ♠78XJQ ♣A ♦Q ♥8JQ  ♠K ♣78JQK ♦KA ♥KA  ♦J8  0 -> 8♣ 9
-
 deal: ♠78X ♣9JA ♦89J ♥7  ♠J ♣8XQ ♦7XKA ♥9X  ♠9K ♣7K ♦Q ♥8JQKA  ♠QA  2 -> 9♥ 9
-
 deal: ♠78 ♣9XQ ♦89J ♥QK  ♠9Q ♣8JA ♦7QK ♥8J  ♠XKA ♣7 ♦XA ♥79XA  ♠J ♣K  0 -> 6♥ 8 # по Утяцкому #65
 deal: ♣79QA ♦9XKA ♥XJ  ♠89X ♣XK ♦8Q ♥79Q  ♠7JQKA ♣J ♦7J ♥8K  ♥A ♣8  0 -> 8♦ 9 # по Утяцкому #33
 deal: ♠9X ♦89XQA ♥8XK  ♠QA ♣79XJQA ♦7K  ♠7K ♣8K ♦J ♥79JQA  ♠J8  0 -> 8♣ 8

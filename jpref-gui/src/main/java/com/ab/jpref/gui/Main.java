@@ -27,10 +27,11 @@ import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.TrickList;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.gui.config.PConfig;
+
+import static com.ab.jpref.config.I18n.m;
 import static com.ab.jpref.gui.config.PConfig.NOP;
 
 import com.ab.jpref.gui.config.SettingsPopup;
-import com.ab.jpref.trickpool.TrickPool;
 import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
@@ -82,6 +83,7 @@ public class Main implements Logger.LogHolder, Host {
 
     public static JFrame mainFrame;
     private final Container mainContainer;
+    private final MainPanel mainPanel;
 
     private Rectangle mainRectangle = new Rectangle();
     private Insets insets;
@@ -188,7 +190,7 @@ public class Main implements Logger.LogHolder, Host {
         mainFrame.setTitle(PConfig.PROJECT_NAME);
         mainFrame.setVisible(true);
 
-        MainPanel mainPanel = new MainPanel(this);
+        mainPanel = new MainPanel(this);
         mainContainer.add(mainPanel);
         tableLayout = new TableLayout(this, mainPanel);
         config.eventObserver = tableLayout;
@@ -203,21 +205,28 @@ public class Main implements Logger.LogHolder, Host {
             pUtil.register(trickList);
         }
         gameManager.init(this);
-        trickList.init(new TrickPool());
+        trickList.init();
     }
 
     public void go() {
         new Thread(() -> {
-            try {
-                while (true) {
+            while (true) {
+                try {
                     gameManager.runGame(testInputStream, 0);
                     Logger.println("game ended!");
                     for (Player p : gameManager.getPlayers()) {
                         p.clearHistory();
                     }
+                } catch (HumanPlayer.PrefExceptionRerun e) {
+                    // ignore
+                } catch (Throwable t) {
+                    t.printStackTrace(getLogStream());
+                    if (mainPanel.showMessage(m("Program crash"), m("Submit log") + "?",
+                            TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {
+                        tableLayout.submitLog(null);
+                    }
+                    gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 }
-            } catch (HumanPlayer.PrefExceptionRerun e) {
-                // ignore
             }
         }).start();
     }
@@ -438,4 +447,10 @@ public class Main implements Logger.LogHolder, Host {
     public void updateSettings() {
         new SettingsPopup(this);
     }
+
+    @Override
+    public Config.OS getOS() {
+        return PConfig.getOS();
+    }
+
 }

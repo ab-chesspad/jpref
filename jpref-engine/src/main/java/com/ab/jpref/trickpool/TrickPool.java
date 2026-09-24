@@ -24,32 +24,43 @@ package com.ab.jpref.trickpool;
 
 import com.ab.jpref.engine.TrickList;
 
-public class TrickPool implements TrickList.TrickPool {
-    public static boolean TRACE = TrickList.TRACE;
+import static com.ab.jpref.engine.TrickList.SINGLE_THREADED;
+import static com.ab.jpref.engine.TrickList.TRACE;
 
-    // pool storage is split into fixed-size pages, allocated lazily. When the
-    // page table runs out of room, it is extended (just pointers, cheap);
-    // when an index falls in a not-yet-used page, that one page is allocated.
-    // Already-stored entries are never copied, unlike growing a single array
-    // with Arrays.copyOf.
-    private static final int PAGE_BITS = 17;
+import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+public class TrickPool implements TrickList.TrickPool {
+    // pool storage is split into fixed-size pages. Page 0 is allocated
+    // upfront (virtually every search needs it); the rest are allocated
+    // lazily as needed, so a fresh pool doesn't spike memory before the
+    // search even knows how much it'll use, which matters on Android. The
+    // page table itself is fixed-size and never resized, so no thread can
+    // ever observe it mid-growth. Each page is published through an
+    // AtomicReferenceArray, so a lazily-created page is safely visible to any
+    // thread that later reads it without get()/set() needing to synchronize:
+    // get()/set() are only ever called with an index a prior alloc() already
+    // returned, so that index's page is guaranteed to already exist.
+    private static final int PAGE_BITS = 20;
     private static final int PAGE_SIZE = 1 << PAGE_BITS;
     private static final int PAGE_MASK = PAGE_SIZE - 1;
+    private static final int PAGE_COUNT = 32;
 
+    private AtomicReferenceArray<AtomicLongArray> atomicPages;
     private long[][] pages;
-    private int[][] backRefPages;
+    private final int[][] backRefPages;
     public int nextPoolIndex;
 
     public TrickPool() {
-        this(DEFAULT_CAPACITY);
-    }
-
-    public TrickPool(int capacity) {
-        int pageCount = Math.max(1, (capacity + PAGE_SIZE - 1) / PAGE_SIZE);
-        pages = new long[pageCount][];
-        pages[0] = new long[PAGE_SIZE];
+        if (SINGLE_THREADED) {
+            pages = new long[PAGE_COUNT][];
+            pages[0] = new long[PAGE_SIZE];
+        } else {
+            atomicPages = new AtomicReferenceArray<>(PAGE_COUNT);
+            atomicPages.set(0, new AtomicLongArray(PAGE_SIZE));
+        }
+        backRefPages = TRACE ? new int[PAGE_COUNT][] : null;
         if (TRACE) {
-            backRefPages = new int[pageCount][];
             backRefPages[0] = new int[PAGE_SIZE];
         }
     }
@@ -59,43 +70,64 @@ public class TrickPool implements TrickList.TrickPool {
         nextPoolIndex = 0;
     }
 
-    @Override
-    public int alloc(long trickData, int prevIndex) {
-        ++nextPoolIndex;
-        int page = nextPoolIndex >>> PAGE_BITS;
-        int offset = nextPoolIndex & PAGE_MASK;
-        if (page >= pages.length) {
-            // extend the (small) page table itself; existing pages are untouched
-            long[][] extendedPages = new long[page + 1][];
-            System.arraycopy(pages, 0, extendedPages, 0, pages.length);
-            pages = extendedPages;
-            if (TRACE) {
-                int[][] extendedBackRefPages = new int[page + 1][];
-                System.arraycopy(backRefPages, 0, extendedBackRefPages, 0, backRefPages.length);
-                backRefPages = extendedBackRefPages;
-            }
-        }
+    private long[] page(int page) {
         if (pages[page] == null) {
             pages[page] = new long[PAGE_SIZE];
             if (TRACE) {
                 backRefPages[page] = new int[PAGE_SIZE];
             }
         }
-        pages[page][offset] = trickData;
+        return pages[page];
+    }
+
+    private AtomicLongArray atomicPage(int page) {
+        AtomicLongArray p = atomicPages.get(page);
+        if (p == null) {
+            p = new AtomicLongArray(PAGE_SIZE);
+            atomicPages.set(page, p);
+            if (TRACE) {
+                backRefPages[page] = new int[PAGE_SIZE];
+            }
+        }
+        return p;
+    }
+
+    public int alloc(long trickData, int prevIndex) {
+        ++nextPoolIndex;
+        int pageIndex = nextPoolIndex >>> PAGE_BITS;
+        int offset = nextPoolIndex & PAGE_MASK;
+        if (SINGLE_THREADED) {
+            page(pageIndex)[offset] = trickData;
+        } else {
+            atomicPage(pageIndex).set(offset, trickData);
+        }
         if (TRACE) {
-            backRefPages[page][offset] = prevIndex;
+            backRefPages[pageIndex][offset] = prevIndex;
         }
         return nextPoolIndex;
     }
 
     @Override
+    public synchronized int allocSync(long trickData, int prevIndex) {
+        return alloc(trickData, prevIndex);
+    }
+
+    @Override
     public void set(int index, long trickData) {
-        pages[index >>> PAGE_BITS][index & PAGE_MASK] = trickData;
+        if (SINGLE_THREADED) {
+            pages[index >>> PAGE_BITS][index & PAGE_MASK] = trickData;
+        } else {
+            atomicPages.get(index >>> PAGE_BITS).set(index & PAGE_MASK, trickData);
+        }
     }
 
     @Override
     public long get(int index) {
-        return pages[index >>> PAGE_BITS][index & PAGE_MASK];
+        if (SINGLE_THREADED) {
+            return pages[index >>> PAGE_BITS][index & PAGE_MASK];
+        } else {
+            return atomicPages.get(index >>> PAGE_BITS).get(index & PAGE_MASK);
+        }
     }
 
     @Override
@@ -113,6 +145,6 @@ public class TrickPool implements TrickList.TrickPool {
 
     @Override
     public int capacity() {
-        return pages.length * PAGE_SIZE;
+        return PAGE_COUNT * PAGE_SIZE;
     }
 }

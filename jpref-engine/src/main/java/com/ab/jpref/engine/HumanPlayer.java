@@ -117,7 +117,7 @@ public class HumanPlayer extends Player implements Serializable {
     }
 
     @Override
-    public void declareRound(Config.Bid minBid, int elderHand) {
+    public void declareRound(Config.Bid minBid, int elderHand, Trick trick) {
         if (!minBid.equals(Config.Bid.BID_MISERE)) {
             clickable.setCurrentPlayer(this);
             this.bid = (Config.Bid) takeFromQueue();

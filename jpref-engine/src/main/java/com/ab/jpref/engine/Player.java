@@ -54,7 +54,7 @@ public abstract class Player implements Serializable {
     protected int tricks;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
-    public abstract void declareRound(Config.Bid minBid, int elderHand);
+    public abstract void declareRound(Config.Bid minBid, int elderHand, Trick trick);
     public abstract void acknowledge();         // wait for mouse click
     public abstract void respondOnDeclaration(); // return whist or half-whist or pass
     public abstract Card play(Trick trick);

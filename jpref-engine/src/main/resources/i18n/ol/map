@@ -4,21 +4,23 @@ After Round Timeout->задержка после раунда
 Animation Time->врэмя анимэшн
 Cancel->забить
 Comments->каммент
+Confirmation->падтвирждени
 Continue->прадолжыз
 Delete logs after, days -> Удалячь логи старшэ, дней
 Double click -> Двайной шчолчок
-Dragging -> Пиритаскиванийе
+Description->паясненья
+Dragging -> пиритаскиванийе
 Drop->сброз
 Game Type->вид игри
 Gentleman->жэнтельменский
-Пояснения->Паясненья
+has been uploaded->файло отослано
 Language->йазыг
 Last Trick->паследне взятко
 Laying->лежачо
 Miami->Соче
 Misère -> мизер
 Move Method -> Спосоп хода
-New Round->Новый раунт
+New Round->новый раунт
 Not implemented yet->пака ни рабтаит
 OK->ок
 Pass -> пас
@@ -38,12 +40,12 @@ Single click -> Адиночный шчолчок
 Standing->стая
 Submit Log->паслать лог
 Table Color->цвет стала
-has been uploaded->файло отослано
+Verify->Чекнуть
 What would you like to do?->чо хотеть творить-то, а?
 Whist -> вист
 Whist Type->вид визда
 Without 3->без трех
 Without Three->без трех
-Your Offer->Ваще предложениэ
+Your Offer->ваще предложениэ
 Your Tricks->вашых взятков
 ½ Whist->½ виста

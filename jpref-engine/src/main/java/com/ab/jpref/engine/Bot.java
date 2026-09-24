@@ -38,7 +38,6 @@ public class Bot extends Player implements Serializable {
     static PlayerBid playerBid;
 
     public static Bot targetBot;  // either forTricksBot or misereBot
-    static Trick trick;
 
     public Bot(int number) {
         this.number = number;
@@ -71,7 +70,6 @@ public class Bot extends Player implements Serializable {
         super.clear();
         playerBid = null;
         targetBot = null;
-        trick = null;
         debugDrop = null;
     }
 
@@ -108,7 +106,7 @@ public class Bot extends Player implements Serializable {
     public void acknowledge() {}         // do nothing
 
     // stab to be overridden in MisereBot and ForTricksBot
-    PlayerBid getDrop(int elderHand, int nDrops) {
+    PlayerBid getDrop(int elderHand, int nDrops, Trick trick) {
         throw new RuntimeException("stub!");
     }
 
@@ -130,14 +128,14 @@ public class Bot extends Player implements Serializable {
 
     // 12 cards
     @Override
-    public void declareRound(Bid minBid, int _elderHand) {
+    public void declareRound(Bid minBid, int _elderHand, Trick trick) {
         int elderHand = (this.number - _elderHand + NOP) % NOP;  // relative to self
         if (Bid.BID_MISERE.equals(minBid)) {
             targetBot = new MisereBot(this);
         } else {
             targetBot = new ForTricksBot(this);
         }
-        Bidder.PlayerBid playerBid = targetBot.getDrop(elderHand, 2);
+        Bidder.PlayerBid playerBid = targetBot.getDrop(elderHand, 2, trick);
         Bot.playerBid = playerBid;
         this.bid = targetBot.getBid();
         drop(playerBid.drops);
@@ -179,7 +177,7 @@ public class Bot extends Player implements Serializable {
         if (targetBot == null) {
             // when declarer is human; todo: verify declaration!
             Player declarer = gameManager().getDeclarerForDefender();
-            declarer.declareRound(gameManager().getMinBid(), trick.getStartedBy());
+            declarer.declareRound(gameManager().getMinBid(), trick.getStartedBy(), trick);
         }
         return targetBot.play(trick);
     }

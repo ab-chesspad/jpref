@@ -159,7 +159,6 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     @Override
     public void add(Widget widget) {
         JComponent view;
-        String text = widget.getText();
         int zOrder;
         if (widget.getCommand() == null) {
             JLabel lbl = new JLabel();
@@ -209,7 +208,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
                 continue;
             }
             jComponent.setVisible(true);
-            int fontSize = (int)(metrics.cardW * .3);
+            int fontSize = (int)(metrics.cardW * .25);
             Font font = new Font("Serif", Font.PLAIN, fontSize);
             jComponent.setFont(font);
             if (widget.getColor() == Widget.RED_COLOR) {
@@ -252,13 +251,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         }
     }
 
-    @Override
-    public void showMessage(String text) {
-        JDialog dialog = new JDialog(Main.mainFrame, m("Message"), true);
-        int width = Main.mainFrame.getWidth();
-        int height = Main.mainFrame.getHeight();
-        dialog.setSize(width, height);
-        dialog.setLocationRelativeTo(Main.mainFrame);
+    private JDialog buildMessageDialog(String title, String text) {
+        JDialog dialog = new JDialog(Main.mainFrame, title, true);
         dialog.setLayout(new BorderLayout());
         JEditorPane editorPane = new JEditorPane();
         editorPane.setEditable(false);
@@ -273,10 +267,60 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         dialog.add(new JScrollPane(editorPane,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER), BorderLayout.CENTER);
+        return dialog;
+    }
+
+    // Size to the message's own natural extent (e.g. a one-line submitLog
+    // result) rather than always opening at the full main-window size; still
+    // capped at that size so a genuinely long message falls back to the old
+    // full-size, scrollable behavior. Must run after the dialog's button row
+    // is added, so pack() accounts for it.
+    private void sizeMessageDialog(JDialog dialog) {
+        dialog.pack();
+        int maxWidth = Main.mainFrame.getWidth();
+        int maxHeight = Main.mainFrame.getHeight();
+        Dimension pref = dialog.getSize();
+        dialog.setSize(
+            Math.min(Math.max(pref.width, 250), maxWidth),
+            Math.min(Math.max(pref.height, 120), maxHeight));
+        dialog.setLocationRelativeTo(Main.mainFrame);
+    }
+
+    @Override
+    public void showMessage(String title, String text) {
+        JDialog dialog = buildMessageDialog(title, text);
         JButton okButton = new JButton(m("Continue"));
         okButton.addActionListener(e -> dialog.dispose());
         dialog.add(okButton, BorderLayout.SOUTH);
-        dialog.setVisible(true);
+        sizeMessageDialog(dialog);
+        dialog.setVisible(true);   // blocks until dispose() (modal)
+    }
+
+    @Override
+    public int showMessage(String title, String text, int flags) {
+        JDialog dialog = buildMessageDialog(title, text);
+        int[] result = {0};
+        JPanel buttonPanel = new JPanel();
+        if ((flags & msgFlagOK) != 0) {
+            JButton okButton = new JButton(m(TableLayout.ButtonCommand.ok.getName()));
+            okButton.addActionListener(e -> {
+                result[0] = msgFlagOK;
+                dialog.dispose();
+            });
+            buttonPanel.add(okButton);
+        }
+        if ((flags & msgFlagCancel) != 0) {
+            JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+            cancelButton.addActionListener(e -> {
+                result[0] = msgFlagCancel;
+                dialog.dispose();
+            });
+            buttonPanel.add(cancelButton);
+        }
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        sizeMessageDialog(dialog);
+        dialog.setVisible(true);   // blocks until dispose() (modal)
+        return result[0];
     }
 
     @Override
@@ -379,6 +423,27 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         Couple<Integer> elderHandLocation = getInstance().elderHandLocation;
         if (elderHandLocation.first != null) {
             g.drawImage(elderHandImage, elderHandLocation.first, elderHandLocation.second, this);
+        }
+    }
+
+    // paintComponent() (above) draws the whole table, including any card being
+    // dragged, before this JLayeredPane's own children (the score/button
+    // widgets added via add(Widget)) paint on top of it - so a card dragged
+    // under one of those widgets would otherwise appear to go behind it.
+    // Re-drawing just the dragged card here, after super.paint() has painted
+    // both the table and the widgets, keeps it visually on top while it's
+    // being held, without changing the stacking of everything else.
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g);
+        if (getInstance() == null) {
+            return;
+        }
+        Card draggedCard = getInstance().getDraggedCard();
+        if (draggedCard != null) {
+            paint(g, draggedCard,
+                getInstance().getDraggedCardPosition().getX(),
+                getInstance().getDraggedCardPosition().getY());
         }
     }
 

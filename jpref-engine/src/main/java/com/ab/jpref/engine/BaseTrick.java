@@ -163,6 +163,14 @@ public class BaseTrick implements Serializable {
         return (int)(trickData >>> INDEX_SHIFT) & INDEX_MASK;
     }
 
+    public static boolean isDone(long trickData) {
+        return (trickData & FORECAST_DONE_BIT) != 0;
+    }
+
+    public static long setDone(long trickData) {
+        return trickData | FORECAST_DONE_BIT;
+    }
+
     public static String toString(long trickData) {
         StringBuilder sb = new StringBuilder();
         Card.Suit suit = null;

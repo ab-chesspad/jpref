@@ -4,30 +4,37 @@ After Round Timeout->Задержка после раунда
 Animation Time->Время анимации
 Cancel->Забыть
 Comments->Комментарии
+Confirmation->Подтверждение
 Continue->Продолжить
 Delete logs after, days -> Удалять логи старше, дней
+Description->Описание
 Double click -> Двойной клик
 Dragging -> Перетаскивание
 Drop->снос
+Game Over->Игра закончена
 Game Type->Вид игры
-Help->Описание
 Gentleman->Джентльменский
+has been uploaded->файл послан
 Language->Язык
 Last Trick->Последняя взятка
 Laying->Лежа
+Maximum move delay, sec -> Максимальное время на ход, сек
 Miami->Сочи
 Misère -> мизер
 Move Method -> Способ хода
 New Round->Новый раунд
 Not implemented yet->Пока не работает
+No Internet Connection->Нет связи с интернетом
 OK->Сохранить
 Pass -> пас
 Pause between moves, msec -> Пауза между ходами, мсек
 Pause between tricks, msec -> Пауза между взятками, мсек
+Please correct->Пожалуйста исправьте
 Please select->Выберите
 Peter->Питер
 Player's Names->Имена игроков
 Pool Size->Пуля
+Program crash->Ошибка программы
 Record Notes->Запомнить
 Redneck->Жлобский
 Replay->Переиграть
@@ -38,7 +45,7 @@ Single click -> Одиночный клик
 Standing->Стоя
 Submit Log->Послать лог
 Table Color->Цвет стола
-has been uploaded->файл послан
+Verify->Проверить
 What would you like to do?->Что вы хотите делать?
 Whist -> вист
 Whist Type->Вид виста

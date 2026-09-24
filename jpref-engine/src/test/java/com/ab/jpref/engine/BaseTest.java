@@ -18,6 +18,7 @@ public class BaseTest {
     public static void initClass() {
         host = new TestHost();
         config = new TestConfig(host);
+        config.maxMoveTime.set(20);
         util = new TestUtil(host);
     }
 

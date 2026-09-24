@@ -182,7 +182,9 @@ public class SimpleLongIntMap {
     }
 
     private int hash(long key) {
-        return (int)(key % keys.length);
+        // key < 0x3ffffffffL anyway
+        int hash = (int)(key ^ key >>> 30) & Integer.MAX_VALUE;
+        return hash % keys.length;
     }
 
     public static void printStatistics() {

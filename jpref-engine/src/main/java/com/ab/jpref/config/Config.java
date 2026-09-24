@@ -42,10 +42,10 @@ import java.io.*;
 import java.util.Locale;
 
 public abstract class Config implements Serializable {
-    private static final long serialVersionUID = 11L;
+    private static final long serialVersionUID = 12L;
 
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.1.1";
+    public static final String VERSION = "0.1.2";
 
     public final Property<Boolean> release = new Property<>("", true);
 
@@ -101,14 +101,14 @@ public abstract class Config implements Serializable {
     public final Property<Selection<MoveMethod>> moveMethod =
         new Property<>("Move Method", new Selection<>(MoveMethod.values()));
 
-    public final Property<Integer> pauseBetweenTricks = new Property<>("Pause between tricks, msec", 500);
-    public final Property<Integer> pauseBetweenMoves = new Property<>("Pause between moves, msec", 100);
+    public final Property<Integer> maxMoveTime = new Property<>("Maximum move delay, sec", 7);
+
+    public final Property<Integer> pauseBetweenTricks = new Property<>("Pause between tricks, msec", 1500);
+    public final Property<Integer> pauseBetweenMoves = new Property<>("Pause between moves, msec", 500);
 
     public final Property<Integer> pauseBetweenRounds = new Property<>("", 100);
 //    public final Property<IntTriplet> animDelay = new Property<>("Animation Timeout", new IntTriplet(100, 1, 200));
 //    public final Property<Integer> animDelay = new Property<>("", 100);
-
-    public final Property<Integer> deleteLogsAfter = new Property<>("Delete logs after, days", 1);
 
     public static final int NOP = 3;    // Number of players
     public static final int ROUND_SIZE = 10;    // total tricks == initial hand size
@@ -218,18 +218,27 @@ public abstract class Config implements Serializable {
 
         private final String label;
         private final boolean visual;
+        // the constructor-provided default, kept separately from the mutable
+        // value so get() can fall back to it - Java's default deserialization
+        // leaves a field at null (skipping this class's own field initializer)
+        // whenever it reads an old, still-serialVersionUID-compatible stream
+        // that predates this field/value being set, which would otherwise
+        // silently turn a property with a real default into a live null.
+        private final T defaultValue;
         private T value;
 
         public Property(String label, T value) {
             this.label = label;
             this.visual = false;
             this.value = value;
+            this.defaultValue = value;
         }
 
         public Property(String label, boolean visual, T value) {
             this.visual = visual;
             this.label = label;
             this.value = value;
+            this.defaultValue = value;
         }
 
         public int getOrder() {
@@ -249,7 +258,7 @@ public abstract class Config implements Serializable {
         }
 
         public T get() {
-            return value;
+            return value != null ? value : defaultValue;
         }
     }
 
@@ -378,6 +387,7 @@ public abstract class Config implements Serializable {
         linux,
         mac,
         windows,
+        android,
         unknown
     }
 

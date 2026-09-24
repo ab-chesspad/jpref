@@ -26,11 +26,10 @@ import com.ab.jpref.ui.Host;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -39,6 +38,8 @@ import java.util.zip.ZipOutputStream;
 public abstract class Util {
     public static final String DATA_FILE_NAME = Config.PROJECT_NAME + ".state";
     public static final String DEAL_MARK = "deal:";
+    private static final String SUBMIT_LOG_URL = "http://jpref.elementfx.com/upload.php";
+    private static final int CONNECT_TIMEOUT_MS = 3000;
 
     protected Host host;
 
@@ -94,13 +95,40 @@ public abstract class Util {
         }
     }
 
+    // Checks whether the log-upload server specifically is reachable right
+    // now, via a real (short-timeout) network probe - not just whether the
+    // device has some active network interface. A device can report an
+    // active Wi-Fi/cellular connection (e.g. a captive portal with no real
+    // route out yet) while DNS still fails to resolve this one host, which is
+    // exactly the failure this lets submitLog() below catch up front instead
+    // of deep inside the network stack with a raw UnknownHostException.
+    // Platforms with a cheaper way to rule out "no network at all" first
+    // (e.g. Android's ConnectivityManager) should check that, then fall back
+    // to this for the real answer - see DUtil's override.
+    public boolean isConnected() {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URI(SUBMIT_LOG_URL).toURL().openConnection();
+            conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            conn.setReadTimeout(CONNECT_TIMEOUT_MS);
+            conn.setRequestMethod("HEAD");
+            conn.connect();
+            conn.disconnect();
+            return true;
+        } catch (IOException | URISyntaxException e) {
+            return false;
+        }
+    }
+
     // return result file name
     public String submitLog(String filePath) {
+        if (!isConnected()) {
+            return "No internet connection";
+        }
         final String CrLf = "\r\n";
-        final String url = "http://jpref.elementfx.com/upload.php";
+        final String url = SUBMIT_LOG_URL;
         final String boundary = "---------------------------4664151417711";
 
-        String res;
+        String res = "";
         OutputStream os = null;
         InputStream is = null;
         File f = new File(filePath);
@@ -161,8 +189,14 @@ public abstract class Util {
             }
         } catch(IOException | URISyntaxException e) {
             res = e.toString();
+        } catch(Exception e) {
+            res = e.toString();
         } finally {
+            System.out.println(res);
             try {
+                if (os == null) {
+                    throw new IOException("log submission error <" + res + ">");
+                }
                 os.close();
                 if (is == null) {
                     throw new IOException("log submission error");
@@ -177,7 +211,10 @@ public abstract class Util {
     }
 
     private byte[] getLogBytes(String filePath) throws IOException {
-        try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
+        // java.nio.file (Files/Paths) is API 26+ - Android's minSdk is 23, and
+        // this runs there via submitLog()'s log upload, so use the plain
+        // java.io equivalent instead.
+        try (InputStream is = new FileInputStream(filePath)) {
             byte[] fileData = new byte[is.available()];
             is.read(fileData);
             File f = new File(filePath);
@@ -206,7 +243,9 @@ public abstract class Util {
         };
         File f = new File(filePath);
         String s = f.getAbsolutePath();
-        try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
+        // java.nio.file (Files/Paths) is API 26+ - Android's minSdk is 23, so
+        // use the plain java.io equivalent instead.
+        try (InputStream is = new FileInputStream(filePath)) {
             getList(is, charMap, lineHandler);
         }
     }
@@ -303,8 +342,6 @@ public abstract class Util {
     }
 
     public static String currMethodName() {
-        int i = -1;
-        while (!Thread.currentThread().getStackTrace()[++i].getMethodName().equals("currMethodName"));
-        return Thread.currentThread().getStackTrace()[++i].getMethodName();
+        return new Throwable().getStackTrace()[1].getMethodName();
     }
 }

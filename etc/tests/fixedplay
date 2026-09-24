@@ -1,16 +1,26 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+#deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
+#deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
+deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # ловится
+
 #########
 # stress test
-list build duration: 327 msec, positions 396,866, similar 2,052,148
-[♥AJQ, ♣K ♥9 ♣8, ♣X ♦Q ♣9, ♣7 ♦J ♣J, ♣A ♥8 ♦9, ♠JK9, ♠8 ♦8 ♠Q, ♠AX ♦7, ♥7 ♦X ♥K, ♦A ♥X ♦K]
-deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6- 2
+analyzing: ♠9 ♦789JQA ♥9JK  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A
+list build duration: 829 msec, positions 662,796, similar 6,117,598
+[♥AJQ, ♣X ♥9 ♣8, ♣K ♦Q ♣9, ♣7 ♦J ♣J, ♣A ♥8 ♦9, ♠JK9, ♠8 ♦8 ♠Q, ♠AX ♦7, ♥7 ♦X ♥K, ♦A ♥X ♦K]
+#deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6- 2
 
 # same deal, hands rotated among seats, elderHand 1: worse than the above under the current bm4Iteration
-list build duration: 516 msec, positions 460,690, similar 2,898,437
-[♦7 ♥7J, ♦8 ♥X9, ♦9 ♥QA, ♥K ♣A ♥8, ♦J ♣8X, ♦Q ♣9K, ♦A ♣J7, ♣Q ♠AX, ♠7JK, ♠89Q]
-deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  1 -> 6- 1
+analyzing: ♠8XK ♣7XK ♥89JA  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ
+list build duration: 2,196 msec, positions 1,615,153, similar 17,866,365
+[♦7 ♥QJ, ♦8 ♥X9, ♦9 ♥7A, ♥K ♣A ♥8, ♦J ♣JX, ♦Q ♣8K, ♦A ♣97, ♣Q ♠AX, ♠9JK, ♠87Q]
+#deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  1 -> 6- 1
 
+deal: ♠89 ♣9A ♦9Q ♥8JKA  ♠7JA ♣7JQ ♦7K ♥7Q  ♠QK ♣8XK ♦8XJ ♥9X  ♦A ♠X  1 -> 6♥ 7
+deal: ♠XQK ♣7XKA ♦9XQ  ♠9J ♣9J ♦8 ♥78XJA  ♠7A ♣8Q ♦7JK ♥9QK  ♦A ♠8  2 -> 6♣ 6
+deal: ♠8QA ♦8KA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦9XJ ♥XJ  ♣A ♥A  0 -> 9♥ 9
+deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥89  ♥7X  0 -> 6- 6
 deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 
 deal: ♠8J ♣7KA ♦78A ♥7A  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♥J9  1 -> 6♥ 6

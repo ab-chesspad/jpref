@@ -21,7 +21,6 @@
 
 package com.ab.jpref.gui;
 
-import com.ab.jpref.config.Metrics;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.ui.Host;
@@ -119,7 +118,7 @@ public class OfferPopup extends JDialog {
             String text = m(value);
             JLabel jLabel = jLabels[index];
             if (jLabel == null) {
-                jLabel = new JLabel(text, lineIcon, JLabel.LEFT);
+                jLabel = new JLabel(text, lineIcon, JLabel.CENTER);
                 jLabels[index] = jLabel;
                 jLabel.setFont(font);
                 jLabel.setOpaque(true);
@@ -147,9 +146,7 @@ public class OfferPopup extends JDialog {
                 }
             }
         });
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        centerPanel.add(jList);
-        JScrollPane scrollPane = new JScrollPane(centerPanel);
+        JScrollPane scrollPane = new JScrollPane(jList);
         add(scrollPane, BorderLayout.CENTER);
 
         // 2. bottom buttons
@@ -168,6 +165,15 @@ public class OfferPopup extends JDialog {
         });
         jPanel.add(cancelButton);
         add(jPanel, BorderLayout.SOUTH);
+
+        // The list opens scrolled to the top (trick count 10), but the
+        // selectable range sits near minTricks, further down - when the
+        // popup is too short to show every row, force-layout now and scroll
+        // so the bottom of that range is visible instead of leaving the
+        // user to discover the scrollbar on their own.
+        validate();
+        jList.ensureIndexIsVisible(ROUND_SIZE - minTricks);
+
         setVisible(true);
     }
 }

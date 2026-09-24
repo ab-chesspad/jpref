@@ -9,10 +9,8 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.Bidder;
 import com.ab.util.Logger;
-import com.ab.util.Util;
 import org.junit.*;
 
 import java.io.*;
@@ -25,10 +23,12 @@ public class TestBot extends BaseTest {
     static GameManager gameManager;
     static TrickList trickList;
 
+    // Named differently from BaseTest.initClass() (same @BeforeClass signature would
+    // hide it - JUnit would then only invoke this one and BaseTest's setup of
+    // host/config/util would never run, leaving host null here).
     @BeforeClass
-    public static void initClass() {
+    public static void initBotTest() {
         trickList = new TrickList();
-        trickList.init(new TrickPool());
         gameManager = new GameManager();
         gameManager.init(host);
         GameManager.DEBUG_LOG = false;  // suppress thread status logginga
@@ -118,7 +118,7 @@ public class TestBot extends BaseTest {
                 CardSet cardSet = new CardSet(hand);
                 bot.myHand = new CardSet(cardSet);
                 bot.bid = minBid;
-                bot.declareRound(minBid, _elderHand);
+                bot.declareRound(minBid, _elderHand, null);
                 Config.Bid bid = bot.getBid();
                 Assert.assertEquals(expectedBid, bid);
                 if (!bid.equals(Config.Bid.BID_PASS)) {
@@ -179,7 +179,6 @@ public class TestBot extends BaseTest {
             } else {
                 targetBot = new ForTricksBot(hands);
             }
-            Bot.trick = trick;
             Card card = targetBot.play(trick);
             Card expected = Card.fromName(parts[3]);
             Assert.assertEquals("wrong card", expected, card);

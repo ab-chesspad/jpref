@@ -126,12 +126,12 @@ public abstract class ScoreCalculator {
         }
         List<Player.RoundResults> helperHistory = helper.getGameHistory();
         Player.RoundResults helperResults = helperHistory.get(helperHistory.size() - 1);
+        helperResults.setPoints(poolPoints, helperResults.getPoints(poolPoints) - extra);
         for (Player player : helpedPlayers) {
             int help = poolSize - pools[player.getNumber()];
             if (extra - help < 0) {
                 help = extra;
             }
-            helperResults.setPoints(poolPoints, helperResults.getPoints(poolPoints) - help);
             if (player.getNumber() == (helper.getNumber() + 1) % NOP) {
                 helperResults.setPoints(leftPoints, helperResults.getPoints(leftPoints) + 10 * help);
             } else {

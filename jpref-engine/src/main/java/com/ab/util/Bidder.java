@@ -158,7 +158,7 @@ public class Bidder {
     }
 
     // called with:
-    // 11 cards to guess max bid (getMaxPlayerBid)
+    // 11 cards to guess max bid (getMaxPlayerBid), after human decrarer's 1st move
     // 12 cards to define drops and declare round (getDrop)
     public PlayerBid getBid(CardSet hand, Bid minBid, int elderHand, int nDrops) {
         PlayerBid playerBid;

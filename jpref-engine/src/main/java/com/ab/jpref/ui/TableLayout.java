@@ -59,7 +59,7 @@ public class TableLayout implements GameManager.EventObserver {
         menu("Menu"),
         settings("Settings"),
         comments("Comments"),
-        help("Help"),
+        help("Description"),
 
         minBid("Min Bid"),
         misere("Misère"),
@@ -82,7 +82,7 @@ public class TableLayout implements GameManager.EventObserver {
         newRound("New Round"),
         showScores("Scores"),
         lastTrick("Last Trick"),
-        replay("Replay"),
+        replay("Verify"),
         submitLog("Submit Log"),
         yourOffer("Your Offer"),
 
@@ -114,6 +114,12 @@ public class TableLayout implements GameManager.EventObserver {
     final CardSet selectedCards = new CardSet();
     final Point draggingStart = new Point(-1, -1);
     final Point dragging = new Point(-1, -1);
+    // the card currently being dragged (if any) and where paint() last drew it -
+    // exposed so a GUI can re-draw just this card on top of its own overlaid
+    // widgets, since the rest of the table paints underneath those widgets in
+    // z-order.
+    private Card draggedCard;
+    private final Point draggedCardPosition = new Point();
 
     final GUI gui;
     final Host host;
@@ -349,7 +355,10 @@ public class TableLayout implements GameManager.EventObserver {
                     for (int i = 0; i < gameManager.getPlayers().length; ++i) {
                         Player player = gameManager.getPlayers()[i];
                         Widget label = labels[i];
-                        String text;
+                        String text = m(player.getBid().toString());
+                        if (text.startsWith("X")) {
+                            text = 10 + text.substring(1);
+                        }
 
                         switch (this.roundStage) {
                             case bidding:
@@ -358,10 +367,9 @@ public class TableLayout implements GameManager.EventObserver {
                             case declareRound:
                             case whistSelection:
                             case selectWhistOption:
-                                text = m(player.getBid().toString());
                                 break;
                             default:
-                                text = m(player.getBid().toString()) + ", " + player.getTricks();
+                                text += ", " + player.getTricks();
                                 break;
                         }
                         Suit trump = player.getBid().getTrump();
@@ -419,11 +427,6 @@ public class TableLayout implements GameManager.EventObserver {
         for (ButtonPanel buttonPanel : buttonPanels) {
             if (this.roundStage.equals(buttonPanel.getRoundStage())) {
                 placeButtonPanel(buttonPanel);
-                if (menuPanel.isVisible() && host.needsMenuOverlapWorkaround()) {
-                    // stays visible, but must not be clickable while the menu
-                    // overlay is up on hosts that need this workaround
-                    buttonPanel.setEnabled(false);
-                }
             } else if (buttonPanel != menuPanel) {
                 buttonPanel.setVisible(false);
             }
@@ -434,7 +437,6 @@ public class TableLayout implements GameManager.EventObserver {
             widget.setEnabled(!gameManager.getLastTrickCards().isEmpty());
             widget = menuPanel.getWidget(2, 0);  // yourOffer, speed vs. convenience
             widget.setEnabled(TrickList.getInstance().getEstimate() >= 0);
-
             widget = menuPanel.getWidget(3, 0);  // comments, speed vs. convenience
             widget.setEnabled(host.getLogFileName() != null);
             widget = menuPanel.getWidget(3, 0);  // submit log, speed vs. convenience
@@ -531,6 +533,18 @@ public class TableLayout implements GameManager.EventObserver {
         }
     }
 
+    // the card currently being dragged, if any, and the position paint() last
+    // drew it at - null/unset when nothing is being dragged. A GUI can use
+    // these to re-draw just this card above its own overlaid widgets, since
+    // paint() otherwise draws the whole table beneath those widgets in z-order.
+    public Card getDraggedCard() {
+        return draggedCard;
+    }
+
+    public Point getDraggedCardPosition() {
+        return draggedCardPosition;
+    }
+
     public <T> void paint(T graphics) {
         synchronized (metrics) {
             GameManager gameManager = GameManager.getInstance();
@@ -540,6 +554,11 @@ public class TableLayout implements GameManager.EventObserver {
 
             cardPositions.clear();
             currentUserCards.clear();
+            draggedCard = null;
+            paintTalon(graphics);
+            int centerX = metrics.panelX + metrics.panelWidth / 2;
+            int centerY = (labels[0].y - labels[1].y - labels[1].height) / 2;
+            paintTrick(graphics, gameManager.getTrick().cards2List(), centerX, centerY);
             int index = 1;
             if (currentPlayer != null) {
                 index = currentPlayer.getNumber() + 1;
@@ -548,16 +567,20 @@ public class TableLayout implements GameManager.EventObserver {
                 // paint currentPlayer the last, so her dragging cards be on the top
                 paintHand(graphics, gameManager.getPlayers()[(index + i) % NOP]);
             }
-            paintTalon(graphics);
-            int centerX = metrics.panelX + metrics.panelWidth / 2;
-            int centerY = (labels[0].y - labels[1].y - labels[1].height) / 2;
-            paintTrick(graphics, gameManager.getTrick().cards2List(), centerX, centerY);
         }
     }
 
     private <T> void paintTalon(T graphics) {
         GameManager gameManager = GameManager.getInstance();
-        CardList talonCards = gameManager.getTalonCards();
+        // getTalonCards() returns the game-logic thread's live, mutable list -
+        // it clears/reassigns/removes from it (see GameManager) with no
+        // synchronization against this (UI-thread) paint path, so iterating it
+        // directly below can throw ConcurrentModificationException if a mutation
+        // lands mid-frame. CardList's copy constructor uses ArrayList's
+        // Collection constructor internally, which snapshots via toArray()
+        // rather than an iterator, so this copy itself can't throw even if the
+        // source is being mutated concurrently.
+        CardList talonCards = new CardList(gameManager.getTalonCards());
         if (talonCards.isEmpty()) {
             return;
         }
@@ -648,6 +671,8 @@ public class TableLayout implements GameManager.EventObserver {
         }
         boolean showCards = showCards(player.getNumber());
 
+        Card handDraggedCard = null;
+        Point handDraggedPoint = new Point();
         int mask = 0;
         for (Suit suit : suits) {
             int bit = 1 << suit.getValue();
@@ -664,26 +689,41 @@ public class TableLayout implements GameManager.EventObserver {
                 int _x = x;
                 int _y = y;
                 if (selectedCards.contains(card)) {
-                    Logger.printf(DEBUG_LOG, "%s, selected %s\n", Util.currMethodName(), selectedCards.toColorString());
+                    Logger.printf(DEBUG_LOG,"%s, selected %s\n", Util.currMethodName(), selectedCards.toColorString());
                     if (draggingStart.first >= 0) {
                         _x += dragging.first - draggingStart.first;
+                        // Pull the reference point (draggingStart) back by the overshoot
+                        // instead of overwriting dragging with the clamped, screen-space
+                        // position - dragging must stay the raw touch position (only
+                        // onMouseDragged() should ever set it) or the delta computed here
+                        // on the very next repaint mixes touch-space and screen-space
+                        // numbers, snapping the card to a bogus position on any repaint
+                        // that isn't immediately preceded by a fresh touch event (visible
+                        // as the card jerking/snapping once it's dragged to a screen
+                        // border). Adjusting draggingStart instead keeps dragging correct
+                        // while still pinning the card at the edge and responding
+                        // immediately the instant the drag reverses direction.
                         if (_x < 0) {
+                            draggingStart.first += _x;
                             _x = 0;
-                            dragging.first = _x;
                         }
                         if (_x > metrics.panelWidth - (int)metrics.cardW) {
+                            draggingStart.first += _x - (metrics.panelWidth - (int)metrics.cardW);
                             _x = metrics.panelWidth - (int)metrics.cardW;
-                            dragging.first = _x;
                         }
                         _y += dragging.second - draggingStart.second;
                         if (_y < 0) {
+                            draggingStart.second += _y;
                             _y = 0;
-                            dragging.second = _y;
                         }
                         if (_y > metrics.panelHeight - (int)metrics.cardH) {
+                            draggingStart.second += _y - (metrics.panelHeight - (int)metrics.cardH);
                             _y = metrics.panelHeight - (int)metrics.cardH;
-                            dragging.second = _y;
                         }
+                        handDraggedCard = card;
+                        handDraggedPoint.setX(_x);
+                        handDraggedPoint.setY(_y);
+                        continue;
                     } else {
                         switch (alignment) {
                             case South:
@@ -714,6 +754,11 @@ public class TableLayout implements GameManager.EventObserver {
                 x += (int)(dxSuit - dx);
                 y += (int)(dySuit - dy);
             }
+        }
+        if (handDraggedCard != null) {
+            gui.paint(graphics, handDraggedCard, handDraggedPoint.getX(), handDraggedPoint.getY());
+            draggedCard = handDraggedCard;
+            draggedCardPosition.set(handDraggedPoint.getX(), handDraggedPoint.getY());
         }
 
     }
@@ -926,8 +971,11 @@ public class TableLayout implements GameManager.EventObserver {
 
     private void execCommand(ButtonCommand buttonCommand) {
         Logger.printf(DEBUG_LOG, "%s for %s\n", Util.currMethodName(), buttonCommand.getName());
+        boolean menuVisible = menuPanel.isVisible();
         menuPanel.setVisible(false);
-        String text;
+        if (menuVisible) {
+            update(null);   // hide menu
+        }
         switch (buttonCommand) {
             case menu:
                 menuPanel.setVisible(true);
@@ -953,23 +1001,12 @@ public class TableLayout implements GameManager.EventObserver {
                 break;
             case comments:
                 String userComments = gui.getUserComments();
-                if (!userComments.isEmpty()) {
+                if (!userComments.trim().isEmpty()) {
                     Logger.printf("*** comment start ***\n%s\n*** comment end ***\n", userComments);
                 }
                 break;
             case submitLog:
-                String logFilePath = host.getLogFileName();
-                File f = new File(logFilePath);
-                String fn = f.getName();
-                String res = host.getUtil().submitLog(logFilePath);
-                String msg = res;
-                if (res.startsWith(fn)) {
-                    msg = m(msg.substring(fn.length() + 1));
-                } else {
-                    fn = "";
-                }
-                text = String.format("%s %s", fn, msg);
-                gui.showMessage(text);
+                submitLog(gui);
                 break;
             case settings:
                 host.updateSettings();
@@ -1031,25 +1068,69 @@ public class TableLayout implements GameManager.EventObserver {
         update(null);
     }
 
+    public synchronized void submitLog(GUI gui) {
+        while (!host.getUtil().isConnected()) {
+            if (this.gui.showMessage(m("No Internet Connection"), m("Please correct"),
+                    GUI.msgFlagOK | GUI.msgFlagCancel) != GUI.msgFlagOK) {
+                return;
+            }
+        }
+        String logFilePath = host.getLogFileName();
+        final String[] res = new String[1];
+        Thread worker = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                res[0] = host.getUtil().submitLog(logFilePath);
+                System.out.println(res[0]);
+            }
+        });
+        worker.start();
+        try {
+            worker.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        File f = new File(logFilePath);
+        String fn = f.getName();
+        String msg = res[0];
+        if (msg.startsWith(fn)) {
+            msg = m(msg.substring(fn.length() + 1));
+        } else {
+            fn = "";
+        }
+        String text = String.format("%s %s", fn, msg);
+        if (gui != null) {
+            gui.showMessage(m("Confirmation"), text);
+        }
+    }
+
     private void showHelp() {
         final String versionVar = "<!-- *** VERSION ***-->";
         final String remoteMark = "<!--*** REMOTE ***-->";
+        final String androidMark = "<!--*** ANDROID_SKIP ***-->";
+
+        String skipMark = remoteMark;
+        if (host.getOS().equals(OS.android)) {
+            skipMark = androidMark;
+        }
+
         String version = Config.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(host.buildDate());
         String src = I18n.loadString("index.html").replace(versionVar, version);
         StringBuilder sb = new StringBuilder();
         int start = 0;
         int end;
-        while ((end = src.indexOf(remoteMark, start)) >= 0) {
+        while ((end = src.indexOf(skipMark, start)) >= 0) {
             sb.append(src, start, end);
-            start = src.indexOf(remoteMark, end + 1);
+            start = src.indexOf(skipMark, end + 1);
             if (start < 0) {
                 start = src.length();
                 break;
             }
-            start += remoteMark.length();
+            start += skipMark.length();
         }
         sb.append(src, start, src.length());
-        gui.showMessage(sb.toString());
+        gui.showMessage(m("Description"), sb.toString());
     }
 
     // select trump suit and tricks
@@ -1171,22 +1252,28 @@ public class TableLayout implements GameManager.EventObserver {
             return;     // rejected
         }
         int others = ROUND_SIZE - acceptedTricks;
-        player0.setTricks(acceptedTricks);
+        player0.setTricks(acceptedTricks);          // human
         if (player2.getBid() == Bid.BID_PASS) {
-            player1.setTricks(others);
+            player2.setTricks(0);
+            player1.setTricks(others);              // whist/declarer
         } else {
+            player1.setTricks(0);
             player2.setTricks(others);
         }
         GameManager.getInstance().restart(GameManager.RestartCommand.offer);
     }
 
     public interface GUI {
+        int msgFlagOK = 0x1;
+        int msgFlagCancel = 0x2;
         void update();
         <T> void paint(T graphics, Card card, int x, int y);
         <T> void paintBack(T graphics, int x, int y);
         void add(Widget widget);
         String getUserComments();
-        void showMessage(String text);
+        void showMessage(String title, String text);
+        // returns which button was clicked (msgFlagOK/msgFlagCancel)
+        int showMessage(String title, String text, int flags);
         void showLastTrick(CardList cards);
         GameManager.RestartCommand showScores(boolean showButtons);
         int showOffer(int minTricks, int maxTricks);

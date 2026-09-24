@@ -58,6 +58,7 @@ public class ForTricksBot extends Bot {
             myHand.add(card0);
             // 11 cards
             PlayerBid playerBid = Bidder.getInstance().getBid(myHand, minBid, elderHand, myHand.size() - ROUND_SIZE);
+            playerBid.drops.clear();
             playerBid.drops.add(card0);     // for testing
             playerBids.add(playerBid);
             myHand.remove(card0);
@@ -72,23 +73,28 @@ public class ForTricksBot extends Bot {
     }
 
     @Override
-    public PlayerBid getDrop(int elderHand, int nDrops) {
+    public PlayerBid getDrop(int elderHand, int nDrops, Trick trick) {
         if (debugDrop != null) {
             PlayerBid playerBid = new PlayerBid(this.bid);
             playerBid.drops = new CardSet(debugDrop);
             return playerBid;
         }
+        Card playedCard = null;
         if (playerBid == null || !myHand.contains(playerBid.drops)) {
-            playerBid = Bidder.getInstance().getBid(myHand, bid, elderHand, nDrops);
+            if (trick != null && trick.getTurn() == (gameManager().declarerNumber + 1) % NOP &&
+                    myHand.size() == 11) {
+                playedCard = trick.getCard(trick.size() - 1);
+            }
+            myHand.add(playedCard);
         }
+        playerBid = Bidder.getInstance().getBid(myHand, bid, elderHand, nDrops);
+        myHand.remove(playedCard);
         this.bid = playerBid.toBid();
         return playerBid;
     }
 
     @Override
     public Card play(Trick trick) {
-        Bot.trick = trick;
-
         if (trick.getNumber() == 0 && trick.isEmpty() &&
                 trick.getTurn() == gameManager().declarerNumber) {
             return declarerPlay();
@@ -293,7 +299,7 @@ public class ForTricksBot extends Bot {
 
         int diff = 10 * (bestSoFarTricks - probeTricks);
         if (diff != 0) {
-            // deside on total past + future tricks
+            // decide on total past + future tricks
             if (num == 0) {
                 return diff;
             }
@@ -301,7 +307,7 @@ public class ForTricksBot extends Bot {
         }
         diff = bestSoFarPastTricks - probePastTricks;
         if (diff != 0) {
-            // deside on past tricks
+            // decide on past tricks
             if (num == 0) {
                 return diff;
             }

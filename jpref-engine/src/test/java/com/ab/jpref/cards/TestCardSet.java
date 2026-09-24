@@ -134,6 +134,7 @@ public class TestCardSet extends BaseTest {
     public void testIterate4BuildForward() {
         String[] sources = {
             // hands -> list (* means empty hand)
+            "♠7JK  ♠8  ♠9XQA -> ♠7JK",
             "♥79J  ♥8A  ♥XQK -> ♥79J",
             "♦9Q  *  ♦78 -> ♦9",
             "♦7XQA  ♠78QA  ♦9K ♥8 -> ♦7XA",
@@ -228,32 +229,43 @@ public class TestCardSet extends BaseTest {
     public void testIterate4BuildForwardWithFriend() {
         String[] sources = {
             // hands (self, friend, foe) -> list
+            "♠78Q  ♠9  ♠XJKA -> ♠7Q",
 ///
-            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7A ♦Q ♥8",
-            "♣7KA  ♣9JQ  * -> ♣7A",
+            "♠78Q ♦89A ♥8A  ♠9 ♣XQ ♦XJQK ♥9XK  ♠XJKA ♣78KA ♥JQ -> ♠7Q ♦8A ♥8A",
+            "♥8A  ♥9XK  ♥JQ -> ♥8A",
+            "♦89A ♥8A  ♦XJQK ♥9XK  ♥JQ -> ♦8A ♥8A",
+            "♠79QK  ♠JA  ♠8X -> ♠7Q",
+            "♠79QA  ♠8X  * -> ♠79",
+            "♠79QK  ♠8X  * -> ♠79",
+            "♥8A  ♥JQ  ♥9XK -> ♥8A",
+            "♠9A ♣QK  ♠XJK  ♣XA -> ♠9A ♣Q",
+            "♠79JK  ♠8  ♠XQA -> ♠7JK",
+            "♠J ♣7KA ♦Q ♥89JKA  ♠9 ♣9JQ ♦78A ♥7XQ  ♠78XQKA ♦9XJK -> ♠J ♣7K ♦Q ♥8",
+            "♠78Q ♦89A ♥8A  ♠9 ♣XQ ♦XJQK ♥9XK  ♠XJKA ♣78KA ♥JQ -> ♠7Q ♦8A ♥8A",
+            "♠79JK  *  ♠8XQA -> ♠79JK",
+            "♠9A  ♠XJK  * -> ♠9A",
+            "♠9K  ♠XJA  * -> ♠9K",
+            "♠7JK  ♠8  ♠XQA -> ♠7JK",
+            "♣7KA  ♣9JQ  * -> ♣7K",
             "♠78Q ♦89 ♥8  ♠9 ♦XJQK  ♠XJKA ♥J -> ♠7Q ♦8 ♥8",
             "♥7XQ  ♥8A  ♥JK -> ♥7Q",
-            "♠78Q ♦89A ♥8A  ♠9 ♣XQ ♦XJQK ♥9XK  ♠XJKA ♣78KA ♥JQ -> ♠7Q ♦8A ♥8A",
-            "♥8A  ♥JQ  ♥9XK -> ♥8A",
             "♦9Q  ♦XJK  ♦78A -> ♦9Q",
             "♦XQ  ♦9JK  ♦78A -> ♦X",
-            "♣79JQ  ♣8K  ♣A -> ♣7Q",
+            "♣79JQ  ♣8K  ♣A -> ♣7Q",    // ♣79?
             "♥9Q  ♥XJK  ♥78 -> ♥9Q",
             "♥XJK  ♥9Q  ♥78 -> ♥X",
             "♣XQ  ♣J  ♣A -> ♣XQ",
             "♥8Q  ♥XK  ♥79JA -> ♥8Q",
-            "♠9A  ♠XJK  * -> ♠9A",
             "♠9A ♣QK ♦9 ♥89A  ♠XJK ♦78QK ♥X  ♣XA ♦XA ♥7JQK -> ♠9A ♣Q ♦9 ♥8A",
             "♦Q  ♦78A  ♦9XJK -> ♦Q",
-            "♠79QK  ♠JA  ♠8X -> ♠7K",
             "♠79QK  *  ♠8X -> ♠79Q",
             "♠79QK  ♣8A  ♠8X ♣79J -> ♠79Q",
-            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠7K",
+            "♠79QK  ♠JA ♣8A  ♠8X ♣79J -> ♠7Q",
             "♦78Q  ♦J  ♦XKA -> ♦7Q",
             "♣JK ♦78Q ♥A  ♦J ♥78XJQ  ♠Q ♦XKA ♥9K -> ♣J ♦7Q ♥A",
-            "♣79JK  ♣8XQA  * -> ♣7K",
+            "♣79JK  ♣8XQA  * -> ♣79",
             "♣8XQA  ♣79JK  * -> ♣8",
-            "♣7XK  ♣89JA  * -> ♣7K",
+            "♣7XK  ♣89JA  * -> ♣7X",
             "♣89JA  ♣7XK  * -> ♣8",
             "♠8XQA  ♦789X  ♠79K ♣8 -> ♠8XA",
             "♣8K  ♣79JQ  ♣A -> ♣8",
@@ -279,14 +291,20 @@ public class TestCardSet extends BaseTest {
                 int i = -1;
                 while ((bit = CardSet.next(bitmap, bit)) != 0) {
                     Card card = Card.get(bit);
-                    if (expected.get(++i).equals(card)) {
-                        continue;
+                    if (++i >= expected.size()) {
+                        String msg = String.format("\nexpected list size %d too short, %s extra\n",
+                            expected.size(), card);
+                        throw new RuntimeException(msg);
                     }
-                    String msg = String.format("\nexpected %s\nres      %s, %s != %s\n",
-                        expected, new CardSet(bitmap), expected.get(i), card);
-                    throw new RuntimeException(msg);
-//                    Assert.assertEquals(expected.get(++i), card);
+                    if (!expected.get(i).equals(card)) {
+                        String msg = String.format("\nexpected %s\nres      %s, %s != %s\n",
+                            expected, new CardSet(bitmap), expected.get(i), card);
+                        throw new RuntimeException(msg);
+                    }
                 }
+                String msg = String.format("\nresult list %s too short\nexpected    %s\n",
+                    new CardSet(bitmap), expected);
+                throw new RuntimeException(msg);
             }
         }
     }

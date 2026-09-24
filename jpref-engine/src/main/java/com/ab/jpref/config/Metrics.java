@@ -42,11 +42,11 @@ public class Metrics {
         xHandGap = 1,       // between hands & talon
         wButton = .5,
         hButton = wButton,
-        wLabel = 1.7,
+        wLabel = 1.6,
         hLabel = .5,
         wElderHand = .5,
 
-        wHand = 4 * xSuitVisible + 8 * xVisible + wButton,  // for 12 cards
+        wHand = 4 * xSuitVisible + 8 * xVisible,    // + wButton,  // for 12 cards
         hHand = 4 * ySuitVisible + 6 * yVisible,            // for 10 cards
 
         ySideHandMargin = (double) 4 / 7,     // for vertical layout

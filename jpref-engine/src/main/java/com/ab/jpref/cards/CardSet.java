@@ -33,6 +33,7 @@ import com.ab.util.Pair;
 import java.io.Serializable;
 import java.util.*;
 
+// bits are counted from right (lsb) to left (msb)
 public class CardSet implements Serializable {
     // todo: first, last, random
     public static final boolean RANDOM_ANY_CARD = false;
@@ -964,9 +965,9 @@ mainLoop:
                 suitMask <<= SUIT_LIST_LENGTH;
             }
             // suitMask = 0xFF0000
-            int m0 = (bitmap + bit) & suitMask;     // clear bit and adjucent bits, 0xBC0000
+            int m0 = (bitmap + bit) & suitMask;     // clear bit and adjacent bits, 0xBC0000
             m0 &= (m0 - 1);                         // remove lsb set by previous line, 0xB80000
-            bitmap = bitmap & ~suitMask | m0;       // bitmap without bit and adjucent bits, 0xB80000
+            bitmap = bitmap & ~suitMask | m0;       // bitmap without bit and adjacent bits, 0xB80000
             bit = bitmap ^ (bitmap & (bitmap - 1)); // new lsb, 0x80000
             // clear bits not in thisBitmap:
             while (bit != 0 && (bit & thisBitmap) == 0) {
@@ -1012,45 +1013,72 @@ mainLoop:
         return res;
     }
 
+    // Candidate cards a defender ("this") could usefully play, given what the partner
+    // ("friend") and the declarer ("foe") hold. thisBitmap may span more than one suit (e.g.
+    // when void in the led suit); friendBitmap/foeBitmap are their full hands.
+    //
+    // Within each suit, a maximal run of "equivalent" thisBitmap cards - cards separated only
+    // by ranks the foe doesn't hold - collapses to its lowest card, since playing any card in
+    // the run wins or loses the trick the same way against the foe. A run splits where the
+    // friend holds a card inside it, because the friend's card changes which of "this" hand's
+    // cards actually wins, so both sides of the split may need their own representative.
     public static int bm4build(int thisBitmap, int friendBitmap, int foeBitmap) {
-        // ♥7XQ  ♥8A  ♥JK -> ♥7Q
-        // 0x29000000 0x82000000 0x50000000
+        // ♠79QA  ♠8X  * -> ♠7A
+        // 0xA5   0x0A  0
         int bitmap = thisBitmap;
-        int bit = bitmap ^ (bitmap & (bitmap - 1)); // bitmap lsb, 0x1000000
-        int others = ~foeBitmap;                    // reverted othersBitmap, 0xAFFFFFFF
-        others &= -bit;                             // remove all bits right from bit, 0xAF000000
-        others &= (msb(bitmap) << 1) - 1;           // remove all bits left from bitmap, 0x2F000000
-        bitmap |= others;                           // add bits missing in othersBitmap, 0x2F000000
+        int bit = lsb(bitmap);                       // bitmap lsb, 0x01
+        int others = ~foeBitmap;                     // reverted othersBitmap
+        others &= -bit;                              // clear all bits right from bit
+        others &= (msb(bitmap) << 1) - 1;            // clear all bits left from bitmap, 0xFF
+        bitmap |= others;                            // add bits missing in othersBitmap, 0xFF
         int suitMask = SUIT_MASK;
         int res = 0;
         while (bit != 0) {
-            res |= bit;                             // 0x1000000
+            bitmap &= -bit;                          // needed when returned from 'continue'
+            res |= bit;                              // 0x01
             while ((bit & suitMask) == 0) {
                 bitmap &= ~suitMask;
                 suitMask <<= SUIT_LIST_LENGTH;
             }
-            // suitMask = 0xFF000000
-            int _friendBitmap = friendBitmap & suitMask;        // 0x82000000
-            int friendLsb = _friendBitmap ^ (_friendBitmap & (_friendBitmap - 1)); // 0x2000000
-            if (friendLsb != 0 && ((friendLsb - 1) & bit) != 0) {
-                // bit is smaller, add suit msb (m.b group of 1s?)
-                int msb = msb(thisBitmap & suitMask);
-                if (msb != 0 && ((msb - 1) & friendLsb) != 0) {
-                    res |= msb;
+            int afterRun = (bitmap + bit) & suitMask; // bit right past the run, 0x00
+            int friendInSuit = friendBitmap & suitMask;
+            int friendLowest = lsb(friendInSuit);     // 0x02
+            if (hasLowerBit(friendLowest, bit)) {
+                // bit is below the friend's lowest card in this suit, so it can't stand in for
+                // the friend's card - work out what else this run needs to contribute
+                int foeHighest = msb(foeBitmap & suitMask);
+                if (afterRun == 0 || hasLowerBit(friendLowest, foeHighest)) {
+                    // the foe can't split the run below friendLowest: also offer the smallest
+                    // thisBitmap card able to beat it
+                    int friendBeater = next(thisBitmap, friendLowest) & suitMask;
+                    res |= friendBeater;
+                } else {
+                    // the foe holds something between friendLowest and the run boundary:
+                    // resume the run from there instead
+                    int afterGapCard = next(thisBitmap, lsb(afterRun)) & suitMask;
+                    if (afterGapCard != 0) {
+                        bit = afterGapCard;
+                        continue;
+                    }
+                    // nothing of ours left past the boundary: fall back to this suit's own
+                    // top card, if it still beats friendLowest
+                    int suitTop = msb(thisBitmap & suitMask);
+                    if (hasLowerBit(suitTop, friendLowest)) {
+                        res |= suitTop;
+                    }
                 }
                 int nextSuitMask = suitMask << SUIT_LIST_LENGTH;
                 if (nextSuitMask == 0) {
                     break;  // last suit ♥
                 }
                 // go to next suit, m.b. next group??
-                int _bitmap = thisBitmap & ~suitMask & ~(suitMask - 1);
-                bit = _bitmap ^ (_bitmap & (_bitmap - 1)); // new lsb, 0x80000
+                int nextSuitCards = thisBitmap & ~suitMask & ~(suitMask - 1);
+                bit = lsb(nextSuitCards);            // new lsb, 0x80000
                 continue;
             }
-            int m0 = (bitmap + bit) & suitMask;     // clear bit and adjucent bits, 0xBC0000
-            m0 &= (m0 - 1);                         // remove lsb set by previous line, 0xB80000
-            bitmap = bitmap & ~suitMask | m0;       // bitmap without bit and adjucent bits, 0xB80000
-            bit = bitmap ^ (bitmap & (bitmap - 1)); // new lsb, 0x80000
+            afterRun &= (afterRun - 1);              // remove lsb set by previous line, 0xB80000
+            bitmap = bitmap & ~suitMask | afterRun;  // bitmap without bit and adjacent bits, 0xB80000
+            bit = lsb(bitmap);                       // new lsb, 0x80000
             // clear bits not in thisBitmap:
             while (bit != 0 && (bit & thisBitmap) == 0) {
                 bitmap &= ~bit;
@@ -1058,6 +1086,15 @@ mainLoop:
             }
         }
         return res;
+    }
+
+    private static int lsb(int bitmap) {
+        return bitmap ^ (bitmap & (bitmap - 1));
+    }
+
+    // true if bits has a set bit strictly below mark's position (mark is a single bit, or 0)
+    private static boolean hasLowerBit(int mark, int bits) {
+        return mark != 0 && ((mark - 1) & bits) != 0;
     }
 
     public static class ListData {

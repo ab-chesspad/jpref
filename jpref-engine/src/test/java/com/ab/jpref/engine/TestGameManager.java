@@ -10,10 +10,9 @@ import com.ab.jpref.config.Config;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 
-import com.ab.jpref.trickpool.TrickPool;
 import com.ab.util.Logger;
 import com.ab.util.SimpleLongIntMap;
-import com.ab.util.Util;
+
 import static com.ab.util.Util.DEAL_MARK;
 import static com.ab.util.Util.currMethodName;
 import org.junit.Assert;
@@ -32,7 +31,6 @@ public class TestGameManager extends BaseTest {
     @Before
     public void init() {
         trickList = new TrickList();
-        trickList.init(new TrickPool());
         gameManager = new GameManager();
         gameManager.init(host);
         GameManager.DEBUG_LOG = false;      // suppress thread status logginga

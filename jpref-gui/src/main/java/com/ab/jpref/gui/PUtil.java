@@ -19,8 +19,6 @@
  */
 package com.ab.jpref.gui;
 
-import com.ab.jpref.config.Config;
-import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.ui.Host;
 import com.ab.util.Util;
 

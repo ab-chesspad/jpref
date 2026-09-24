@@ -29,25 +29,15 @@ public interface Host {
     int SPECIAL_OPTION_SHOW_CARDS = 0x1;
     int SPECIAL_OPTION_MANUAL = 0x1;
 
+    default Config.OS getOS() {return Config.OS.unknown;}
     default int specialOption() {return 0;}
     default long buildDate() {return 0;}
     default Metrics getMetrics() {return null;}
     Config config();
-    default void setConfig(Config config) {};
+    default void setConfig(Config config) {}
     Util getUtil();
     default String getLogFileName() {return null;}
     default void repaintAll() {}
     default void updateSettings() {}
     default String getDataDirectory(){return null;}
-
-    // Some Android versions/devices don't reliably dispatch touches (or draw
-    // order) by z-order/elevation for overlapping sibling views, letting a tap
-    // on a disabled overlay button fall through to whatever's positioned
-    // underneath it. Hosts affected by this should force the covered panel's
-    // buttons disabled while the menu overlay is shown; unaffected hosts
-    // (desktop's proper Z-ordered JLayeredPane, and newer Android versions)
-    // don't need it and shouldn't have their buttons disabled needlessly.
-    default boolean needsMenuOverlapWorkaround() {
-        return false;
-    }
 }

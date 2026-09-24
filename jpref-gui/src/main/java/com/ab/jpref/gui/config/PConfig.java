@@ -22,14 +22,15 @@ package com.ab.jpref.gui.config;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.ui.Host;
 import com.ab.util.Couple;
-import com.ab.jpref.gui.PUtil;
 
 import java.awt.*;
 import java.util.Locale;
 
 public class PConfig extends Config {
     // update serialVersionUID every time a property is being added/changed!
-    private static final long serialVersionUID = 10L;
+    private static final long serialVersionUID = 11L;
+
+    public final Property<Integer> deleteLogsAfter = new Property<>("Delete logs after, days", 1);
 
     public final Property<Rectangle> scoresPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> settingsPopupRectangle = new Property<>("", new Rectangle());

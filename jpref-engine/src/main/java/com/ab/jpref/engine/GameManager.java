@@ -39,6 +39,8 @@ import java.util.*;
 public class GameManager implements Serializable {
     public static boolean RELEASE = false;
     public static boolean DEBUG_LOG = false;
+    public static final boolean DEBUG_END_OF_GAME = false;
+
     private static final long serialVersionUID = 1L;
 
     public static final boolean[] BOTS = new boolean[NOP];
@@ -195,11 +197,28 @@ public class GameManager implements Serializable {
         return declarer;
     }
 
+    public void setRoundStage(RoundStage roundStage) {
+        this.roundStage = roundStage;
+    }
+
     public void runGame(InputStream testInputStream, int skip) {
         this.testInputStream = testInputStream;
+        if (roundStage == RoundStage.dealing) {
+            TrickList.getInstance().initBuild(null);
+            passCount = 0;
+            allPassFactor = 0;
+        }
         if (testInputStream == null) {
             runGame();
         } else {
+            if (DEBUG_END_OF_GAME) {
+                int poolPoints = config().poolSize.get() - 1;
+                for (Player player : players) {
+                    Player.RoundResults roundResults = new Player.RoundResults();
+                    roundResults.setPoints(Player.PlayerPoints.poolPoints, poolPoints);
+                    player.getGameHistory().add(roundResults);
+                }
+            }
             try {
                 util.getList(testInputStream,
                     (res, tokens) -> {
@@ -251,9 +270,14 @@ public class GameManager implements Serializable {
         int totalPool;
         if (roundStage == RoundStage.dealing) {
             elderHand = new Random().nextInt(NOP);
+            nextBidder = elderHand;
+            allPassFactor = 0;
         }
         do {
             if (roundStage == RoundStage.dealing) {
+                TrickList.getInstance().initBuild(null);
+                passCount = 0;
+//                allPassFactor = 0;
                 deck = CardList.getDeck();
                 Collections.shuffle(deck);
                 minBid = Bid.BID_6S;
@@ -278,7 +302,10 @@ public class GameManager implements Serializable {
             }
         } while (totalPool < config().poolSize.get() * NOP);
         printf("game ended\n");
-        // now Main will continue launching games
+        for (Player player: players) {
+            player.clearHistory();
+        }
+        // Main will continue launching games
     }
 
     Bid getBid(int playerNum) {
@@ -326,8 +353,31 @@ public class GameManager implements Serializable {
                 this.talonCards.clear();
             }
             this.declarerHand = new CardSet(this.declarer.myHand);
+            if (declarerNum >= 0) {
+                // roundStage is still at its default (dealing) here, so playRoundForTricks()/
+                // playRoundMisere() would skip their own declareRound() call entirely; without
+                // this, Bot.play()'s targetBot==null fallback runs declareRound() on a throwaway
+                // proxy (getDeclarerForDefender(), meant only for a human declarer) instead of
+                // the real declarer, so the drop never actually reduces this.declarer.myHand -
+                // it silently drops from a discarded copy instead, leaving phantom cards in
+                // this.declarer's hand for the rest of the round. Call it directly on the real
+                // declarer here, then restore the forced bid on both this.declarer and
+                // targetBot: declareRound() (via ForTricksBot/MisereBot.getDrop()) always
+                // recomputes bid from the bot's own judgement of the hand - normally fine, since
+                // real bidding only ever reaches declareRound() with a bid the declarer judged
+                // achievable, but a bid forced here for testing can be far beyond what the dealt
+                // hand supports, in which case that judgement can come back null. targetBot (not
+                // this.declarer) is what declarerPlay()/the search actually reads afterward, so
+                // it needs the restored bid too, or it NPEs the first time it's consulted.
+                this.declarer.declareRound(bid, elderHand, null);
+                this.declarer.bid = bid;
+                if (Bot.targetBot != null) {
+                    Bot.targetBot.bid = bid;
+                }
+            }
             printf("declarer %s, round %s, %s\n",
                 this.declarer.getName(), this.declarer.getBid(), this.declarer.toColorString());
+            this.initialDeclarerHand = new CardSet(declarerHand);
         }
     }
 
@@ -352,7 +402,6 @@ public class GameManager implements Serializable {
         try {
             switch (roundStage) {
                 case dealing:
-                    TrickList.getInstance().initBuild();
                     trick.clear(elderHand);
                     lastTrickCards.clear();
                     deal(deck);
@@ -389,7 +438,11 @@ public class GameManager implements Serializable {
                             update(RoundStage.drop);
                             sleep(10);
                         }
-                        minBid = declarer.drop();
+                        Bid bid = declarer.drop();
+                        if (Bid.BID_WITHOUT_THREE.equals(bid)) {
+                            break;
+                        }
+                        minBid = bid;
                         this.roundStage = RoundStage.declareRound;
                     }
                     // fall through
@@ -442,7 +495,14 @@ public class GameManager implements Serializable {
             if (minBid.equals(Bid.BID_ALL_PASS)) {
                 allPassFactor = ++allPassFactor % 3;
             } else {
-                allPassFactor = 0;
+                boolean whist = players[(declarerNumber + 1) % NOP].getBid().equals(Bid.BID_PASS) ||
+                    players[(declarerNumber + 2) % NOP].getBid().equals(Bid.BID_PASS);
+                int defenderTricks = players[(declarerNumber + 1) % NOP].getTricks() +
+                    players[(declarerNumber + 2) % NOP].getTricks();
+                if (declarer.tricks >= declarer.getBid().goal() && whist &&
+                        defenderTricks >= declarer.getBid().defenderGoal()) {
+                    allPassFactor = 0;
+                }
             }
         }
         return next;
@@ -452,6 +512,9 @@ public class GameManager implements Serializable {
         // in the future bot should be able to pass even if it can declare a round
         if (allPassFactor > 0) {
             minBid = Bid.BID_7S;
+        }
+        if (minBid.compareTo(Bid.BID_6S) < 0) {
+            minBid = Bid.BID_6S;
         }
         update(RoundStage.bidding);
         boolean misereDeclared = false;
@@ -507,7 +570,7 @@ loop:
                     }
                     minBid = bid.next();
                     if (bid.equals(Bid.BID_8N)) {
-                        minBid = minBid.next();     // skip Misere
+                        minBid = minBid.next();     // skip Misère
                     }
                 } else {
                     minBid = savedBid;
@@ -689,6 +752,15 @@ loop:
                 Player avatar = this.players[i];
                 player.setTricks(avatar.getTricks());
                 player.setBid(avatar.getBid());
+                // the round was actually played out on the avatar (a separate Bot/HumanPlayer
+                // copy made by avatars4Round()), so its hand fields are the ones that reflect
+                // the finished round; without this, the real player object keeps whatever
+                // myHand/leftHand/rightHand it had going in - stale for anyone reading it
+                // between now and the next deal() (which overwrites it unconditionally, hiding
+                // the staleness in the common case of immediately starting a new round).
+                player.myHand.set(avatar.myHand);
+                player.leftHand.set(avatar.leftHand);
+                player.rightHand.set(avatar.rightHand);
             }
         }
         this.players = savedPlayers;
@@ -705,7 +777,7 @@ loop:
                 if (declarer instanceof HumanPlayer) {
                     update(RoundStage.declareRound);
                 }
-                declarer.declareRound(minBid, elderHand);
+                declarer.declareRound(minBid, elderHand, null);
                 this.minBid = declarer.getBid();
                 printf("%s declares %s\n", declarer.getName(), this.minBid);
                 trick.setBid(this.minBid);
@@ -815,7 +887,7 @@ loop:
     protected void playRoundMisere() {
         if (roundStage.equals(RoundStage.showTalon) ||
                 roundStage.equals(RoundStage.declareRound)) {
-            declarer.declareRound(minBid, elderHand);
+            declarer.declareRound(minBid, elderHand, null);
             Player player1 = players[(this.declarerNumber + 1) % NOP];
             Player player2 = players[(this.declarerNumber + 2) % NOP];
             if (declarer instanceof HumanPlayer) {
@@ -833,7 +905,6 @@ loop:
                 avatars4Round();
             }
             this.declarer = this.players[this.declarerNumber];
-            TrickList.getInstance().initBuild();
         }
         update(RoundStage.play);
         for (int c = trick.number; c < ROUND_SIZE; ++c) {

@@ -65,10 +65,13 @@ public class Logger {
     }
 
     protected void _printf(String format, Object... args) {
-        PrintStream out = logHolder.getLogStream();
-        out.printf(format, args);
-        if (DEBUG_LOG && out != System.out) {
-            System.out.printf(format, args);
+        String s = String.format(format, args);
+        synchronized (Logger.class) {
+            PrintStream out = logHolder.getLogStream();
+            out.print(s);
+            if (DEBUG_LOG && out != System.out) {
+                System.out.print(s);
+            }
         }
     }
 

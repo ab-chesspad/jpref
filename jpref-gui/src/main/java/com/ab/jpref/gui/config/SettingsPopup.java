@@ -19,7 +19,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class SettingsPopup extends JDialog {
     static final boolean DEBUG_LOG = false;
@@ -111,17 +114,46 @@ public class SettingsPopup extends JDialog {
         settingsPanel.setLayout(new BoxLayout(settingsPanel, BoxLayout.Y_AXIS));
         try {
             Class<? extends PConfig> claz = pConfig.getClass();
-            for (Field property : claz.getFields()) {
+            List<Field> fields = new ArrayList<>();
+            for (Field field : claz.getFields()) {
                 // including ColorProperty
-                if (!property.getType().getName().endsWith("Property")) {
+                if (!field.getType().getName().endsWith("Property")) {
                     continue;
                 }
-                Object p = claz.getField(property.getName()).get(pConfig);
-                if (((Config.Property<?>)p).getLabel().isEmpty()) {
+                Config.Property<?> property = (Config.Property<?>) field.get(pConfig);
+                if (property.getLabel().isEmpty()) {
                     continue;
                 }
+                fields.add(field);
+            }
+            // Class.getFields() enumeration order isn't guaranteed by the JLS -
+            // show every property declared directly on Config (shared across
+            // platforms) before any declared on a platform-specific subclass
+            // (like PConfig, where deleteLogsAfter now lives); within each of
+            // those two groups, fall back to Property's own declaration-order
+            // sequence number so a newly added property still lands in the
+            // right spot with no separate list to keep in sync. Grouping by
+            // declaring class explicitly (rather than relying on Property's
+            // order alone) keeps this correct even across a refresh(), which
+            // deserializes a previously-saved Config and so can carry stale
+            // order values from before a property was moved between classes.
+            Collections.sort(fields, (f1, f2) -> {
+                boolean base1 = f1.getDeclaringClass() == Config.class;
+                boolean base2 = f2.getDeclaringClass() == Config.class;
+                if (base1 != base2) {
+                    return base1 ? -1 : 1;
+                }
+                try {
+                    Config.Property<?> p1 = (Config.Property<?>) f1.get(pConfig);
+                    Config.Property<?> p2 = (Config.Property<?>) f2.get(pConfig);
+                    return Integer.compare(p1.getOrder(), p2.getOrder());
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            for (Field field : fields) {
                 settingsPanel.add(Box.createRigidArea(new Dimension(0,5)));
-                settingsPanel.add(getPropUpdater(property));
+                settingsPanel.add(getPropUpdater(field));
             }
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new RuntimeException(e);

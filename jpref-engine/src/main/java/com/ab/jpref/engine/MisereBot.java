@@ -168,7 +168,7 @@ public class MisereBot extends Bot {
     }
 
     @Override
-    PlayerBid getDrop(int elderHand, int nDrops) {
+    PlayerBid getDrop(int elderHand, int nDrops, Trick trick) {
         PlayerBid playerBid = new PlayerBid(Config.Bid.BID_MISERE);
         if (debugDrop != null) {
             playerBid.drops = new CardSet(debugDrop);
@@ -219,7 +219,7 @@ probes:
         return playerBid;
     }
 
-    public void getHoles(int declarerNum) {
+    public void getHoles(int declarerNum, Trick trick) {
         if (holes == null) {
             // happens after unserialization
             holes = new ArrayList<>();
@@ -246,17 +246,12 @@ probes:
 
     @Override
     public Card play(Trick trick) {
-        Bot.trick = trick;
-
-        getHoles(gameManager().declarerNumber);
+        getHoles(gameManager().declarerNumber, trick);
 
         Card res;
         if (trick.getTurn() != gameManager().declarerNumber) {
             // defender
             if (holes.isEmpty()) {
-                if (TrickList.bestNodes[0] != null) {
-                    TrickList.bestNodes[0].trickData = 0;   // ugly
-                }
                 return gameManager().getPlayers()[trick.getTurn()].anyCard(trick, false);
             }
             res = TrickList.getInstance().getCard(this, trick);
@@ -265,7 +260,7 @@ probes:
             }
             return this.anyCard(trick, false);
         }
-        return declarerPlay();
+        return declarerPlay(trick);
     }
 
     HandResults misereTricks(int elderHand) {
@@ -288,7 +283,7 @@ probes:
         return handResults;
     }
 
-    private Card declarerPlay() {
+    private Card declarerPlay(Trick trick) {
         HandResults handResults = misereTricks(trick.getTurn());
         CardSet.ListData bestListData = null;
         if (trick.startingSuit == null) {
@@ -412,7 +407,6 @@ probes:
 
     private MisereBot getMisereBot(TrickList.TrickNode trickNode) {
         MisereBot misereBot = new MisereBot(trickNode.hands);
-        Bot.trick = trickNode;
 
         int rightSize = misereBot.rightHand.size();
         if (trickNode.startingSuit != null) {
@@ -420,7 +414,7 @@ probes:
         }
         if (misereBot.myHand.size() > rightSize) {
             int elderHand = (this.number - gameManager().elderHand + NOP) % NOP;  // relative to self
-            PlayerBid playerBid = misereBot.getDrop(elderHand, misereBot.myHand.size() - ROUND_SIZE);
+            PlayerBid playerBid = misereBot.getDrop(elderHand, misereBot.myHand.size() - ROUND_SIZE, trickNode);
             misereBot.drop(playerBid.drops);
         }
         return misereBot;
@@ -430,7 +424,8 @@ probes:
     long bm4Iteration(TrickList.TrickNode trickNode) {
         int num = trickNode.getTurn();
         if (num == 0) {
-            return CardSet.bit(play4Build(trickNode));
+            Card card = play4Build(trickNode);
+            return card == null ? 0L : CardSet.bit(card);
         }
         int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
         if (bitmap == 0) {
@@ -450,11 +445,21 @@ probes:
 
     private Card play4Build(TrickList.TrickNode trickNode) {
         MisereBot misereBot = getMisereBot(trickNode);
-        Bot.trick = trickNode;
-        misereBot.getHoles(0);
-        Card card = misereBot.declarerPlay();
+        misereBot.getHoles(0, trickNode);
+        Card card = misereBot.declarerPlay(trickNode);
         if (card == null) {
-            throw new RuntimeException("card == null"); // sanity check
+            // declarerPlay()'s own heuristic found no suit to lead with - can happen when this
+            // node is reached while TrickList.rebuild() is re-guessing the declarer's drop
+            // (getMisereBot()'s own lazy drop can end up applied on top of that guess). Rather
+            // than crash the whole search over a leftover heuristic gap, fall back to any legal
+            // card; a suboptimal candidate here is still sound input to the minimax comparison.
+            card = misereBot.myHand.anyCard();
+            if (card == null) {
+                // the same drop-guessing interaction can leave this node with no cards at all;
+                // the caller (bm4Iteration) treats a null return as "no candidates here" and
+                // lets that search branch end normally instead of crashing the whole search.
+                return null;
+            }
         }
         if (!misereBot.myHand.contains(card)) {
             throw new RuntimeException(String.format("err: card %s does not belong to %s",
