@@ -210,7 +210,9 @@ if (++count[0] > 0) {
                         printTricks();
                         if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
                             Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                            if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                            if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                                Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
+                            } else {
                                 Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                             }
                         }
@@ -281,7 +283,9 @@ if (++count[0] > 0) {
                         int declarerTricks = Integer.parseInt(resParts[1]);
                         Assert.assertNotNull("wrong bidding", gameManager.getDeclarer());
                         Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                        if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                        if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                            Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
+                        } else {
                             Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                         }
                     }

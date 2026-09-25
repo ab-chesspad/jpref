@@ -1,21 +1,23 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
-#deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
-#deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
-deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # ловится
-
 #########
 # stress test
 analyzing: ♠9 ♦789JQA ♥9JK  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A
 list build duration: 829 msec, positions 662,796, similar 6,117,598
 [♥AJQ, ♣X ♥9 ♣8, ♣K ♦Q ♣9, ♣7 ♦J ♣J, ♣A ♥8 ♦9, ♠JK9, ♠8 ♦8 ♠Q, ♠AX ♦7, ♥7 ♦X ♥K, ♦A ♥X ♦K]
-#deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6- 2
+deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6- 2
 
 # same deal, hands rotated among seats, elderHand 1: worse than the above under the current bm4Iteration
 analyzing: ♠8XK ♣7XK ♥89JA  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ
 list build duration: 2,196 msec, positions 1,615,153, similar 17,866,365
 [♦7 ♥QJ, ♦8 ♥X9, ♦9 ♥7A, ♥K ♣A ♥8, ♦J ♣JX, ♦Q ♣8K, ♦A ♣97, ♣Q ♠AX, ♠9JK, ♠87Q]
-#deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  1 -> 6- 1
+deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  1 -> 6- 1
+
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
+deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
+
+deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
+deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # ловится
 
 deal: ♠89 ♣9A ♦9Q ♥8JKA  ♠7JA ♣7JQ ♦7K ♥7Q  ♠QK ♣8XK ♦8XJ ♥9X  ♦A ♠X  1 -> 6♥ 7
 deal: ♠XQK ♣7XKA ♦9XQ  ♠9J ♣9J ♦8 ♥78XJA  ♠7A ♣8Q ♦7JK ♥9QK  ♦A ♠8  2 -> 6♣ 6
@@ -24,9 +26,6 @@ deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥8
 deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 
 deal: ♠8J ♣7KA ♦78A ♥7A  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♥J9  1 -> 6♥ 6
-
-declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
-deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
 
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9Q ♣XQ ♦JQK ♥9XK   ♠78 ♣9J ♦89XA ♥8A     ♥JQ 1  -> 6♣ 8
 
@@ -67,10 +66,9 @@ deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥
 [♠X89, ♠7AK, ♠J ♦Q ♣K, ♣89X, ♦7X ♥A, ♦8 ♥J ♦9, ♦J ♥QX, ♦K ♥89, ♦A ♣AJ, ♥7 ♣Q7]
 deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> Misère 1 # ловится xx
 
-deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 1 # ловится
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # , diff drop, не ловится
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
 
-deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # не ловится
 deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
 
 list build duration: 193 msec, positions 198,618, similar 1,298,905
@@ -114,8 +112,6 @@ deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥7
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79 ♣8JQK ♦89Q ♥7   ♥9K  2 -> 6♦ 6
 
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
-
-deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 0 # small hole 7-10
 
 ######## todo: test all-pass
 deal: ♠89XA ♣7XK ♦KA ♥9  ♠7JK ♣89 ♦8X ♥8JA  ♠Q ♣JA ♦79J ♥7XQK  ♦Q ♣Q  1 -> All-pass # 6♣ 7

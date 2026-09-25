@@ -1,13 +1,18 @@
 biddedplay: hands, talon, elderhand -> bid, tricks
 
-# only 6 cards make 9♠
-#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ  ♥KA  1 -> 9♠ 10
+############
+deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> All-pass # Misère https://preferans.de/004
+
+deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 0 # не ловится 2
+
+deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 10
 
 deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 10
 
-############
+deal: ♠78J ♦XJQK ♥8XQ  ♠9QA ♣8XJ ♦79 ♥9J  ♠K ♣79QK ♦8A ♥7KA  ♠X ♣A  2 -> 8♣ 8
+
 deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
-deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole 7-10
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
 deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7
 deal: ♠9A ♣9X ♦79X ♥79X  ♠78XJQ ♣A ♦Q ♥8JQ  ♠K ♣78JQK ♦KA ♥KA  ♦J8  0 -> 8♣ 9
@@ -16,7 +21,6 @@ deal: ♠78 ♣9XQ ♦89J ♥QK  ♠9Q ♣8JA ♦7QK ♥8J  ♠XKA ♣7 ♦XA �
 deal: ♣79QA ♦9XKA ♥XJ  ♠89X ♣XK ♦8Q ♥79Q  ♠7JQKA ♣J ♦7J ♥8K  ♥A ♣8  0 -> 8♦ 9 # по Утяцкому #33
 deal: ♠9X ♦89XQA ♥8XK  ♠QA ♣79XJQA ♦7K  ♠7K ♣8K ♦J ♥79JQA  ♠J8  0 -> 8♣ 8
 deal: ♠XQA ♦9XKA ♥789  ♠789J ♣78K ♦J ♥JQ  ♣9XJQA ♦78 ♥XKA  ♠K ♦Q  2 -> 6♣ 7
-deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 2 # не ловится
 deal: ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠JQA ♣XK ♦XK ♥7JA  ♠9 ♦7  1 -> 6♦ 6
 deal: ♠JQA ♣XK ♦XK ♥7JA  ♠7XK ♣789J ♥9XK  ♠8 ♣QA ♦89JQA ♥8Q  ♠9 ♦7  1 -> 6♦ 6
 
@@ -98,3 +102,7 @@ deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠9 ♣8JQK ♦8Q �
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♣8JQK ♦89Q ♥79K  ♠79  0 -> 7♠ 8
 deal: ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠Q ♣8J ♦7XJK ♥78Q  ♠8K  1 -> 8♠ 9
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
+
+# only 6 cards make 9♠
+#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ  ♥KA  1 -> 9♠ 10
+

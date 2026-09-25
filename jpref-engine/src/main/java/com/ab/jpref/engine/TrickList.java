@@ -66,7 +66,7 @@ String path;
     private transient SimpleLongIntMap positions;
     private final TrickNode[] bestNodes = new TrickNode[ROUND_SIZE + 1];
     private final TrickList.TrickNode[] probesBestNodes = new TrickList.TrickNode[ROUND_SIZE + 1];
-    private int nodeIndex = 0;
+    private int nodeIndex = -1;
     private int lastTrickNum = -2;
 
     private Bot targetBot;
@@ -217,8 +217,8 @@ String path;
 
     public void initBuild(Bot targetBot) {
         this.targetBot = targetBot;
-        nodeIndex = 0;
-        bestNodes[nodeIndex].setTrickData(NULL_DATA);
+        nodeIndex = -1;
+        bestNodes[0].setTrickData(NULL_DATA);
     }
 
     public int getEstimate() {

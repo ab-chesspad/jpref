@@ -256,6 +256,7 @@ public class Scoresheet {
                 --historySize;
             }
             if (historySize == 0) {
+                widget.change = 0;
                 return;
             }
             if (labelIndex == statusPoints) {

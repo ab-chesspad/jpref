@@ -277,7 +277,6 @@ public class GameManager implements Serializable {
             if (roundStage == RoundStage.dealing) {
                 TrickList.getInstance().initBuild(null);
                 passCount = 0;
-//                allPassFactor = 0;
                 deck = CardList.getDeck();
                 Collections.shuffle(deck);
                 minBid = Bid.BID_6S;
@@ -505,6 +504,7 @@ public class GameManager implements Serializable {
                 }
             }
         }
+        TrickList.getInstance().initBuild(null);
         return next;
     }
 

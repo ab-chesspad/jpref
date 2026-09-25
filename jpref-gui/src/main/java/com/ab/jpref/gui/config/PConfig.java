@@ -37,7 +37,7 @@ public class PConfig extends Config {
     public final Property<Rectangle> helpPopupRectangle = new Property<>("", new Rectangle());
     public final Property<Rectangle> offerPopupRectangle = new Property<>("", new Rectangle());
 
-    public final ColorProperty bgColor = new ColorProperty("", "#007000");
+    public final ColorProperty bgColor = new ColorProperty("", "#005000");
     public final ColorProperty labelBGColor = new ColorProperty("","#ffff00");
     public final ColorProperty labelTextColor = new ColorProperty("","#008200");
     public final ColorProperty currentPlayerBGColor = new ColorProperty("", "#00ff00");

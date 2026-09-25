@@ -473,7 +473,6 @@ public class TableLayout implements GameManager.EventObserver {
         x = (metrics.panelWidth - wPanel) / 2;
         y = 2 * metrics.yMargin + metrics.panelY + (int) metrics.cardH + (space - hPanel) / 2;
         buttonPanel.setBounds(x, y, wPanel, hPanel);
-        buttonPanel.setEnabled(true);
         buttonPanel.setVisible(true);
 
         Widget widget;
