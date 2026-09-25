@@ -50,11 +50,11 @@ public class BaseTrick implements Serializable {
     private static final int TOP_LEN = 2;
     private static final int TOP_SHIFT = STARTED_BY_SHIFT + STARTED_BY_LEN;                 // 27
 
-    private static final int INDEX_MASK_LEN = 24;                                           // 24
+    private static final int INDEX_MASK_LEN = 28;                                           // 28, thread pool number in upper 4 bits
     private static final int INDEX_MASK = (1 << INDEX_MASK_LEN) - 1;
     private static final int INDEX_SHIFT = TOP_SHIFT + TOP_LEN;                             // 30
 
-    public static final int TOTAL_USED_BITS = INDEX_SHIFT + INDEX_MASK_LEN;                 // 53
+    public static final int TOTAL_USED_BITS = INDEX_SHIFT + INDEX_MASK_LEN;                 // 57
 
     // for multithreaded TrickList, not in use anymore
     private static final long FORECAST_DONE_BIT = (1L << 63);                               // 63

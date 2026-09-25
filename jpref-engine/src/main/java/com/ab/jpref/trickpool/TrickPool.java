@@ -22,112 +22,133 @@
 
 package com.ab.jpref.trickpool;
 
+import com.ab.jpref.engine.BaseTrick;
 import com.ab.jpref.engine.TrickList;
 
-import static com.ab.jpref.engine.TrickList.SINGLE_THREADED;
+import static com.ab.jpref.engine.TrickList.MULTI_THREADED;
 import static com.ab.jpref.engine.TrickList.TRACE;
 
-import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public class TrickPool implements TrickList.TrickPool {
-    // pool storage is split into fixed-size pages. Page 0 is allocated
-    // upfront (virtually every search needs it); the rest are allocated
-    // lazily as needed, so a fresh pool doesn't spike memory before the
-    // search even knows how much it'll use, which matters on Android. The
-    // page table itself is fixed-size and never resized, so no thread can
-    // ever observe it mid-growth. Each page is published through an
-    // AtomicReferenceArray, so a lazily-created page is safely visible to any
-    // thread that later reads it without get()/set() needing to synchronize:
-    // get()/set() are only ever called with an index a prior alloc() already
-    // returned, so that index's page is guaranteed to already exist.
+    // the pool is split into THREAD_POOLS independent sub-pools, one per
+    // search thread, so alloc() never needs to synchronize: each thread only
+    // ever allocates from its own sub-pool. A pool index is
+    // (threadNum << THREAD_SHIFT) | localIndex, so get()/set() can locate the
+    // entry from any thread. localIndex 0 is never allocated, so index 0
+    // still means "none".
+    //
+    // Each sub-pool's storage is split into fixed-size pages. Page 0 of
+    // sub-pool 0 is allocated upfront (virtually every search needs it); the
+    // rest are allocated lazily as needed, so a fresh pool doesn't spike
+    // memory before the search even knows how much it'll use, which matters
+    // on Android. The page tables themselves are fixed-size and never
+    // resized, so no thread can ever observe one mid-growth.
+    //
+    // Entry data is kept in plain arrays: an entry is written only by its
+    // owning thread, and never changes after set() stores its final (done)
+    // data. Other threads read an entry only after isDone() returned true for
+    // it (directly, or for an entry whose data led to it), so in multithreaded
+    // mode the single cross-thread handoff is a per-entry done bit: set()
+    // publishes it with a release write (lazySet) after the plain data write,
+    // isDone() reads it with an acquire read. That makes the entry data, and
+    // everything its owner wrote before it (including newly created pages),
+    // visible to the reader. Each done bitmap word covers entries of a single
+    // sub-pool, so it only ever has one writer and needs no CAS.
+    private static final int THREAD_SHIFT = 24;         // BaseTrick index keeps 28 bits
+    private static final int LOCAL_MASK = (1 << THREAD_SHIFT) - 1;
     private static final int PAGE_BITS = 20;
     private static final int PAGE_SIZE = 1 << PAGE_BITS;
     private static final int PAGE_MASK = PAGE_SIZE - 1;
-    private static final int PAGE_COUNT = 32;
+    private static final int PAGE_COUNT = 1 << (THREAD_SHIFT - PAGE_BITS);
+    private static final int DONE_WORD_BITS = 5;        // 32 done bits per int
 
-    private AtomicReferenceArray<AtomicLongArray> atomicPages;
-    private long[][] pages;
-    private final int[][] backRefPages;
-    public int nextPoolIndex;
+    private final long[][][] pages;
+    private final AtomicIntegerArray[][] donePages;
+    private final int[][][] backRefPages;
+    private final int[] nextPoolIndex = new int[THREAD_POOLS];
 
     public TrickPool() {
-        if (SINGLE_THREADED) {
-            pages = new long[PAGE_COUNT][];
-            pages[0] = new long[PAGE_SIZE];
-        } else {
-            atomicPages = new AtomicReferenceArray<>(PAGE_COUNT);
-            atomicPages.set(0, new AtomicLongArray(PAGE_SIZE));
-        }
-        backRefPages = TRACE ? new int[PAGE_COUNT][] : null;
-        if (TRACE) {
-            backRefPages[0] = new int[PAGE_SIZE];
-        }
+        pages = new long[THREAD_POOLS][PAGE_COUNT][];
+        donePages = MULTI_THREADED ? new AtomicIntegerArray[THREAD_POOLS][PAGE_COUNT] : null;
+        backRefPages = TRACE ? new int[THREAD_POOLS][PAGE_COUNT][] : null;
+        page(0, 0);
     }
 
     @Override
     public void clear() {
-        nextPoolIndex = 0;
+        Arrays.fill(nextPoolIndex, 0);
     }
 
-    private long[] page(int page) {
-        if (pages[page] == null) {
-            pages[page] = new long[PAGE_SIZE];
+    private long[] page(int threadNum, int page) {
+        long[][] threadPages = pages[threadNum];
+        if (threadPages[page] == null) {
+            threadPages[page] = new long[PAGE_SIZE];
+            if (MULTI_THREADED) {
+                donePages[threadNum][page] = new AtomicIntegerArray(PAGE_SIZE >>> DONE_WORD_BITS);
+            }
             if (TRACE) {
-                backRefPages[page] = new int[PAGE_SIZE];
+                backRefPages[threadNum][page] = new int[PAGE_SIZE];
             }
         }
-        return pages[page];
+        return threadPages[page];
     }
 
-    private AtomicLongArray atomicPage(int page) {
-        AtomicLongArray p = atomicPages.get(page);
-        if (p == null) {
-            p = new AtomicLongArray(PAGE_SIZE);
-            atomicPages.set(page, p);
-            if (TRACE) {
-                backRefPages[page] = new int[PAGE_SIZE];
-            }
+    @Override
+    public int alloc(long trickData, int threadNum, int prevIndex) {
+        int localIndex = ++nextPoolIndex[threadNum];
+        if (localIndex > LOCAL_MASK) {
+            throw new RuntimeException("trick pool " + threadNum + " overflow");
         }
-        return p;
-    }
-
-    public int alloc(long trickData, int prevIndex) {
-        ++nextPoolIndex;
-        int pageIndex = nextPoolIndex >>> PAGE_BITS;
-        int offset = nextPoolIndex & PAGE_MASK;
-        if (SINGLE_THREADED) {
-            page(pageIndex)[offset] = trickData;
-        } else {
-            atomicPage(pageIndex).set(offset, trickData);
+        int pageIndex = localIndex >>> PAGE_BITS;
+        int offset = localIndex & PAGE_MASK;
+        page(threadNum, pageIndex)[offset] = trickData;
+        if (MULTI_THREADED && ((offset & ((1 << DONE_WORD_BITS) - 1)) == 0 || localIndex == 1)) {
+            // entries are allocated sequentially, so the whole word belongs to
+            // entries not yet allocated in this search; reset done bits left
+            // over from a previous one. localIndex 0 is never allocated, so
+            // the first word is reset on localIndex 1
+            donePages[threadNum][pageIndex].lazySet(offset >>> DONE_WORD_BITS, 0);
         }
         if (TRACE) {
-            backRefPages[pageIndex][offset] = prevIndex;
+            backRefPages[threadNum][pageIndex][offset] = prevIndex;
         }
-        return nextPoolIndex;
+        return threadNum << THREAD_SHIFT | localIndex;
     }
 
-    @Override
-    public synchronized int allocSync(long trickData, int prevIndex) {
-        return alloc(trickData, prevIndex);
-    }
-
+    // stores the final data, entry must not change afterwards
     @Override
     public void set(int index, long trickData) {
-        if (SINGLE_THREADED) {
-            pages[index >>> PAGE_BITS][index & PAGE_MASK] = trickData;
-        } else {
-            atomicPages.get(index >>> PAGE_BITS).set(index & PAGE_MASK, trickData);
+        int threadNum = index >>> THREAD_SHIFT;
+        int localIndex = index & LOCAL_MASK;
+        int pageIndex = localIndex >>> PAGE_BITS;
+        int offset = localIndex & PAGE_MASK;
+        pages[threadNum][pageIndex][offset] = trickData;
+        if (MULTI_THREADED) {
+            AtomicIntegerArray done = donePages[threadNum][pageIndex];
+            int word = offset >>> DONE_WORD_BITS;
+            done.lazySet(word, done.get(word) | 1 << (offset & ((1 << DONE_WORD_BITS) - 1)));
         }
+    }
+
+    @Override
+    public boolean isDone(int index) {
+        int threadNum = index >>> THREAD_SHIFT;
+        int localIndex = index & LOCAL_MASK;
+        int pageIndex = localIndex >>> PAGE_BITS;
+        int offset = localIndex & PAGE_MASK;
+        if (MULTI_THREADED) {
+            int bits = donePages[threadNum][pageIndex].get(offset >>> DONE_WORD_BITS);
+            return (bits & 1 << (offset & ((1 << DONE_WORD_BITS) - 1))) != 0;
+        }
+        return BaseTrick.isDone(pages[threadNum][pageIndex][offset]);
     }
 
     @Override
     public long get(int index) {
-        if (SINGLE_THREADED) {
-            return pages[index >>> PAGE_BITS][index & PAGE_MASK];
-        } else {
-            return atomicPages.get(index >>> PAGE_BITS).get(index & PAGE_MASK);
-        }
+        int localIndex = index & LOCAL_MASK;
+        return pages[index >>> THREAD_SHIFT][localIndex >>> PAGE_BITS][localIndex & PAGE_MASK];
     }
 
     @Override
@@ -135,16 +156,21 @@ public class TrickPool implements TrickList.TrickPool {
         if (!TRACE) {
             throw new RuntimeException("invalid use of debugging option");
         }
-        return backRefPages[index >>> PAGE_BITS][index & PAGE_MASK];
+        int localIndex = index & LOCAL_MASK;
+        return backRefPages[index >>> THREAD_SHIFT][localIndex >>> PAGE_BITS][localIndex & PAGE_MASK];
     }
 
     @Override
     public int size() {
-        return nextPoolIndex;
+        int size = 0;
+        for (int n : nextPoolIndex) {
+            size += n;
+        }
+        return size;
     }
 
     @Override
     public int capacity() {
-        return PAGE_COUNT * PAGE_SIZE;
+        return THREAD_POOLS * PAGE_COUNT * PAGE_SIZE;
     }
 }

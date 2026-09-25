@@ -49,7 +49,7 @@ public class TrickList implements Serializable{
     public static final boolean DEBUG_CHECK_HANDS = false;    // for debug
     public static final boolean PRINT_BEST_PATH = true;    // for debug
 
-    public static final boolean SINGLE_THREADED = true;
+    public static final boolean MULTI_THREADED = true;
 
 //static final String testPath = "[♥9 ♣X ♥X, ♦A8J, ♦Q ♣9 ♦7, ♥AQ ♣7, ♦X ♣J ♦K";
 static final String testPath = null;
@@ -122,7 +122,7 @@ String path;
     public void init() {
         instance = this;
         lock = new Object();
-        positions = new SimpleLongIntMap();
+        positions = new SimpleLongIntMap(MULTI_THREADED);
         trickPool = new com.ab.jpref.trickpool.TrickPool();
         for (int i = 0; i <= ROUND_SIZE; ++i) {
             bestNodes[i] = new TrickNode();
@@ -397,30 +397,29 @@ probe:
             printf("analyzing: %s\n", CardSet.toString(hands));
             start = System.currentTimeMillis();
             int nextIndex;
-            if (SINGLE_THREADED) {
-                nextIndex = buildSubList(cards, 0);
-            } else {
-                final int[] bestTrickNode0 = {0};
+            if (MULTI_THREADED) {
+                // each worker stores its result in its own slot; they are combined after join()
+                // in card iteration order, so ties are broken the same way as single-threaded,
+                // regardless of which thread finishes first
+                final int[] workerResults = new int[TrickPool.THREAD_POOLS];
                 final List<Thread> workers = new ArrayList<>();
                 final TrickNode thisNode = new TrickNode();
                 thisNode.init(this);
+                int threadNum = -1;
                 long bm0 = this.bm4Iteration(cards);
                 int bit0 = CardSet.next(bm0, 0);
                 int bit1 = bit0;            // keep it for current thread
                 while ((bit1 = CardSet.next(bm0, bit1)) != 0) {
                     final Card card0 = Card.get(bit1);
+                    final int _threadNum = ++threadNum;
                     Thread worker = new Thread(new Runnable() {
                         @Override
                         public void run() {
                             printf("thread %s, starting with %s\n", Thread.currentThread().getName(), card0);
                             TrickNode trickNode = new TrickNode();
                             trickNode.init(thisNode);
-                            int next = trickNode.buildSubList(new CardList(Arrays.asList(card0)), 0);
-                            synchronized (this) {
-                                if (compare(bestTrickNode0[0], next, 0) < 0) {
-                                    bestTrickNode0[0] = next;
-                                }
-                            }
+                            workerResults[_threadNum] =
+                                trickNode.buildSubList(new CardList(Arrays.asList(card0)), _threadNum, 0);
                         }
                     });
                     workers.add(worker);
@@ -429,7 +428,7 @@ probe:
                 // now current thread:
                 Card card0 = Card.get(bit0);
                 printf("current thread %s, starting with %s\n", Thread.currentThread().getName(), card0);
-                nextIndex = this.buildSubList(new CardList(Arrays.asList(card0)), 0);
+                nextIndex = this.buildSubList(new CardList(Arrays.asList(card0)), ++threadNum, 0);
                 try {
                     for (Thread worker : workers) {
                         worker.join();
@@ -437,9 +436,14 @@ probe:
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                if (compare(bestTrickNode0[0], nextIndex, 0) > 0) {
-                    nextIndex = bestTrickNode0[0];
+                // current thread took the first card, workers the following ones in order
+                for (int i = 0; i < workers.size(); ++i) {
+                    if (compare(nextIndex, workerResults[i], 0) < 0) {
+                        nextIndex = workerResults[i];
+                    }
                 }
+            } else {
+                nextIndex = buildSubList(cards, 0, 0);
             }
             if (nextIndex <= 0) {
                 nodeIndex = -1;
@@ -496,7 +500,7 @@ probe:
             positions.clear();
         }
 
-        private int buildSubList(CardList cards, int prevIndex) {
+        private int buildSubList(CardList cards, int threadNum, int prevIndex) {
             if (this.hands[0].size() <= 0) {
                 return 0;
             }
@@ -578,12 +582,11 @@ search:
                         int probeIndex;
                         int oldIndex;
                         int nextIndex = 0;
-                        if (SINGLE_THREADED) {
-                            probeIndex = trickPool.alloc(this.getTrickData(), prevIndex);
-                            oldIndex = this.addPosition(probeIndex);
-                        } else {
-                            probeIndex = trickPool.allocSync(this.getTrickData(), prevIndex);
+                        probeIndex = trickPool.alloc(this.getTrickData(), threadNum, prevIndex);
+                        if (MULTI_THREADED) {
                             oldIndex = this.addPositionMT(probeIndex);
+                        } else {
+                            oldIndex = this.addPosition(probeIndex);
                         }
                         if (oldIndex == 0) {
                             if (TRACE) {
@@ -593,7 +596,7 @@ search:
                                     testNumber = this.number;
                                 }
                             }
-                            nextIndex = this.buildSubList(null, probeIndex);
+                            nextIndex = this.buildSubList(null, threadNum, probeIndex);
                         } else {
                             ++similar;
                             if (TRACE) {
@@ -803,11 +806,7 @@ search:
                 return 0;
             }
             long key = ((long)this.getTop() << 32) | (bitmap & 0x0ffffffffL);
-            int res = positions.get(key);
-            if (res == 0) {
-                positions.put(key, probeIndex);
-            }
-            return res;
+            return positions.putIfAbsent(key, probeIndex);
         }
 
         private int addPositionMT(int probeIndex) {
@@ -816,30 +815,24 @@ search:
                 return 0;
             }
             long key = ((long)this.getTop() << 32) | (bitmap & 0x0ffffffffL);
-            int res;
-            synchronized (positions) {
-                res = positions.get(key);
-                if (res == 0) {
-                    positions.put(key, probeIndex);
-                    return 0;
-                }
+            int res = positions.putIfAbsent(key, probeIndex);
+            if (res == 0) {
+                return 0;
             }
 
-            synchronized (lock) {
-                int count = 0;
-                long trickData = trickPool.get(res);
-                while (!BaseTrick.isDone(trickData)) {
-                    if (++count > 10) {
-                        printf("%s waiting for %s \n", Thread.currentThread().getName(), new CardSet(bitmap));
-                        count = 0;
-                    }
-                    try {
-                        lock.wait(50);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    trickData = trickPool.get(res);
+            // another thread is computing this position, it takes a short
+            // while, so spin: a timed wait() can't sleep less than 1 msec.
+            // No deadlock: a thread only waits for positions with fewer cards
+            // than any it is itself still computing
+            long start = 0;
+            while (!trickPool.isDone(res)) {
+                if (start == 0) {
+                    start = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - start > 500) {
+                    printf("%s waiting for %s \n", Thread.currentThread().getName(), new CardSet(bitmap));
+                    start = 0;
                 }
+                Thread.yield();
             }
             return res;
         }
@@ -925,10 +918,11 @@ search:
     }
 
     public interface TrickPool {
+        int THREAD_POOLS = 10;      // one per search thread, up to 10 cards in hand
         void clear();
-        int alloc(long trickData, int prevIndex);
-        int allocSync(long trickData, int prevIndex);
-        void set(int index, long trickData);
+        int alloc(long trickData, int threadNum, int prevIndex);
+        void set(int index, long trickData);    // final data, publishes the entry as done
+        boolean isDone(int index);              // may be called from any thread
         long get(int index);
         int getPrev(int index);
         int size();

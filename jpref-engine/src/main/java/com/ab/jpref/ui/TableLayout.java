@@ -1164,7 +1164,7 @@ public class TableLayout implements GameManager.EventObserver {
         int fgColor = getSuitColor(suitNum);
         String text = currentBid.getName();
         if (roundValue == 10) {
-            text = "" + roundValue + Suit.values()[suitNum - 1].getCode();
+            text = roundValue + text.substring(1);
         }
         declareRoundPanel.getWidget(ButtonCommand.select).setText(text, fgColor);
 

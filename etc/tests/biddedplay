@@ -1,5 +1,7 @@
 biddedplay: hands, talon, elderhand -> bid, tricks
 
+deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
+
 ############
 deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> All-pass # Misère https://preferans.de/004
 
@@ -11,7 +13,6 @@ deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78
 
 deal: ♠78J ♦XJQK ♥8XQ  ♠9QA ♣8XJ ♦79 ♥9J  ♠K ♣79QK ♦8A ♥7KA  ♠X ♣A  2 -> 8♣ 8
 
-deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
 deal: ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♠8K ♣K ♦9JA ♥9XQK  ♣J ♥8  2 -> 6♠ 7

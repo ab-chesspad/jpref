@@ -42,7 +42,7 @@ import java.io.*;
 import java.util.Locale;
 
 public abstract class Config implements Serializable {
-    private static final long serialVersionUID = 12L;
+    private static final long serialVersionUID = 13L;
 
     public static final String PROJECT_NAME = "JPref";
     public static final String VERSION = "0.1.2";

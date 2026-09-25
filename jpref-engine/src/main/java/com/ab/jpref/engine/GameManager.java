@@ -41,7 +41,7 @@ public class GameManager implements Serializable {
     public static boolean DEBUG_LOG = false;
     public static final boolean DEBUG_END_OF_GAME = false;
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 13L;
 
     public static final boolean[] BOTS = new boolean[NOP];
     static {

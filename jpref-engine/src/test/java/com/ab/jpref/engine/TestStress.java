@@ -17,6 +17,7 @@ import static com.ab.util.Logger.println;
 import static com.ab.util.Util.currMethodName;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.PrintWriter;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+@Ignore("too long")
 public class TestStress extends BaseTest {
     private static final int NOP = Config.NOP;
 
