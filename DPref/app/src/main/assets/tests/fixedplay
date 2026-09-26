@@ -1,0 +1,35 @@
+#fixedplay: hands, talon, elderhand -> bid, tricks
+
+deal: ♠8QA ♦8KA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦9XJ ♥XJ  ♣A ♥A  0 -> 9♥ 9
+
+[♠QX8, ♠7 ♦J ♠J, ♣9A8, ♠A9 ♣7, ♦KX ♣J, ♦AQ ♣Q, ♦7 ♠K ♥J, ♦8 ♣K ♥Q, ♦9 ♥X7, ♥AK8]
+list build duration: 0 sec, positions 86946
+deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
+
+deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥89  ♥7X  0 -> 6- 6
+
+list build duration: 1 sec, positions 61771, similar 409,030
+[♣X97, ♣KA8, ♠78 ♦7, ♠9 ♦8 ♠X, ♠KJ ♦K, ♠AQ ♥9, ♣QJ ♥X, ♦A9 ♥J, ♥8 ♦X ♥Q, ♥KA ♦Q]
+deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
+
+list build duration: 4 sec, positions 434226, similar 3,122,481
+list build duration: 5 sec, positions 434226, similar 3,122,173
+list build duration: 4 sec, positions 434226, similar 3,119,174
+[♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
+#deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
+
+#deal: ♠7X ♣9QK ♦7A ♥7XQ  ♠9JK ♣A ♦89JQK ♥A  ♠8QA ♣78J ♦X ♥9JK  ♣X ♥8  0 -> 6♦ 6
+
+list build duration: 2 sec, positions 270229, similar 2,028,375
+[♠A8Q, ♠79 ♦7, ♣9KQ, ♠XJ ♦9, ♣A7 ♦8, ♦AK ♣8, ♠K ♥Q ♣X, ♦X ♥KX, ♦J ♥7J, ♦Q ♥9A]
+#deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 6
+
+
+♠A9 ♣9, ♠7J ♣Q, ♠K ♣A ♠8, ♣X ♦9 ♠X, ♠Q ♣J ♦J, ♦K7 ♥7, ♥9A8, ♣K ♥X ♦X, ♦8 ♥J ♦A, ♥K ♦Q ♥Q]
+list build duration: 2 sec, positions 190485
+#deal: ♠78XQA ♦XKA ♥9K  ♠9JK ♣XJK ♦78Q ♥A  ♣9QA ♦9J ♥7X8JQ  ♣78  0 -> 6♠ 6
+
+[♠QX8, ♠7 ♦J ♠J, ♣7A8, ♠A9 ♣9, ♦KX ♣J, ♦AQ ♣Q, ♦7 ♠K ♥7, ♦8 ♣K ♥8, ♦9 ♥XJ, ♥AKQ]
+list build duration: 1 sec, positions 158228
+#deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
+

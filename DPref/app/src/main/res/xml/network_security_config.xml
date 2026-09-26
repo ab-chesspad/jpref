@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  jpref.elementfx.com is free PHP hosting (Util.submitLog's log-upload target)
+  with no HTTPS on its subdomain - scope the cleartext exception to that one
+  host rather than allowing it app-wide.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">jpref.elementfx.com</domain>
+    </domain-config>
+</network-security-config>

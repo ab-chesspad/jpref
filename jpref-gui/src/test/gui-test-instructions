@@ -1,0 +1,15 @@
+0. Install Xvfb:
+  sudo apt-get install -y xvfb
+
+1. Start an isolated virtual display (skip if you're reusing an existing one — :99 is already up from our current
+  run):
+  Xvfb :99 -screen 0 1280x1024x24 &
+
+2. Compile the app + test classes:
+  mvn -pl jpref-engine,jpref-gui -am test-compile
+
+3. Run the fuzzer against that display:
+  DISPLAY=:99 java -cp "jpref-gui/target/classes:jpref-gui/target/test-classes:jpref-engine/target/classes" \
+       com.ab.jpref.gui.GuiCrashFuzzer [durationSeconds] [seed]
+  - durationSeconds defaults to 180 if omitted, seed defaults to a random value.
+  - Exits 0 if no crash was found in that time, 1 (with stack traces printed) if one was.

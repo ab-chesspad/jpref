@@ -1,4 +1,4 @@
-/*  This file is part of JPref project.
+/*  This file is part of DPref project.
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -15,46 +15,33 @@
  *
  * Copyright (C) 2025-2026 Alexander Bootman <ab.jpref@gmail.com>
  *
- * Created: 3/2/25
+ * Created: 7/13/2026
  *
- * avoid dependency on Java or android libraries
  */
-package com.ab.util;
+package com.ab.droid.jpref.util;
 
-public class Point extends Pair<Integer, Integer> {
+import android.util.Log;
 
-    public Point() {
-        super(0, 0);
+import java.io.PrintStream;
+
+public class DLogger extends com.ab.util.Logger {
+    public final static String LOG_TAG = "DPREF";
+
+    private static class Holder {
+        static final DLogger instance = new DLogger();
     }
 
-    /**
-     * Constructor for a Point.
-     *
-     * @param x  the first int the Point
-     * @param y the second int the Point
-     */
-    public Point(int x, int y) {
-        super(x, y);
+    public static DLogger getInstance() {
+        return Holder.instance;
     }
 
-    public int getX() {
-        return first;
-    }
-
-    public void setX(int value) {
-        first = value;
-    }
-
-    public int getY() {
-        return second;
-    }
-
-    public void setY(int value) {
-        second = value;
-    }
-
-    public void set(int first, int second) {
-        this.first = first;
-        this.second = second;
+    @Override
+    protected void _printf(String format, Object... args) {
+        String message = String.format(format, args);
+        PrintStream out = logHolder.getLogStream();
+        out.print(message);
+        if (DEBUG_LOG && out != System.out) {
+            Log.d(LOG_TAG, message);
+        }
     }
 }
