@@ -344,4 +344,15 @@ public abstract class Util {
     public static String currMethodName() {
         return new Throwable().getStackTrace()[1].getMethodName();
     }
+
+    // message dialogs render their text as HTML, where line breaks collapse into
+    // spaces; plain (multi-line) text is escaped and its line breaks kept, HTML
+    // (containing <html>) is returned as is
+    public static String toHtml(String text) {
+        if (text.toLowerCase().contains("<html")) {
+            return text;
+        }
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replaceAll("\\r?\\n", "<br>");
+    }
 }

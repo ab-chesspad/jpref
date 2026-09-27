@@ -37,6 +37,7 @@ import com.ab.jpref.ui.Widget;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
+import com.ab.util.Util;
 
 import com.ab.jpref.ui.Host;
 
@@ -262,7 +263,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         HTMLEditorKit kit = (HTMLEditorKit) editorPane.getEditorKit();
         kit.getStyleSheet().addRule(String.format("body { font-family: %s; font-size: %dpt; }",
             font.getFamily(), font.getSize()));
-        editorPane.setText(text);
+        editorPane.setText(Util.toHtml(text));
         editorPane.setCaretPosition(0);
         dialog.add(new JScrollPane(editorPane,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,

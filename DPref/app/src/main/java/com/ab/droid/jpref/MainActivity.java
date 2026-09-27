@@ -20,21 +20,6 @@
  */
 package com.ab.droid.jpref;
 
-import android.content.Context;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.res.Configuration;
-import android.os.Build;
-import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.util.DisplayMetrics;
-import android.widget.RelativeLayout;
-
-import android.widget.RelativeLayout.LayoutParams;
-
 import com.ab.droid.jpref.config.DConfig;
 import com.ab.droid.jpref.config.DMetrics;
 import com.ab.droid.jpref.util.DLogger;
@@ -42,9 +27,7 @@ import com.ab.droid.jpref.util.DUtil;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.I18n;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.HumanPlayer;
 import com.ab.jpref.engine.TrickList;
-import com.ab.jpref.trickpool.TrickPool;
 import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
@@ -52,6 +35,17 @@ import com.ab.util.Util;
 
 import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.I18n.m;
+
+import android.content.Context;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.os.Build;
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+import android.widget.RelativeLayout;
+import android.widget.RelativeLayout.LayoutParams;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -199,8 +193,11 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
 //                    gameManager.runGame(null, 0);
                     Logger.println("game ended!");
                     testInputStream = null;
-                } catch (HumanPlayer.PrefExceptionRerun e) {
+                } catch (Config.PrefExceptionRerun e) {
                     // ignore
+                } catch (Config.PrefExceptionReset e) {
+                    // user reset after submitLog, the loop starts a new game
+                    gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } catch (Throwable t) {
                     t.printStackTrace(getLogStream());
                     getLogStream().flush();

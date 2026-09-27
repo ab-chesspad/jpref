@@ -56,9 +56,10 @@ class DLabel extends View {
     }
 
     // Accepts either a plain string or one containing HTML markup (e.g. a
-    // <span style="color: ..."> run) - converting is done here, once, so callers
-    // never need to remember to run text through Html.fromHtml() themselves before
-    // calling this (Canvas/StaticLayout draw literal "<span ...>" characters if fed
+    // <font color="..."> run; <span style> colors are ignored before API 24) -
+    // converting is done here, once, so callers never need to remember to run
+    // text through Html.fromHtml() themselves before calling this
+    // (Canvas/StaticLayout draw literal "<font ...>" characters if fed
     // the raw HTML string directly, since only Html.fromHtml() parses that markup
     // into the Spanned that colors/styles actually come from).
     void setText(String text) {

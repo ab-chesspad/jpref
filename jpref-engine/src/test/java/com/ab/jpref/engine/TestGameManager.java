@@ -441,7 +441,7 @@ if (++count[0] > 0) {
             String text = t + "\n" + String.format("maxBuildTime=%,d msec, maxPositions=%,d, maxMapSize=%,d\n",
                 TrickList.maxListBuildTime, TrickList.maxPositions, SimpleLongIntMap.maxSize);
             println(text);
-        } catch (HumanPlayer.PrefExceptionRerun e) {
+        } catch (Config.PrefExceptionRerun e) {
             // ignore
         }
 

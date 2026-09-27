@@ -642,7 +642,7 @@ Canvas g2d;
         titleView.setPadding(titlePad, titlePad, titlePad, titlePad);
 
         TextView body = new TextView(context);
-        body.setText(DLabel.fromHtml(text));
+        body.setText(DLabel.fromHtml(Util.toHtml(text)));
         body.setTextColor(Color.BLACK);
         body.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .16));
         int bodyPad = (int) (dMetrics.cardW * .15);

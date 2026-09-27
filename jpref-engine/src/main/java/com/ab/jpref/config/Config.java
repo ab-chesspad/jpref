@@ -42,10 +42,11 @@ import java.io.*;
 import java.util.Locale;
 
 public abstract class Config implements Serializable {
-    private static final long serialVersionUID = 13L;
+    // update projectSerialVersionUID every time a property is being added/changed!
+    public static final long projectSerialVersionUID = 14L;
+    public static final String VERSION = "0.1.3";
 
     public static final String PROJECT_NAME = "JPref";
-    public static final String VERSION = "0.1.2";
 
     public final Property<Boolean> release = new Property<>("", true);
 
@@ -114,6 +115,7 @@ public abstract class Config implements Serializable {
     public static final int ROUND_SIZE = 10;    // total tricks == initial hand size
     private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
     public static final char NO_TRUMP = '-';
+    private static final long serialVersionUID = projectSerialVersionUID;
     public final String GUID;
 
     protected transient Host host;
@@ -443,4 +445,15 @@ public abstract class Config implements Serializable {
         ANSI_HEAD = ANSI_TAIL = ANSI_RESET = ANSI_RED = "";
     }
 
+    public static class PrefExceptionRerun extends RuntimeException {
+        public PrefExceptionRerun(String msg) {
+            super(msg);
+        }
+    }
+
+    public static class PrefExceptionReset extends RuntimeException {
+        public PrefExceptionReset(String msg) {
+            super(msg);
+        }
+    }
 }

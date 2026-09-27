@@ -22,7 +22,6 @@ package com.ab.jpref.gui;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.I18n;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.HumanPlayer;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.engine.TrickList;
 import com.ab.jpref.config.Metrics;
@@ -217,8 +216,11 @@ public class Main implements Logger.LogHolder, Host {
                     for (Player p : gameManager.getPlayers()) {
                         p.clearHistory();
                     }
-                } catch (HumanPlayer.PrefExceptionRerun e) {
-                    // ignore
+                } catch (Config.PrefExceptionRerun e) {
+                    // ignoreMain
+                } catch (Config.PrefExceptionReset e) {
+                    // user reset after submitLog, the loop starts a new game
+                    gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } catch (Throwable t) {
                     t.printStackTrace(getLogStream());
                     if (mainPanel.showMessage(m("Program crash"), m("Submit log") + "?",

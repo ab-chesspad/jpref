@@ -72,13 +72,16 @@ public class HumanPlayer extends Player implements Serializable {
         }
     }
 
-    private Config.Queueable takeFromQueue() throws Player.PrefExceptionRerun {
+    private Config.Queueable takeFromQueue() throws Config.PrefExceptionRerun, Config.PrefExceptionReset {
         try {
             Logger.printf(DEBUG_LOG, "%s, human blocking:%s\n", gameManager().getRoundStage().name(), currentThread().getName());
             Config.Queueable q = queue.take();
             Logger.printf(DEBUG_LOG, "%s, human unblock:%s got %s\n", gameManager().getRoundStage().name(), currentThread().getName(), q);
+            if (RestartCommand.reset.equals(q)) {
+                throw new Config.PrefExceptionReset(RestartCommand.reset.name());
+            }
             if (q instanceof RestartCommand) {
-                throw new PrefExceptionRerun(((RestartCommand)q).name());   // a little ugly
+                throw new Config.PrefExceptionRerun(((RestartCommand)q).name());   // a little ugly
             }
             return q;
         } catch (InterruptedException e) {

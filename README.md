@@ -1,5 +1,5 @@
 # JPref
-JPref is Java program to play Russian Preference (преферанс).  
+JPref is a Java program to play Russian Preference (преферанс).  
 
 [documentation](http://jpref.elementfx.com/)  
 
@@ -11,7 +11,7 @@ updated.
 
 Installation on Android phone:
 1. Open https://github.com/ab-chesspad/jpref/raw/refs/heads/main/DPref/app/build/outputs/apk/debug/app-debug.apk in Chrome (or any browser) on the phone.
-2. Chrome may block the download because the link is plain http. Tap Keep or Download anyway. If there's no such option, use the adb method below or serve the file over https.
+2. Chrome may block the download. Tap Keep or Download anyway. If there's no such option, you can use adb, search the Web.
 3. When the download finishes, tap the notification, or open the file in Files → Downloads.
 4. On first install Android shows "For your security, your phone is not allowed to install unknown apps from this source". Tap Settings, turn on Allow from this source, then go back and tap Install.
     - To set this up ahead of time: Settings → Apps → Special app access → Install unknown apps → Chrome → Allow. The exact path varies by manufacturer.

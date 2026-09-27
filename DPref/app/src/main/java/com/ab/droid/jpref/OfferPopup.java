@@ -100,7 +100,7 @@ public class OfferPopup {
             boolean enabled = tricks >= minTricks && tricks <= maxTricks;
             // draw the actual choices larger than the out-of-range ones, so the
             // selectable range stands out rather than just being a color difference
-            float textSizeFactor = enabled ? .22f : .16f;
+            float textSizeFactor = enabled ? .22f : .10f;
             rb.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * textSizeFactor));
             // the theme's default CompoundButton minHeight reserves a full touch
             // target (~48dp) regardless of the (small) text/icon it wraps - drop it

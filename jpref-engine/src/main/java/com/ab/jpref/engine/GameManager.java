@@ -32,6 +32,7 @@ import static com.ab.util.Logger.println;
 import com.ab.jpref.ui.Host;
 import com.ab.util.ScoreCalculator;
 import com.ab.util.Util;
+import static com.ab.util.Util.DEAL_MARK;
 
 import java.io.*;
 import java.util.*;
@@ -41,14 +42,14 @@ public class GameManager implements Serializable {
     public static boolean DEBUG_LOG = false;
     public static final boolean DEBUG_END_OF_GAME = false;
 
-    private static final long serialVersionUID = 13L;
-
     public static final boolean[] BOTS = new boolean[NOP];
     static {
         BOTS[0] = false;
         BOTS[1] = true;
         BOTS[2] = true;
     }
+
+    private static final long serialVersionUID = Config.projectSerialVersionUID;
 
     public enum RoundStage implements Config.Queueable {
         dealing,
@@ -66,9 +67,10 @@ public class GameManager implements Serializable {
         replay,
         newRound,
         offer,
+        reset,      // aborts runGame() with PrefExceptionReset
     }
 
-     transient InputStream testInputStream;
+    transient InputStream testInputStream;
 
     private static GameManager instance;
 
@@ -225,7 +227,7 @@ public class GameManager implements Serializable {
                         if (++lineCount < skip) {
                             return;
                         }
-                        if (!tokens.get(0).startsWith(Util.DEAL_MARK)) {
+                        if (!tokens.get(0).startsWith(DEAL_MARK)) {
                             return;     // ignore
                         }
                         elderHand = (Integer.parseInt(tokens.get(tokens.size() - 1))) % NOP;
@@ -394,6 +396,9 @@ public class GameManager implements Serializable {
     }
 
     public RestartCommand playRound(CardList deck) {
+        if (!RoundStage.dealing.equals(roundStage)) {
+            printDeck();
+        }
         if (replayMode) {
             avatars4Round();
         }
@@ -448,7 +453,7 @@ public class GameManager implements Serializable {
 
                 default:
                     if (declarer == null) {
-                        printf("playing all-pass\n");
+                        printf("playing all-pass*%d\n", allPassFactor);
                         playRoundAllPass();
                     } else {
                         if (Bid.BID_MISERE.equals(minBid)) {
@@ -459,7 +464,7 @@ public class GameManager implements Serializable {
                     }
             }
             printf("round ended\n");
-        } catch (Player.PrefExceptionRerun e) {
+        } catch (Config.PrefExceptionRerun e) {
             for (Player p : players) {
                 if (p instanceof HumanPlayer) {
                     ((HumanPlayer)p).clearQueue();
@@ -588,6 +593,19 @@ loop:
         return declarer;
     }
 
+    private void printDeck() {
+        if (deck == null) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder(DEAL_MARK);
+        sb.append(" ").append(new CardSet(deck.subList(0, 10)).toColorString()).append("  ")
+            .append(new CardSet(deck.subList(10, 20)).toColorString()).append("  ")
+            .append(new CardSet(deck.subList(20, 30)).toColorString()).append("  ")
+            .append(new CardList(deck.subList(30, 32)).toColorString()).append("  ")
+            .append(elderHand).append(" -> ").append(minBid);
+        println(sb);
+    }
+
     void deal(CardList deck) {
         CardSet[] cardSets = new CardSet[NOP];
         for (int i = 0; i < NOP; ++i) {
@@ -595,23 +613,18 @@ loop:
             cardSets[i] = new CardSet(deck.subList(index, index + ROUND_SIZE));
         }
 
-        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < NOP; ++i) {
             Player player = players[i];
             if (player instanceof Bot) {
                 player.clear();
             }
             player.setHand(cardSets[i]);
-            sb.append(player.toColorString()).append("  ");
         }
-
         talonCards.clear();
         talonCards = new CardList(deck.subList(30, 32));
 
-        sb.append(talonCards.toColorString());
         if (testInputStream == null) {
-            // when testing it was displayed already
-            printf("%s %s  %d\n", Util.DEAL_MARK, sb, trick.getStartedBy());
+            printDeck();
         }
     }
 

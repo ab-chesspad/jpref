@@ -1098,9 +1098,14 @@ public class TableLayout implements GameManager.EventObserver {
         } else {
             fn = "";
         }
-        String text = String.format("%s %s", fn, msg);
+        String text = String.format("%s %s\n%s", fn, msg, m("Restart JPref") + "?");
         if (gui != null) {
-            gui.showMessage(m("Confirmation"), text);
+            if (gui.showMessage(m("Confirmation"), text,
+                    TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {
+                // runs on the button handler's thread; the game thread picks it up
+                // and throws PrefExceptionReset out of runGame() to the main loop
+                GameManager.getInstance().restart(GameManager.RestartCommand.reset);
+            }
         }
     }
 

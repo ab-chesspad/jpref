@@ -27,8 +27,7 @@ import java.awt.*;
 import java.util.Locale;
 
 public class PConfig extends Config {
-    // update serialVersionUID every time a property is being added/changed!
-    private static final long serialVersionUID = 11L;
+    private static final long serialVersionUID = Config.projectSerialVersionUID;
 
     public final Property<Integer> deleteLogsAfter = new Property<>("Delete logs after, days", 1);
 

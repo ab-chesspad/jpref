@@ -230,7 +230,7 @@ public class TestPosition implements Host {
                     } else {
                         gameManager.playRoundForTricks();
                     }
-                } catch (Player.PrefExceptionRerun e) {
+                } catch (Config.PrefExceptionRerun e) {
                     Logger.println("replay");
                     keepWorking = true;
                 }

@@ -256,10 +256,4 @@ public abstract class Player implements Serializable {
         }
     }
 
-    public static class PrefExceptionRerun extends RuntimeException {
-        public PrefExceptionRerun(String msg) {
-            super(msg);
-        }
-    }
-
 }

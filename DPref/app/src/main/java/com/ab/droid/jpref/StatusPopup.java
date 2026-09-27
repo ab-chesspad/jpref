@@ -258,11 +258,11 @@ public class StatusPopup {
                             sym = "&#9660;"; // ▼
                             color = "#FF0000";
                         }
-                        text = String.format("<html>%s <span style=\"color: %s\">%s%d</span></html>",
+                        text = String.format("<html>%s <font color=\"%s\">%s%d</font></html>",
                                 text, color, sym, change);
                     } else {
                         int index = text.lastIndexOf(".");
-                        text = String.format("<html>%s<span style=\"color: #0080FF\">%s</span></html>",
+                        text = String.format("<html>%s<font color=\"#0080FF\">%s</font></html>",
                                 text.substring(0, index + 1), text.substring(index + 1));
                     }
                 }
