@@ -2,6 +2,7 @@ Accept->Принять
 All-pass->распас
 After Round Timeout->Задержка после раунда
 Animation Time->Время анимации
+Back to Game->Вернуться к игре
 Cancel->Забыть
 Comments->Комментарии
 Confirmation->Подтверждение
@@ -23,6 +24,7 @@ Miami->Сочи
 Misère -> мизер
 Move Method -> Способ хода
 New Round->Новый раунд
+No->Нет
 Not implemented yet->Пока не работает
 No Internet Connection->Нет связи с интернетом
 OK->Сохранить
@@ -52,6 +54,7 @@ Whist -> вист
 Whist Type->Вид виста
 Without 3->без трех
 Without Three->без трех
+Yes->Да
 Your Offer->Ваше предложение
 Your Tricks->Ваших взяток
 ½ Whist->½ виста

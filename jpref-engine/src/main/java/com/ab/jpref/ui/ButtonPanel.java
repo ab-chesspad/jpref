@@ -25,8 +25,8 @@ import static com.ab.jpref.ui.TableLayout.ButtonCommand;
 import java.util.Iterator;
 
 public class ButtonPanel extends Widget implements Iterable<Widget> {
-    static final int xGap = 2;
-    static final int yGap = 2;
+    public static final int xGap = 2;
+    public static final int yGap = 2;
 
     private final RoundStage roundStage;
     private final double scaleW, scaleH;
@@ -65,12 +65,30 @@ public class ButtonPanel extends Widget implements Iterable<Widget> {
         this.width = width;
         this.height = height;
 
+        int _rows = rows;
+        if (columns == 1) {
+            // some rows may be hidden
+            _rows = 0;
+            for (int j = 0; j < rows; ++j) {
+                Widget[] row = widgets[j];
+                if (row[0].isVisible()) {
+                    ++_rows;
+                }
+            }
+            if (_rows == 0) {
+                return;
+            }
+        }
+
         int w = (width - xGap * (columns - 1)) / columns;
-        int h = (height - yGap * (rows - 1)) / rows;
+        int h = (height - yGap * (_rows - 1)) / _rows;
 
         int _y = y;
         for (int j = 0; j < rows; ++j) {
             Widget[] row = widgets[j];
+            if (columns == 1 && !row[0].isVisible()) {
+                continue;
+            }
             int _x = x;
             for (int i = 0; i < columns; ++i) {
                 Widget widget = row[i];

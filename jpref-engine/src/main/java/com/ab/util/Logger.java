@@ -64,6 +64,11 @@ public class Logger {
         logHolder.logger()._printf(format, args);
     }
 
+    // the log stream may be buffered, write everything logged so far to the file
+    public static void flush() {
+        logHolder.getLogStream().flush();
+    }
+
     protected void _printf(String format, Object... args) {
         String s = String.format(format, args);
         synchronized (Logger.class) {

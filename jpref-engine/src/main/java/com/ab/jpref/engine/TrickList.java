@@ -48,17 +48,18 @@ public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
     public static final boolean DEBUG_CHECK_HANDS = false;    // for debug
     public static final boolean PRINT_BEST_PATH = true;    // for debug
+    // alpha-beta style cutoffs in buildSubList(); toggle to A/B the search
+    public static final boolean PRUNE = true;
 
     public static final boolean MULTI_THREADED = true;
+    public static boolean DEBUG_IGNORE_DEADLINE = true;
 
-//static final String testPath = "[♥9 ♣X ♥X, ♦A8J, ♦Q ♣9 ♦7, ♥AQ ♣7, ♦X ♣J ♦K";
+
+//static final String testPath = "[♦AJ ♥X, ♥A7J, ♦K7 ♥Q, ♦Q8 ♥K, ♦X ♥8 ♠K, ♦9 ♥9 ♠9";
 static final String testPath = null;
 int testNumber = -2;
 String path;
     public static final boolean TRACE = testPath != null;
-
-    // alpha-beta style cutoffs in buildSubList(); toggle to A/B the search
-    public static final boolean PRUNE = true;
 
     public static final long NULL_DATA = -1;
 
@@ -98,6 +99,9 @@ String path;
     }
 
     private boolean deadlineExceeded() {
+        if (DEBUG_IGNORE_DEADLINE) {
+            return false;
+        }
         if (deadlineHit) {
             return true;
         }
@@ -153,7 +157,14 @@ String path;
             // to 0 (bestNodes[++nodeIndex]) instead of propagating the sentinel, so this check
             // has to run on every call, not just right after a fresh rebuild() - otherwise
             // bestNodes[nodeIndex] below throws ArrayIndexOutOfBoundsException on bestNodes[-1].
-            return gameManager().getPlayers()[trick.getTurn()].anyCard(trick.startingSuit);
+            CardSet cardSet = gameManager().getPlayers()[trick.getTurn()].myHand;
+            if (!cardSet.list(trick.startingSuit).isEmpty()) {
+                return cardSet.anyCard(trick.startingSuit);
+            }
+            if (!cardSet.list(trick.trumpSuit).isEmpty()) {
+                return cardSet.anyCard(trick.trumpSuit);
+            }
+            return cardSet.anyCard();
         }
 
         TrickNode bestNode = bestNodes[nodeIndex];
@@ -437,11 +448,16 @@ probe:
                     throw new RuntimeException(e);
                 }
                 // current thread took the first card, workers the following ones in order
+                int finished = 0;
                 for (int i = 0; i < workers.size(); ++i) {
+                    if (workerResults[i] > 0) {
+                        ++finished;
+                    }
                     if (compare(nextIndex, workerResults[i], 0) < 0) {
                         nextIndex = workerResults[i];
                     }
                 }
+                printf("finished %d threads\n", finished);
             } else {
                 nextIndex = buildSubList(cards, 0, 0);
             }
@@ -475,7 +491,8 @@ probe:
                 nextIndex = getNextIndex(nextTrickData);
             }
             bestNodes[0].setFutureTricks(this.getFutureTricks() + targetBot.getTricks());
-            long dur = System.currentTimeMillis() - start;
+            long now = System.currentTimeMillis();
+            long dur = now - start;
             printf("list build duration: %,d msec, positions %,d, similar %,d\n",
                 dur, positions.size(), similar);
             nodeIndex = 0;
@@ -543,7 +560,6 @@ probe:
             int bestNode0 = 0;
             long bm0 = this.bm4Iteration(cards);
             int bit0 = 0;
-search:
             while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
                 Card card0 = Card.get(bit0);
                 this.add(card0);
@@ -563,6 +579,7 @@ search:
                         path = path(prevIndex);
                         if (testNumber < 0 && path.startsWith(testPath)) {
                             println(path);
+                            testNumber = this.number;
                         }
                     }
                     int bestNode2 = 0;
@@ -627,6 +644,13 @@ search:
                         // deadlineExceeded() check *before* this point left that registration
                         // permanently unfinished - the waiter then blocks forever, since nothing
                         // will ever mark it done. That was the MT trick-list hang.
+                        if (TRACE) {
+                            path = path(prevIndex);
+                            if (path.startsWith(testPath)) {
+                                println(path);
+                                testNumber = this.number;
+                            }
+                        }
                         if (compare(bestNode2, probeIndex, 2) < 0) {
                             if (TRACE) {
                                 if (this.number == testNumber) {
@@ -634,21 +658,17 @@ search:
                                 }
                             }
                             bestNode2 = probeIndex;
+                        } else if (oldIndex != 0) {
+                            // a similar probe is not registered in positions (the first
+                            // probe of this position is), so if it is not the best one
+                            // nothing refers to it; it is still this thread's last allocation
+                            trickPool.free(probeIndex);
                         }
                         this.removeLast();   // remove 2
                         if (deadlineExceeded()) {
-                            this.removeLast();   // remove 1
-                            this.removeLast();   // remove 0
-                            if (DEBUG_CHECK_HANDS) {
-                                if (hands[0].size() != hands[1].size() || hands[0].size() != hands[2].size()) {
-                                    synchronized (lock) {
-                                        RuntimeException rte = new RuntimeException(String.format("%s, %s", toString(), CardSet.toString(hands)));
-                                        rte.printStackTrace();
-                                        throw rte;
-                                    }
-                                }
-                            }
-                            break search;   // abort incomplete search
+                            // abort incomplete search, but keep whatever has been found:
+                            // each level still passes its best node up before leaving
+                            break;
                         }
                         if (PRUNE && bestNode2 != 0) {
                             long bestData2 = trickPool.get(bestNode2);
@@ -667,6 +687,9 @@ search:
                         bestNode1 = bestNode2;
                     }
                     this.removeLast();   // remove 1
+                    if (deadlineHit) {
+                        break;
+                    }
                     if (PRUNE && bestNode1 != 0) {
                         long bestData1 = trickPool.get(bestNode1);
                         int total1 = getPastTricks(bestData1) + getFutureTricks(bestData1);
@@ -684,6 +707,18 @@ search:
                     bestNode0 = bestNode1;
                 }
                 this.removeLast();   // remove 0
+                if (deadlineHit) {
+                    if (DEBUG_CHECK_HANDS) {
+                        if (hands[0].size() != hands[1].size() || hands[0].size() != hands[2].size()) {
+                            synchronized (lock) {
+                                RuntimeException rte = new RuntimeException(String.format("%s, %s", toString(), CardSet.toString(hands)));
+                                rte.printStackTrace();
+                                throw rte;
+                            }
+                        }
+                    }
+                    break;
+                }
                 if (PRUNE && bestNode0 != 0) {
                     long bestData0 = trickPool.get(bestNode0);
                     int total0 = getPastTricks(bestData0) + getFutureTricks(bestData0);
@@ -921,6 +956,7 @@ search:
         int THREAD_POOLS = 10;      // one per search thread, up to 10 cards in hand
         void clear();
         int alloc(long trickData, int threadNum, int prevIndex);
+        void free(int index);                   // gives back the thread's last allocation
         void set(int index, long trickData);    // final data, publishes the entry as done
         boolean isDone(int index);              // may be called from any thread
         long get(int index);

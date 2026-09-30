@@ -399,7 +399,7 @@ probes:
         if (declarerDrop == DeclarerDrop.First) {
             return cardList.first();
         }
-        if (declarerDrop == DeclarerDrop.Random || GameManager.RELEASE) {
+        if (declarerDrop == DeclarerDrop.Random) {
             return cardList.get(nextRandInt(cardList.size()));
         }
         return cardList.last();

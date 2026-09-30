@@ -1,5 +1,7 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
 
+deal: ♠79K ♣9Q ♦QKA ♥JA  ♣XJA ♦7XJ ♥79XK  ♠8XQA ♣78K ♦8 ♥8Q  ♦9 ♠J  1 -> 6♠ 5
+
 #########
 # stress test
 analyzing: ♠9 ♦789JQA ♥9JK  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A

@@ -176,13 +176,6 @@ public class TestCardSet extends BaseTest {
             CardSet union = hands[1].union(hands[2]);
             int bitmap = CardSet.bm4buildForward(hands[0].bitmap, union.getBitmap());
             Assert.assertEquals(res.toString(), new CardSet(bitmap).toString());
-//            int i = -1;
-//            int bit = 0;
-//            while ((bit = CardSet.next(bitmap, bit)) != 0) {
-//                Card card = Card.get(bit);
-//                Assert.assertEquals(res.get(++i), card);
-//            }
-//            Assert.assertEquals(res.size(), ++i);
         }
     }
 
@@ -310,6 +303,62 @@ public class TestCardSet extends BaseTest {
     }
 
     @Test
+    public void testHoles() {
+        String[] sources = {
+            // hand, discarded, turn : holes
+///
+            "♥789Q  *  1 : 0",
+            "♥789Q  *  0 : 1",
+            "♥78XQ  *  1 : 0",
+            "♥789K  *  1 : 0",
+            "♥789A  *  1 : 1",
+            "♥789A  ♥K  1 : 0",
+
+            "♥78X  *  1 : 0",
+            "♥78J  *  1 : 0",
+            "♠78JQ  *  1 : 0",
+//
+            "♠JQ ♦9K ♥9K  ♠789XKA ♣789XJQKA  0 : 6",
+            "♠JQKA ♣J ♦9K ♥9K  ♣789XQKA  0 : 9",
+////
+            "♥7  *  1 : 0",
+            "♥78  *  1 : 0",
+            "♥79  *  1 : 0",
+            "♥79  *  0 : 1",
+
+            "♥8  *  0 : 1",
+            "♥8  *  1 : 1",
+            "♥78J  *  1 : 0",
+            "♥79J  *  1 : 0",
+            "♥7X  *  1 : 1",
+            "♥79Q  *  1 : 1",
+            "♥7XJ  *  1 : 2",
+            "♥7XQ  *  1 : 2",
+
+            "♥8  ♥7  0 : 0",
+            "♣79 ♥89  ♥7  1 : 0",
+            "♣79 ♥89  ♥7  0 : 0",   // ♥8 fixes hole ♣79
+            "♣7 ♥89  ♥7  1 : 0",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split("\\s+:\\s+");
+            String[] src = parts[0].split("  ");
+            CardSet cardSet = new CardSet(util.toCardList(src[0]));
+            CardSet discarded = new CardSet();
+            if (!src[1].equals("*")) {
+                discarded = new CardSet(util.toCardList(src[1]));
+            }
+            int turn = Integer.parseInt(src[2]);
+            int expectedHoles = Integer.parseInt(parts[1]);
+            int holes = CardSet.holes(cardSet.getBitmap(), discarded.bitmap, turn == 0);
+            Assert.assertEquals(expectedHoles, holes);
+        }
+    }
+
+
+    @Test
     public void testClean4Misere() {
         String[] sources = {
             "♥8 : 0",
@@ -328,7 +377,7 @@ public class TestCardSet extends BaseTest {
         for (String source : sources) {
             Logger.println(source);
             String[] parts = source.split("\\s+:\\s+");
-            com.ab.jpref.cards.CardSet cardSet = new CardSet(util.toCardList(parts[0]));
+            CardSet cardSet = new CardSet(util.toCardList(parts[0]));
             String expected = parts[1].trim();
             try {
                 boolean res = cardSet.isClean4Misere();

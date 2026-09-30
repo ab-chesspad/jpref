@@ -26,6 +26,7 @@ package com.ab.jpref.cards;
 
 import com.ab.jpref.cards.Card.Rank;
 import com.ab.jpref.cards.Card.Suit;
+import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Bot;
 import com.ab.util.Pair;
@@ -757,6 +758,94 @@ mainLoop:
             union |= h.bitmap;
         }
         return last(union);
+    }
+
+    public static int suitNum(int bit) {
+        if (bit == 0) {
+            throw new RuntimeException("no suit number for bit 0");
+        }
+        int suitMask = SUIT_MASK;
+        int suitNum = 0;
+        while ((bit & suitMask) ==  0) {
+            suitMask <<= SUIT_LIST_LENGTH;
+            ++suitNum;
+        }
+        return suitNum;
+    }
+
+    // assuming parameters are single bits, same suit
+    public static boolean isLE(int bit0, int bit1) {
+        if (bit0 == bit1) {
+            return true;
+        }
+        if (suitNum(bit0) != suitNum(bit1)) {
+            return false;
+        }
+        return ((bit1 - 1) & bit0) != 0;
+    }
+
+    public static int holes(CardSet myHand, CardSet discarded, boolean mePlay) {
+        return holes(myHand.bitmap, discarded.bitmap, mePlay);
+    }
+
+    public static int holes(int _bitmap, int discarded, boolean mePlay) {
+        int srcBM = _bitmap;
+        int bitmap = _bitmap | discarded;
+        int holes = 0;
+        int suitMask = SUIT_MASK;
+        int suitLsb = 1;    // 7 of the current suit
+        int bmSuit = 0;
+        int cleanSuits = 0;
+        int allSuitsMask = -1;
+        while ((bmSuit = CardSet.bm4NextSuit(bitmap, bmSuit)) != 0) {
+            if (size(bmSuit) == TOTAL_RANKS) {
+                if (mePlay) {
+                    holes += size(bmSuit);
+                }
+                continue;
+            }
+            int bit = lsb(bmSuit);
+            while ((suitMask & bit) == 0) {
+                suitMask <<= SUIT_LIST_LENGTH;
+                suitLsb <<= SUIT_LIST_LENGTH;
+            }
+            allSuitsMask &= ~suitMask;
+            int suitHoles = 0;
+            int bm = bmSuit;
+            bit = suitLsb;
+            int _holes = 1;
+            do {
+//Logger.printf("%s - %d\n", new CardSet(bit), _holes);
+                if ((bm & bit) == 0) {
+                    ++suitHoles;
+                    if (++_holes >= 2) {
+                        // ♥8  *  0 : 2     // fix it?
+                        // add remaining suit size to holes
+                        holes += size(srcBM & suitMask);
+                        break;
+                    }
+                } else {
+                    --_holes;
+                }
+                bm &= ~bit;
+                srcBM &= ~bit;
+                bit <<= 1;
+            } while (bm != 0);
+            if (suitHoles == 0) {
+                ++cleanSuits;
+            }
+        }
+        if (mePlay && cleanSuits == 0) {
+            int trumpSuitSize = size(_bitmap & allSuitsMask);
+            if (trumpSuitSize == 0) {
+                ++trumpSuitSize;
+            }
+            holes += trumpSuitSize;
+        }
+        if (holes > size(_bitmap)) {
+            holes = size(_bitmap);
+        }
+        return holes;
     }
 
     // assuming always self's turn

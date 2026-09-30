@@ -57,7 +57,6 @@ public class Main implements Logger.LogHolder, Host {
     public static boolean SHOW_ALL = true;
     public static final double MAGIC_ASPECT_RATIO = 1109d / 1297d;
     static {
-        GameManager.RELEASE = release;
         if (release) {
             DEBUG_LOG = false;
             Logger.DEBUG_LOG = false;
@@ -65,6 +64,7 @@ public class Main implements Logger.LogHolder, Host {
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
             SHOW_ALL = false;
+            TrickList.DEBUG_IGNORE_DEADLINE = false;
         }
     }
 
@@ -224,7 +224,7 @@ public class Main implements Logger.LogHolder, Host {
                 } catch (Throwable t) {
                     t.printStackTrace(getLogStream());
                     if (mainPanel.showMessage(m("Program crash"), m("Submit log") + "?",
-                            TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {
+                            TableLayout.GUI.msgFlagYes | TableLayout.GUI.msgFlagNo) == TableLayout.GUI.msgFlagYes) {
                         tableLayout.submitLog(null);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);

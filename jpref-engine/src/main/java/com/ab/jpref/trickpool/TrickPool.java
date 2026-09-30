@@ -58,7 +58,7 @@ public class TrickPool implements TrickList.TrickPool {
     // sub-pool, so it only ever has one writer and needs no CAS.
     private static final int THREAD_SHIFT = 24;         // BaseTrick index keeps 28 bits
     private static final int LOCAL_MASK = (1 << THREAD_SHIFT) - 1;
-    private static final int PAGE_BITS = 20;
+    private static final int PAGE_BITS = 16;           // 512KB pages, every thread allocates its own
     private static final int PAGE_SIZE = 1 << PAGE_BITS;
     private static final int PAGE_MASK = PAGE_SIZE - 1;
     private static final int PAGE_COUNT = 1 << (THREAD_SHIFT - PAGE_BITS);
@@ -76,9 +76,21 @@ public class TrickPool implements TrickList.TrickPool {
         page(0, 0);
     }
 
+    // release the pages a previous search allocated, except the first one, so a
+    // big search doesn't keep its memory (Android); called before a search starts
     @Override
     public void clear() {
         Arrays.fill(nextPoolIndex, 0);
+        for (int threadNum = 0; threadNum < THREAD_POOLS; ++threadNum) {
+            int first = threadNum == 0 ? 1 : 0;
+            Arrays.fill(pages[threadNum], first, PAGE_COUNT, null);
+            if (MULTI_THREADED) {
+                Arrays.fill(donePages[threadNum], first, PAGE_COUNT, null);
+            }
+            if (TRACE) {
+                Arrays.fill(backRefPages[threadNum], first, PAGE_COUNT, null);
+            }
+        }
     }
 
     private long[] page(int threadNum, int page) {
@@ -115,6 +127,24 @@ public class TrickPool implements TrickList.TrickPool {
             backRefPages[threadNum][pageIndex][offset] = prevIndex;
         }
         return threadNum << THREAD_SHIFT | localIndex;
+    }
+
+    // only the owning thread calls it, and only for an entry no one else knows about
+    @Override
+    public void free(int index) {
+        int threadNum = index >>> THREAD_SHIFT;
+        int localIndex = index & LOCAL_MASK;
+        if (nextPoolIndex[threadNum] != localIndex) {
+            return;     // not the last allocation
+        }
+        --nextPoolIndex[threadNum];
+        if (MULTI_THREADED) {
+            // the slot will be allocated again, it must not look done
+            int offset = localIndex & PAGE_MASK;
+            AtomicIntegerArray done = donePages[threadNum][localIndex >>> PAGE_BITS];
+            int word = offset >>> DONE_WORD_BITS;
+            done.lazySet(word, done.get(word) & ~(1 << (offset & ((1 << DONE_WORD_BITS) - 1))));
+        }
     }
 
     // stores the final data, entry must not change afterwards

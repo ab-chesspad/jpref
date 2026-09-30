@@ -74,7 +74,6 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     private static final int DELETE_LOGS_AFTER_DAYS = 1;
 
     static {
-        GameManager.RELEASE = release;
         if (release) {
             DEBUG_LOG = false;
             GameManager.BOTS[0] = false;

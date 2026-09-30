@@ -26,12 +26,10 @@ import static com.ab.util.Logger.printf;
 public class SimpleLongIntMap {
     public static final int KEY_MASK_LEN = 34;  // 3 hands + top
     public static final long KEY_MASK = (1L << KEY_MASK_LEN) - 1;
-//    public static final int CAPACITY = 500009;     // prime number
-//    public static final int CAPACITY = 1000003;     // prime number
-    // with alpha-beta pruning (see TrickList.PRUNE) the worst observed no-trump,
-    // defender-leads-trick-1 case needs ~791,000 distinct positions; this keeps
-    // load factor comfortably low (~0.26) so collision chains stay short
-    public static final int CAPACITY = 3000017;     // prime number
+    // the map starts small and grows as needed: the worst observed search needs
+    // ~1.6M positions, while most need far fewer, and preallocating for the worst
+    // case runs Android out of memory. Initial capacity is split between shards.
+    private static final int INITIAL_CAPACITY = 1 << 16;
 //    public static final long BUCKET_MARK = 1L << KEY_MASK_LEN;
     public static final int VALUE_SHIFT = KEY_MASK_LEN;
 
@@ -50,8 +48,9 @@ public class SimpleLongIntMap {
     // collision chain storage is split into fixed-size chunks. When the
     // current chunk fills up, a new chunk is allocated and appended to the
     // (small) chunk table - already-stored entries are never copied, unlike
-    // growing a single array with Arrays.copyOf.
-    private static final int BUCKET_CHUNK_BITS = 17;
+    // growing a single array with Arrays.copyOf. Chunks are small, every
+    // shard allocates its own.
+    private static final int BUCKET_CHUNK_BITS = 12;
     private static final int BUCKET_CHUNK_SIZE = 1 << BUCKET_CHUNK_BITS;
     private static final int BUCKET_CHUNK_MASK = BUCKET_CHUNK_SIZE - 1;
 
@@ -81,7 +80,7 @@ public class SimpleLongIntMap {
         shards = new Shard[1 << shardBits];
         shardShift = 64 - shardBits;
         for (int i = 0; i < shards.length; ++i) {
-            shards[i] = new Shard(CAPACITY >>> shardBits);
+            shards[i] = new Shard((INITIAL_CAPACITY >>> shardBits) | 1);
         }
     }
 
@@ -140,14 +139,16 @@ public class SimpleLongIntMap {
         private int searches = 0;
         private int size = 0;
 
-        final long[] keys;
-        final int[] values;
+        private final int initialCapacity;
+        private long[] keys;
+        private int[] values;
 
         private long[][] bucketsKeyChunks;
         private int[][] bucketsValueChunks;
         private int lastBucketsIndex = 0;
 
         Shard(int capacity) {
+            initialCapacity = capacity;
             keys = new long[capacity];
             values = new int[capacity];
             // collision chunks are allocated on first use, so many small
@@ -166,6 +167,9 @@ public class SimpleLongIntMap {
         }
 
         void put(long key, int value) {
+            if (size >= keys.length - (keys.length >>> 2)) {
+                grow();     // keep load factor under 0.75
+            }
             // every call is a genuinely new key (callers only put() after a get() miss),
             // so size grows by one on every call, not just when the slot is empty
             ++size;
@@ -205,6 +209,37 @@ public class SimpleLongIntMap {
             values[index] = value;
         }
 
+        // double the capacity and re-insert all entries; collision chunks are reused
+        private void grow() {
+            long[] oldKeys = new long[size];
+            int[] oldValues = new int[size];
+            int n = 0;
+            for (int i = 0; i < keys.length; ++i) {
+                long mapKey = keys[i];
+                if (mapKey == NULL_KEY) {
+                    continue;
+                }
+                oldKeys[n] = mapKey & KEY_MASK;
+                oldValues[n++] = values[i];
+                int bucketIndex = (int)((mapKey >>> VALUE_SHIFT) & 0x0ffffffffL);
+                while (bucketIndex != 0) {
+                    int chunk = bucketIndex >>> BUCKET_CHUNK_BITS;
+                    int offset = bucketIndex & BUCKET_CHUNK_MASK;
+                    mapKey = bucketsKeyChunks[chunk][offset];
+                    oldKeys[n] = mapKey & KEY_MASK;
+                    oldValues[n++] = bucketsValueChunks[chunk][offset];
+                    bucketIndex = (int)((mapKey >>> VALUE_SHIFT) & 0x0ffffffffL);
+                }
+            }
+            keys = new long[2 * keys.length + 1];
+            values = new int[keys.length];
+            lastBucketsIndex = 0;
+            size = 0;
+            for (int i = 0; i < n; ++i) {
+                put(oldKeys[i], oldValues[i]);
+            }
+        }
+
         int get(long key) {
             int index = hash(key);
             long mapKey = keys[index];
@@ -234,6 +269,17 @@ public class SimpleLongIntMap {
         }
 
         void clear() {
+            if (keys.length > initialCapacity) {
+                // release what a big search grew into (Android)
+                keys = new long[initialCapacity];
+                values = new int[initialCapacity];
+                bucketsKeyChunks = new long[0][];
+                bucketsValueChunks = new int[0][];
+                lastBucketsIndex = 0;
+                size = 0;
+                searches = 0;
+                return;
+            }
             if (size == 0) {
                 return;
             }

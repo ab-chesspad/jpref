@@ -36,15 +36,14 @@ import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.ui.Host;
 import com.ab.util.Couple;
 import com.ab.util.Point;
-import com.ab.util.Util;
 
 import java.io.*;
 import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 14L;
-    public static final String VERSION = "0.1.3";
+    public static final long projectSerialVersionUID = 15L;
+    public static final String VERSION = "0.1.5";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -122,6 +121,15 @@ public abstract class Config implements Serializable {
 
     protected Config(Host host) {
         this.host = host;
+        String defaultLang = Locale.getDefault().getLanguage();
+        Selection<Couple<String>> languages = language.value;
+        for (int i = 0; i < languages.values.length; ++i) {
+           Couple<String> lang = languages.values[i];
+           if (lang.second.equals(defaultLang)) {
+               languages.setSelected(i);
+               break;
+           }
+        }
         GUID = java.util.UUID.randomUUID().toString();
     }
 

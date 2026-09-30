@@ -1,16 +1,25 @@
 biddedplay: hands, talon, elderhand -> bid, tricks
 
-[♠XJ9, ♠A ♦7 ♠K, ♠7 ♦X8, ♠8 ♦J9, ♠Q ♣7J, ♣89A, ♦A ♣QX, ♥8K7, ♣K ♥9J, ♥AXQ]
-deal: ♠9 ♣79X ♦7XJ ♥79X  ♠XK ♣JA ♦89A ♥8JQ  ♠Q ♦Q  ♠78JA ♣8QK ♦K ♥KA  2 -> 7♠ 8
+############
+deal: ♠A ♣8JKA ♦9XQK ♥J  ♠JK ♣79XQ ♦7 ♥8KA  ♠8XQ ♦8JA ♥79XQ  ♠79  0 -> 6♣ 6
+
+deal: ♠78Q ♣JA ♦XQKA ♥A  ♠XJ ♣7X ♦78J ♥789  ♠9KA ♣89Q ♥XJQK  ♣K ♦9  0 -> 8♦ 9
+
+deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 10 ловится
+deal: ♠9QK ♦7XJK ♥9XQ  ♠7X ♣78 ♦9 ♥78JKA  ♠8A ♣9XJQKA ♦8Q  ♦A ♠J  1 -> Misère 1 # 11 ловится
+
+p2 declares 7♠
+deal: ♠9 ♣79X ♦7XJ ♥79X  ♠XK ♣JA ♦89A ♥8JQ  ♠78JA ♣8QK ♦K ♥KA  ♠Q ♦Q  1 -> 7♠ 8
+
+p2 declares 7♠
+deal: ♠9 ♣79X ♦7XJ ♥79X  ♠XK ♣JA ♦89A ♥8JQ  ♠78JA ♣8QK ♦K ♥KA  ♠Q ♦Q  2 -> 7♠ 7
 
 deal: ♠9A ♣9 ♦89J ♥789K  ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♦A ♠Q  0 -> 7♠ 8
 
-############
 deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
 deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> All-pass # Misère https://preferans.de/004
 deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 0 # не ловится 2
-deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 10
-deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 10
+deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 12
 deal: ♠78J ♦XJQK ♥8XQ  ♠9QA ♣8XJ ♦79 ♥9J  ♠K ♣79QK ♦8A ♥7KA  ♠X ♣A  2 -> 8♣ 8
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7

@@ -38,7 +38,6 @@ import java.io.*;
 import java.util.*;
 
 public class GameManager implements Serializable {
-    public static boolean RELEASE = false;
     public static boolean DEBUG_LOG = false;
     public static final boolean DEBUG_END_OF_GAME = false;
 
@@ -67,6 +66,7 @@ public class GameManager implements Serializable {
         replay,
         newRound,
         offer,
+        verify,
         reset,      // aborts runGame() with PrefExceptionReset
     }
 
@@ -83,6 +83,7 @@ public class GameManager implements Serializable {
 
     private int lineCount = -1;
     private int allPassFactor = 0;
+    public boolean playedAllPass;
     public boolean replayMode;
 
     private CardList deck;
@@ -91,7 +92,7 @@ public class GameManager implements Serializable {
     public int elderHand;
 
     // bidding:
-    int passCount = 0;
+    int biddingPassCount = 0;
     private Bid minBid = Bid.BID_6S;
     int nextBidder;
 
@@ -203,12 +204,15 @@ public class GameManager implements Serializable {
         this.roundStage = roundStage;
     }
 
+    public CardSet getDiscarded() {
+        return discarded;
+    }
+
     public void runGame(InputStream testInputStream, int skip) {
         this.testInputStream = testInputStream;
         if (roundStage == RoundStage.dealing) {
             TrickList.getInstance().initBuild(null);
-            passCount = 0;
-            allPassFactor = 0;
+            biddingPassCount = 0;
         }
         if (testInputStream == null) {
             runGame();
@@ -239,15 +243,16 @@ public class GameManager implements Serializable {
                             deck.addAll(util.toCardList(token));
                         }
                         deck.verifyDeck();
-                        RestartCommand next = RestartCommand.replay;
-                        while (RestartCommand.replay.equals(next)) {
+                        RestartCommand next;
+                        do {
                             allPassFactor = 0;
+                            playedAllPass = false;
                             minBid = Bid.BID_6S;
                             nextBidder = elderHand;
                             next = playRound(deck);
                             roundStage = RoundStage.dealing;
-                            passCount = 0;
-                        }
+                            biddingPassCount = 0;
+                        } while (RestartCommand.replay.equals(next) || RestartCommand.verify.equals(next));
                         int totalPool = 0;
                         for (Player player: players) {
                             for (Player.RoundResults roundResults : player.getGameHistory()) {
@@ -255,7 +260,6 @@ public class GameManager implements Serializable {
                             }
                         }
                         if (totalPool >= config().poolSize.get() * NOP) {
-                            // emulate endgame
                             for (Player player: players) {
                                 player.clearHistory();
                             }
@@ -273,23 +277,22 @@ public class GameManager implements Serializable {
         if (roundStage == RoundStage.dealing) {
             elderHand = new Random().nextInt(NOP);
             nextBidder = elderHand;
-            allPassFactor = 0;
         }
         do {
             if (roundStage == RoundStage.dealing) {
                 TrickList.getInstance().initBuild(null);
-                passCount = 0;
+                biddingPassCount = 0;
                 deck = CardList.getDeck();
                 Collections.shuffle(deck);
                 minBid = Bid.BID_6S;
             }
             RestartCommand next = RestartCommand.replay;
-            while (RestartCommand.replay.equals(next)) {
+            while (RestartCommand.replay.equals(next) || RestartCommand.verify.equals(next)) {
                 next = playRound(deck);
                 sleep(10);     // give jPrefPanel a chance to paint
                 roundStage = RoundStage.dealing;
                 minBid = Bid.BID_6S;
-                passCount = 0;
+                biddingPassCount = 0;
                 nextBidder = elderHand;
             }
             elderHand = ++elderHand % NOP;
@@ -333,7 +336,8 @@ public class GameManager implements Serializable {
             return;
         }
         allPassFactor = 0;
-        passCount = 0;
+        playedAllPass = false;
+        biddingPassCount = 0;
         Bot.targetBot = null;
         if (declarerNum >= 0) {
             this.declarerNumber = declarerNum;
@@ -494,11 +498,13 @@ public class GameManager implements Serializable {
             sleep(config().pauseBetweenRounds.get());
         }
 
-        replayMode = RestartCommand.replay.equals(next) && trick.getNumber() == 9;
+        replayMode = (RestartCommand.verify.equals(next) || RestartCommand.replay.equals(next))
+            && trick.getNumber() == 9;
         if (!replayMode) {
             if (minBid.equals(Bid.BID_ALL_PASS)) {
+                playedAllPass = true;
                 allPassFactor = ++allPassFactor % 3;
-            } else {
+            } else if (declarerNumber >= 0) {
                 boolean whist = players[(declarerNumber + 1) % NOP].getBid().equals(Bid.BID_PASS) ||
                     players[(declarerNumber + 2) % NOP].getBid().equals(Bid.BID_PASS);
                 int defenderTricks = players[(declarerNumber + 1) % NOP].getTricks() +
@@ -506,6 +512,7 @@ public class GameManager implements Serializable {
                 if (declarer.tricks >= declarer.getBid().goal() && whist &&
                         defenderTricks >= declarer.getBid().defenderGoal()) {
                     allPassFactor = 0;
+                    playedAllPass = false;
                 }
             }
         }
@@ -515,7 +522,7 @@ public class GameManager implements Serializable {
 
     Player bidding() {
         // in the future bot should be able to pass even if it can declare a round
-        if (allPassFactor > 0) {
+        if (playedAllPass) {
             minBid = Bid.BID_7S;
         }
         if (minBid.compareTo(Bid.BID_6S) < 0) {
@@ -536,7 +543,7 @@ public class GameManager implements Serializable {
 
         nextBidder = (nextBidder + 2) % NOP;
 loop:
-        while (declarer == null && passCount < NOP || passCount < NOP - 1) {
+        while (declarer == null && biddingPassCount < NOP || biddingPassCount < NOP - 1) {
             for (int i = 0; i < players.length; ++i) {
                 nextBidder = (nextBidder + 1) % NOP;
                 Player bidder = players[nextBidder];
@@ -547,7 +554,7 @@ loop:
                     continue;
                 }
                 Bid savedBid = minBid;
-                if (adjustMinBid && passCount == 1 && nextBidder == elderHand &&
+                if (adjustMinBid && biddingPassCount == 1 && nextBidder == elderHand &&
                         !(misereDeclared && Bid.BID_9S.equals(minBid))) {
                     // allow 'здесь'
                     minBid = minBid.prev();
@@ -567,7 +574,7 @@ loop:
                 if (bid.compareTo(minBid) >= 0) {
                     if (declarer != null && declarer.getBid().equals(Bid.BID_MISERE)) {
                         declarer.setBid(Bid.BID_PASS);
-                        ++passCount;
+                        ++biddingPassCount;
                     }
                     declarer = bidder;
                     if (bid.equals(Bid.BID_XN)) {
@@ -580,7 +587,7 @@ loop:
                 } else {
                     minBid = savedBid;
                     bidder.setBid(Bid.BID_PASS);
-                    ++passCount;
+                    ++biddingPassCount;
                 }
             }
         }

@@ -54,6 +54,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.Insets;
 import android.os.Build;
 import android.os.Looper;
 import android.util.TypedValue;
@@ -62,6 +63,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -70,6 +72,7 @@ import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.text.Spanned;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -104,8 +107,6 @@ public class MainView extends View implements TableLayout.GUI {
 
     final Point draggingStart = new Point(-1, -1);
 //private final GestureDetectorCompat mDetector;
-
-Canvas g2d;
 
     int panelWidth = -1, panelHeight = -1;
 
@@ -236,30 +237,33 @@ Canvas g2d;
                 Logger.println(DEBUG_LOG, String.format("%s, %s", Util.currMethodName(), event));
                 int x = (int)event.getX();
                 int y = (int)event.getY();
-                TableLayout tableLayout = TableLayout.getInstance();
                 switch(event.getAction()) {
                     case (MotionEvent.ACTION_DOWN):
                         Logger.println(DEBUG_LOG, String.format("%s, ACTION_DOWN %s", Util.currMethodName(), event));
                         lastMoveX = Integer.MIN_VALUE;
                         lastMoveY = Integer.MIN_VALUE;
-                        tableLayout.onMouseClick(x, y);
+                        tableLayout().onMouseClick(x, y);
                         return true;
                     case (MotionEvent.ACTION_MOVE) :
                         Logger.println(DEBUG_LOG, String.format("%s, ACTION_MOVE %s", Util.currMethodName(), event));
                         if (Math.abs(x - lastMoveX) >= MOVE_THRESHOLD_PX || Math.abs(y - lastMoveY) >= MOVE_THRESHOLD_PX) {
                             lastMoveX = x;
                             lastMoveY = y;
-                            tableLayout.onMouseDragged(x, y, false);
+                            tableLayout().onMouseDragged(x, y, false);
                         }
                         return true;
                     case (MotionEvent.ACTION_UP) :
                         Logger.println(DEBUG_LOG, String.format("%s, ACTION_UP %s", Util.currMethodName(), event));
-                        tableLayout.onMouseDragged(x, y, true);
+                        tableLayout().onMouseDragged(x, y, true);
                         return true;
                 }
                 return true;
             }
         });
+    }
+
+    private TableLayout tableLayout() {
+        return TableLayout.getInstance();
     }
 
     @Override
@@ -284,12 +288,11 @@ Canvas g2d;
             dMetrics.recalculateSizes(w, h);
         }
         recalculateSizes();
-        TableLayout tableLayout = TableLayout.getInstance();
-        if (tableLayout != null) {
+        if (tableLayout() != null) {
             // re-run widget layout (incl. menuBtn) against the now-final size;
             // TableLayout.update() is otherwise only triggered by round-stage changes,
             // so a late/changed size would leave widgets positioned with stale DMetrics
-            tableLayout.update(null);
+            tableLayout().update(null);
         }
     }
 
@@ -397,16 +400,13 @@ Canvas g2d;
         // android specific issue, update must be in Thread-2
         Logger.printf(DEBUG_LOG, "%s, %s %s\n", Thread.currentThread().getName(),
                 Util.currMethodName(), roundStage);
-        postInvalidate();
-        // update() runs on the game-logic thread as well as the UI thread (see
-        // the comment above) - setVisibility() isn't thread-safe, so hop onto
-        // the UI thread via post() rather than calling it directly here.
-        boolean waiting = getInstance().getCurrentPlayer() == null;
-        post(() -> {
-            if (waitBar != null) {
+        if (waitBar != null) {
+            boolean waiting = tableLayout().getCurrentPlayer() == null;
+            post(() -> {
                 waitBar.setVisibility(waiting ? VISIBLE : GONE);
-            }
-        });
+            });
+        }
+        postInvalidate();
     }
 
     public void _update() {
@@ -420,11 +420,17 @@ Canvas g2d;
                 jComponent.setVisibility(INVISIBLE);
                 continue;
             }
-            jComponent.setVisibility(VISIBLE);
             int x = widget.getX();
             int y = widget.getY();
             int w = widget.getWidth();
             int h = widget.getHeight();
+            if (w <= 0 || h <= 0) {
+                // not laid out yet (e.g. a draw before the size is known);
+                // a 0-size button image cannot be scaled - wait for the next update
+                jComponent.setVisibility(INVISIBLE);
+                continue;
+            }
+            jComponent.setVisibility(VISIBLE);
             int r = x + w;
             int b = y + h;
             placeView(jComponent, x, y, r, b);
@@ -459,14 +465,19 @@ Canvas g2d;
                 }
                 if (image == null || widget.getTextFace()) {
                     ((Button)jComponent).setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-                    ((Button)jComponent).setText(text);
+                    CharSequence glyphs = DLabel.suitGlyphs(context, text);
+                    if (glyphs instanceof Spanned) {
+                        // allCaps transformation would drop the suit font spans
+                        ((Button)jComponent).setTransformationMethod(null);
+                    }
+                    ((Button)jComponent).setText(glyphs);
                     ((Button)jComponent).setTextColor(textColor);
                 }
                 jComponent.setEnabled(widget.isEnabled());
                 ((Button)jComponent).setTextColor(widget.isEnabled() ? textColor : 0xFFCCCCCC);
             } else if (jComponent instanceof TextView) {
                 ((TextView)jComponent).setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-                ((TextView)jComponent).setText(text);
+                ((TextView)jComponent).setText(DLabel.suitGlyphs(context, text));
                 ((TextView)jComponent).setTextColor(textColor);
                 Player p = getInstance().getCurrentPlayer();
                 if (p == null || p.getNumber() != widget.getNumber()) {
@@ -617,14 +628,15 @@ Canvas g2d;
     private static class MessageDialog {
         final Dialog dialog;
         final LinearLayout root;
-        final int width, height, buttonPanelHeight;
+        final TextView titleView, body;
+        LinearLayout buttonPanel;   // attached in showMessageDialog()
+        int width, height;
 
-        MessageDialog(Dialog dialog, LinearLayout root, int width, int height, int buttonPanelHeight) {
+        MessageDialog(Dialog dialog, LinearLayout root, TextView titleView, TextView body) {
             this.dialog = dialog;
             this.root = root;
-            this.width = width;
-            this.height = height;
-            this.buttonPanelHeight = buttonPanelHeight;
+            this.titleView = titleView;
+            this.body = body;
         }
     }
 
@@ -648,25 +660,6 @@ Canvas g2d;
         int bodyPad = (int) (dMetrics.cardW * .15);
         body.setPadding(bodyPad, 0, bodyPad, bodyPad);
 
-        // Measure the actual content, at a width capped to the main window, before
-        // it's attached to the dialog's own window - mirrors the desktop
-        // MainPanel.showMessage's dialog.pack(): a short message (e.g. the
-        // submitLog result) ends up sized to its own small extent, while a long
-        // one (e.g. showHelp()'s HTML) hits the cap and scrolls instead, once the
-        // window below is fixed at the clamped size.
-        int maxWidth = context.config().mainSize.first;
-        int maxHeight = context.config().mainSize.second;
-        int widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.AT_MOST);
-        titleView.measure(widthSpec, View.MeasureSpec.UNSPECIFIED);
-        body.measure(widthSpec, View.MeasureSpec.UNSPECIFIED);
-        int buttonPanelHeight = (int) (dMetrics.cardW * .5);
-        int minWidth = (int) (dMetrics.cardW * 3);
-        int minHeight = (int) (dMetrics.cardW * 2);
-        int contentWidth = Math.max(titleView.getMeasuredWidth(), body.getMeasuredWidth());
-        int contentHeight = titleView.getMeasuredHeight() + body.getMeasuredHeight() + buttonPanelHeight;
-        int popupWidth = Math.min(Math.max(contentWidth, minWidth), maxWidth);
-        int popupHeight = Math.min(Math.max(contentHeight, minHeight), maxHeight);
-
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
@@ -679,12 +672,58 @@ Canvas g2d;
         root.addView(scrollView, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        return new MessageDialog(dialog, root, popupWidth, popupHeight, buttonPanelHeight);
+        return new MessageDialog(dialog, root, titleView, body);
     }
 
+    // Measure the actual content, at a width capped to the main window, before
+    // it's attached to the dialog's own window - mirrors the desktop
+    // MainPanel.showMessage's dialog.pack(): a short message (e.g. the
+    // submitLog result) ends up sized to its own small extent, while a long
+    // one (e.g. showHelp()'s HTML) hits the cap and scrolls instead, once the
+    // window is fixed at the clamped size. Runs again on rotation, when the
+    // activity's content area changes. Capped at that content area, the space
+    // the window actually has, falling back to config.mainSize before layout.
+    private void sizeMessageDialog(MessageDialog md) {
+        View content = context.findViewById(android.R.id.content);
+        int maxWidth = content.getWidth();
+        int maxHeight = content.getHeight();
+        if (maxWidth <= 0 || maxHeight <= 0) {
+            maxWidth = context.config().mainSize.first;
+            maxHeight = context.config().mainSize.second;
+        } else if (Build.VERSION.SDK_INT >= 35) {
+            // edge-to-edge (see onSizeChanged()): the content area includes the
+            // system bars, keep the dialog out of them
+            WindowInsets windowInsets = content.getRootWindowInsets();
+            if (windowInsets != null) {
+                Insets insets = windowInsets.getInsets(
+                    WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                maxWidth -= insets.left + insets.right;
+                maxHeight -= insets.top + insets.bottom;
+            }
+        }
+        int widthSpec = View.MeasureSpec.makeMeasureSpec(maxWidth, View.MeasureSpec.AT_MOST);
+        md.titleView.measure(widthSpec, View.MeasureSpec.UNSPECIFIED);
+        md.body.measure(widthSpec, View.MeasureSpec.UNSPECIFIED);
+        md.buttonPanel.measure(widthSpec, View.MeasureSpec.UNSPECIFIED);
+        int minWidth = (int) (dMetrics.cardW * 3);
+        int minHeight = (int) (dMetrics.cardW * 2);
+        int contentWidth = Math.max(md.titleView.getMeasuredWidth(), md.body.getMeasuredWidth());
+        int contentHeight = md.titleView.getMeasuredHeight() + md.body.getMeasuredHeight()
+            + md.buttonPanel.getMeasuredHeight();
+        md.width = Math.min(Math.max(contentWidth, minWidth), maxWidth);
+        md.height = Math.min(Math.max(contentHeight, minHeight), maxHeight);
+    }
+
+
     private void showMessageDialog(MessageDialog md, LinearLayout buttonPanel) {
+        // the panel takes whatever height its buttons need: a fixed cardW-based
+        // height is less than a Button's own minimum height in landscape, where
+        // cards are smaller, and cut the buttons off
+        buttonPanel.setMinimumHeight((int) (dMetrics.cardW * .5));
+        md.buttonPanel = buttonPanel;
         md.root.addView(buttonPanel, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, md.buttonPanelHeight));
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        sizeMessageDialog(md);
         md.dialog.setContentView(md.root);
         Window window = md.dialog.getWindow();
         if (window != null) {
@@ -694,6 +733,20 @@ Canvas g2d;
             // keep whatever's behind the popup at its normal color, matching the other popups
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         }
+        // follow the content area when it changes size (rotation); its layout
+        // change is reliable on every API level, unlike the DMetrics sizes
+        View content = context.findViewById(android.R.id.content);
+        View.OnLayoutChangeListener resizer = (v, l, t, r, b, oldL, oldT, oldR, oldB) -> {
+            if (r - l != oldR - oldL || b - t != oldB - oldT) {
+                sizeMessageDialog(md);
+                Window w = md.dialog.getWindow();
+                if (w != null) {
+                    w.setLayout(md.width, md.height);
+                }
+            }
+        };
+        content.addOnLayoutChangeListener(resizer);
+        md.dialog.setOnDismissListener(d -> content.removeOnLayoutChangeListener(resizer));
         md.dialog.show();
     }
 
@@ -736,31 +789,10 @@ Canvas g2d;
             buttonPanel.setOrientation(LinearLayout.HORIZONTAL);
             buttonPanel.setGravity(Gravity.CENTER);
             buttonPanel.setBackgroundColor(0xFFCCCCCC);
-            int pad = (int) (dMetrics.cardW * .1);
-            if ((flags & msgFlagOK) != 0) {
-                Button okButton = new Button(context);
-                okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
-                okButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
-                okButton.setOnClickListener(v -> {
-                    md.dialog.dismiss();
-                    resultQueue.offer(msgFlagOK);
-                });
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                lp.rightMargin = pad;
-                buttonPanel.addView(okButton, lp);
-            }
-            if ((flags & msgFlagCancel) != 0) {
-                Button cancelButton = new Button(context);
-                cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
-                cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
-                cancelButton.setOnClickListener(v -> {
-                    md.dialog.dismiss();
-                    resultQueue.offer(msgFlagCancel);
-                });
-                buttonPanel.addView(cancelButton, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-            }
+            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagYes, "Yes");
+            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagNo, "No");
+            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagOK, TableLayout.ButtonCommand.ok.getName());
+            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagCancel, TableLayout.ButtonCommand.cancel.getName());
             showMessageDialog(md, buttonPanel);
         });
         try {
@@ -769,6 +801,27 @@ Canvas g2d;
             Thread.currentThread().interrupt();
             return 0;
         }
+    }
+
+    // adds the button for flag if it is requested in flags; a tap returns flag
+    private void addMessageButton(LinearLayout buttonPanel, MessageDialog md,
+                                  ArrayBlockingQueue<Integer> resultQueue, int flags, int flag, String name) {
+        if ((flags & flag) == 0) {
+            return;
+        }
+        Button button = new Button(context);
+        button.setText(m(name));
+        button.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
+        button.setOnClickListener(v -> {
+            md.dialog.dismiss();
+            resultQueue.offer(flag);
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        if (buttonPanel.getChildCount() > 0) {
+            lp.leftMargin = (int) (dMetrics.cardW * .1);
+        }
+        buttonPanel.addView(button, lp);
     }
 
     @Override

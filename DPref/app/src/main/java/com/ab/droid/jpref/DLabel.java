@@ -18,14 +18,19 @@
  */
 package com.ab.droid.jpref;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.text.Html;
 import android.text.Layout;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.style.MetricAffectingSpan;
 import android.view.View;
 
 // Draws its text rotated about its own center, while its own box (background,
@@ -63,9 +68,46 @@ class DLabel extends View {
     // the raw HTML string directly, since only Html.fromHtml() parses that markup
     // into the Spanned that colors/styles actually come from).
     void setText(String text) {
-        this.text = fromHtml(text);
+        this.text = suitGlyphs(getContext(), fromHtml(text));
         layout = null;
         invalidate();
+    }
+
+    // some devices (e.g. Samsung SM-S327VL, Android 6) draw suit symbols from
+    // their emoji font, which ignores the text color, so red suits come out
+    // black (U+FE0E text presentation selector does not help there). Suit
+    // symbols are drawn with the bundled DejaVu Sans instead, the rest of the
+    // text keeps the default font. Returns text as is if it has no suits.
+    private static final String SUITS = "\u2660\u2663\u2665\u2666";    // ♠♣♥♦
+    private static Typeface suitTypeface;
+
+    static CharSequence suitGlyphs(Context context, CharSequence text) {
+        SpannableStringBuilder sb = null;
+        for (int i = 0; i < text.length(); ++i) {
+            if (SUITS.indexOf(text.charAt(i)) < 0) {
+                continue;
+            }
+            if (sb == null) {
+                if (suitTypeface == null) {
+                    suitTypeface = Typeface.createFromAsset(context.getAssets(), "fonts/DejaVuSans.ttf");
+                }
+                sb = new SpannableStringBuilder(text);
+            }
+            sb.setSpan(new SuitSpan(), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return sb == null ? text : sb;
+    }
+
+    private static class SuitSpan extends MetricAffectingSpan {
+        @Override
+        public void updateDrawState(TextPaint paint) {
+            paint.setTypeface(suitTypeface);
+        }
+
+        @Override
+        public void updateMeasureState(TextPaint paint) {
+            paint.setTypeface(suitTypeface);
+        }
     }
 
     @SuppressWarnings("deprecation")   // single-arg overload is required below API 24 (minSdk 23)
@@ -73,6 +115,11 @@ class DLabel extends View {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY);
         }
+        // before API 24 Html.fromHtml() ignores lists, the items run together:
+        // start each <li> on a new line with a bullet
+        html = html.replaceAll("(?i)<li[^>]*>", "<br>&#8226;&nbsp;")
+            .replaceAll("(?i)</li>|<ul[^>]*>", "")
+            .replaceAll("(?i)</ul>", "<br>");
         return Html.fromHtml(html);
     }
 

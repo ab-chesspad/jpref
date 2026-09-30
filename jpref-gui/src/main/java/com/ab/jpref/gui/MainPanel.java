@@ -22,7 +22,6 @@ package com.ab.jpref.gui;
 import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import static com.ab.jpref.cards.Card.TOTAL_SUITS;
 import static com.ab.jpref.ui.TableLayout.ButtonCommand.showScores;
-import static com.ab.jpref.ui.TableLayout.getInstance;
 
 import com.ab.jpref.cards.Card;
 
@@ -75,7 +74,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     final List<Pair<Widget, JComponent>> widgets = new ArrayList<>();
 
     private TableLayout tableLayout() {
-        return TableLayout.getInstance();    }
+        return TableLayout.getInstance();
+    }
 
     public MainPanel(Host host) {
         this.host = host;
@@ -221,7 +221,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             String text = m(widget.getText());
             if (jComponent instanceof JLabel) {
                 ((JLabel)jComponent).setText(text);
-                Player p = getInstance().getCurrentPlayer();
+                Player p = tableLayout().getCurrentPlayer();
                 if (p == null || p.getNumber() != widget.getNumber()) {
                     jComponent.setBackground(LBL_BG_COLOR);
                 } else {
@@ -243,7 +243,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         }
         host.repaintAll();
 
-        if ((getInstance()).getCurrentPlayer() == null) {
+        if (tableLayout().getCurrentPlayer() == null) {
             // wait cursor
             this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         } else {
@@ -302,26 +302,27 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         JDialog dialog = buildMessageDialog(title, text);
         int[] result = {0};
         JPanel buttonPanel = new JPanel();
-        if ((flags & msgFlagOK) != 0) {
-            JButton okButton = new JButton(m(TableLayout.ButtonCommand.ok.getName()));
-            okButton.addActionListener(e -> {
-                result[0] = msgFlagOK;
-                dialog.dispose();
-            });
-            buttonPanel.add(okButton);
-        }
-        if ((flags & msgFlagCancel) != 0) {
-            JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
-            cancelButton.addActionListener(e -> {
-                result[0] = msgFlagCancel;
-                dialog.dispose();
-            });
-            buttonPanel.add(cancelButton);
-        }
+        addMessageButton(buttonPanel, dialog, result, flags, msgFlagYes, "Yes");
+        addMessageButton(buttonPanel, dialog, result, flags, msgFlagNo, "No");
+        addMessageButton(buttonPanel, dialog, result, flags, msgFlagOK, TableLayout.ButtonCommand.ok.getName());
+        addMessageButton(buttonPanel, dialog, result, flags, msgFlagCancel, TableLayout.ButtonCommand.cancel.getName());
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         sizeMessageDialog(dialog);
         dialog.setVisible(true);   // blocks until dispose() (modal)
         return result[0];
+    }
+
+    // adds the button for flag if it is requested in flags; a click returns flag
+    private void addMessageButton(JPanel buttonPanel, JDialog dialog, int[] result, int flags, int flag, String name) {
+        if ((flags & flag) == 0) {
+            return;
+        }
+        JButton button = new JButton(m(name));
+        button.addActionListener(e -> {
+            result[0] = flag;
+            dialog.dispose();
+        });
+        buttonPanel.add(button);
     }
 
     @Override
@@ -412,7 +413,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (g == null || getInstance() == null) {
+        if (g == null || tableLayout() == null) {
             return;
         }
 
@@ -421,7 +422,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         g.fillRect(0, 0, metrics.panelWidth, metrics.panelHeight);
 
         tableLayout().paint(g);
-        Couple<Integer> elderHandLocation = getInstance().elderHandLocation;
+        Couple<Integer> elderHandLocation = tableLayout().elderHandLocation;
         if (elderHandLocation.first != null) {
             g.drawImage(elderHandImage, elderHandLocation.first, elderHandLocation.second, this);
         }
@@ -437,14 +438,14 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     @Override
     public void paint(Graphics g) {
         super.paint(g);
-        if (getInstance() == null) {
+        if (tableLayout() == null) {
             return;
         }
-        Card draggedCard = getInstance().getDraggedCard();
+        Card draggedCard = tableLayout().getDraggedCard();
         if (draggedCard != null) {
             paint(g, draggedCard,
-                getInstance().getDraggedCardPosition().getX(),
-                getInstance().getDraggedCardPosition().getY());
+                tableLayout().getDraggedCardPosition().getX(),
+                tableLayout().getDraggedCardPosition().getY());
         }
     }
 

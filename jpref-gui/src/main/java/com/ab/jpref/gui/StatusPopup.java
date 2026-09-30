@@ -336,12 +336,12 @@ public class StatusPopup extends JDialog {
             result = RestartCommand.newRound;
         });
         jPanel.add(goonButton);
-        JButton replayButton = new JButton(m(TableLayout.ButtonCommand.replay.getName()));
-        replayButton.addActionListener(actionEvent -> {
+        JButton verifyButton = new JButton(m(TableLayout.ButtonCommand.verify.getName()));
+        verifyButton.addActionListener(actionEvent -> {
             StatusPopup.this.dispose();
-            result = RestartCommand.replay;
+            result = RestartCommand.verify;
         });
-        jPanel.add(replayButton);
+        jPanel.add(verifyButton);
         return  jPanel;
     }
 }

@@ -82,9 +82,11 @@ public class TableLayout implements GameManager.EventObserver {
         newRound("New Round"),
         showScores("Scores"),
         lastTrick("Last Trick"),
-        replay("Verify"),
+        replay("Replay"),
+        verify("Verify"),
         submitLog("Submit Log"),
         yourOffer("Your Offer"),
+        backToGame("Back to Game"),
 
         ok("OK"),
         accept("Accept"),
@@ -196,18 +198,9 @@ public class TableLayout implements GameManager.EventObserver {
         gui.add(menuBtn);
 
         ButtonCommand[][] menuCommands;
-        if (config().release.get()) {
-            menuCommands = new ButtonCommand[][] {
-                {ButtonCommand.showScores},
-                {ButtonCommand.lastTrick},
-                {ButtonCommand.yourOffer},
-                {ButtonCommand.comments},
-                {ButtonCommand.submitLog},
-                {ButtonCommand.settings},
-                {ButtonCommand.help},
-            };
-        } else {
-            menuCommands = new ButtonCommand[][] {
+
+        menuPanel = create(null, 3.5, .6, 3,
+            new ButtonCommand[][] {
                 {ButtonCommand.showScores},
                 {ButtonCommand.lastTrick},
                 {ButtonCommand.yourOffer},
@@ -217,10 +210,8 @@ public class TableLayout implements GameManager.EventObserver {
                 {ButtonCommand.help},
                 {ButtonCommand.replay},
                 {ButtonCommand.newRound},
-            };
-        }
-
-        menuPanel = create(null, 3.5, .6, 3, menuCommands);
+                {ButtonCommand.backToGame},
+            });
     }
 
     private ButtonPanel create(RoundStage roundStage, double scaleW, double scaleH, int zOrder, ButtonCommand[][] commands) {
@@ -395,9 +386,6 @@ public class TableLayout implements GameManager.EventObserver {
     }
 
     private void placeMenuPanel() {
-        if (!menuPanel.isVisible()) {
-            return;
-        }
         int panelWidth = config().mainSize.first;
         int panelHeight = config().mainSize.second;
 
@@ -411,7 +399,45 @@ public class TableLayout implements GameManager.EventObserver {
             hButton = wButton * aspectRatio;
         }
 
-        int hPanel = (int) (hButton * menuPanel.getRowCount());
+        int rowCount = 0;
+        for (int i = 0; i < menuPanel.getRowCount(); ++i) {
+            Widget widget = menuPanel.getWidget(i, 0);
+            switch (widget.getCommand()) {
+                case showScores:
+                    widget.setVisible(menuPanel.isVisible());
+                    break;
+                case lastTrick:
+                    widget.setEnabled(!gameManager.getLastTrickCards().isEmpty());
+                    break;
+                case yourOffer:
+                    widget.setEnabled(getEstimate() >= 0);
+                    break;
+                case comments:
+                case submitLog:
+                    widget.setEnabled(host.getLogFileName() != null);
+                    break;
+                case settings:
+                case help:
+                    widget.setVisible(menuPanel.isVisible());
+                    break;
+                case replay:
+                case newRound:
+                    widget.setVisible(menuPanel.isVisible() && !config().release.get());
+                    break;
+                case backToGame:
+                    widget.setVisible(menuPanel.isVisible() && gameManager.replayMode);
+                    break;
+            }
+            if (widget.isVisible()) {
+                ++rowCount;
+            }
+        }
+
+        if (rowCount == 0) {
+            return;
+        }
+
+        int hPanel = (int) (hButton * rowCount);
         if (hPanel > panelHeight) {
             hPanel = panelHeight;
         }
@@ -430,17 +456,6 @@ public class TableLayout implements GameManager.EventObserver {
             } else if (buttonPanel != menuPanel) {
                 buttonPanel.setVisible(false);
             }
-        }
-        if (menuPanel.isVisible()) {
-            Widget widget;
-            widget = menuPanel.getWidget(1, 0);  // lastTrick, speed vs. convenience
-            widget.setEnabled(!gameManager.getLastTrickCards().isEmpty());
-            widget = menuPanel.getWidget(2, 0);  // yourOffer, speed vs. convenience
-            widget.setEnabled(TrickList.getInstance().getEstimate() >= 0);
-            widget = menuPanel.getWidget(3, 0);  // comments, speed vs. convenience
-            widget.setEnabled(host.getLogFileName() != null);
-            widget = menuPanel.getWidget(3, 0);  // submit log, speed vs. convenience
-            widget.setEnabled(host.getLogFileName() != null);
         }
     }
 
@@ -996,6 +1011,7 @@ public class TableLayout implements GameManager.EventObserver {
                 GameManager.getInstance().restart(GameManager.RestartCommand.replay);
                 break;
             case newRound:
+            case backToGame:
                 GameManager.getInstance().restart(GameManager.RestartCommand.newRound);
                 break;
             case comments:
@@ -1074,6 +1090,7 @@ public class TableLayout implements GameManager.EventObserver {
                 return;
             }
         }
+        Logger.flush();     // submit the log up to this moment
         String logFilePath = host.getLogFileName();
         final String[] res = new String[1];
         Thread worker = new Thread(new Runnable() {
@@ -1101,7 +1118,7 @@ public class TableLayout implements GameManager.EventObserver {
         String text = String.format("%s %s\n%s", fn, msg, m("Restart JPref") + "?");
         if (gui != null) {
             if (gui.showMessage(m("Confirmation"), text,
-                    TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {
+                TableLayout.GUI.msgFlagYes | TableLayout.GUI.msgFlagNo) == TableLayout.GUI.msgFlagYes) {
                 // runs on the button handler's thread; the game thread picks it up
                 // and throws PrefExceptionReset out of runGame() to the main loop
                 GameManager.getInstance().restart(GameManager.RestartCommand.reset);
@@ -1217,6 +1234,33 @@ public class TableLayout implements GameManager.EventObserver {
         return Widget.BLACK_COLOR;
     }
 
+    int getEstimate() {
+        if (!gameManager.getRoundStage().equals(RoundStage.play)) {
+            return -1;
+        }
+        Player player = gameManager.getDeclarer();
+        if (player == null) {
+            player = gameManager.getPlayers()[0];   // all-pass, player is user
+        }
+        int tricksEstimate;
+        if (gameManager.getMinBid().equals(Bid.BID_MISERE) || gameManager.getMinBid().equals(BID_ALL_PASS)) {
+            boolean myTurn = gameManager.getTrick().getTurn() == 0;
+            if (gameManager.getTrick().size() > 0) {
+                myTurn = false;
+            }
+            tricksEstimate = player.getTricks() +
+                CardSet.holes(player.getMyHand(), gameManager.getDiscarded(), myTurn);
+            if (myTurn) {
+                if (tricksEstimate < 10) {
+                    ++tricksEstimate;   // this is a pessimistic estimate
+                }
+            }
+        } else {
+            tricksEstimate = TrickList.getInstance().getEstimate();
+        }
+        return tricksEstimate;
+    }
+
     private void getOffer() {
         int minTricks, maxTricks;
         Player[] players = gameManager.getPlayers();
@@ -1224,7 +1268,7 @@ public class TableLayout implements GameManager.EventObserver {
         Player player1 = players[1];
         Player player2 = players[2];
         int theirTricks = player1.getTricks() + player2.getTricks();
-        int tricksEstimate = TrickList.getInstance().getEstimate();
+        int tricksEstimate = getEstimate();
 
         if (player0.getBid().equals(Bid.BID_MISERE)) {
             int _minTricks = tricksEstimate;
@@ -1246,6 +1290,9 @@ public class TableLayout implements GameManager.EventObserver {
                 minTricks = _minTricks;
                 maxTricks = ROUND_SIZE - tricksEstimate;
             }
+        } else if (gameManager.getMinBid().equals(BID_ALL_PASS)) {
+            minTricks = tricksEstimate;
+            maxTricks = Math.min(ROUND_SIZE - theirTricks, tricksEstimate);
         } else {
             // for tricks play
             minTricks = Math.max(player0.getTricks(), 0);
@@ -1270,13 +1317,15 @@ public class TableLayout implements GameManager.EventObserver {
     public interface GUI {
         int msgFlagOK = 0x1;
         int msgFlagCancel = 0x2;
+        int msgFlagYes = 0x4;
+        int msgFlagNo = 0x8;
         void update();
         <T> void paint(T graphics, Card card, int x, int y);
         <T> void paintBack(T graphics, int x, int y);
         void add(Widget widget);
         String getUserComments();
         void showMessage(String title, String text);
-        // returns which button was clicked (msgFlagOK/msgFlagCancel)
+        // shows a button for each msgFlagXXX set in flags, returns the flag of the clicked one
         int showMessage(String title, String text, int flags);
         void showLastTrick(CardList cards);
         GameManager.RestartCommand showScores(boolean showButtons);
