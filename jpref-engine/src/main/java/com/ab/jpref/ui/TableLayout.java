@@ -197,8 +197,6 @@ public class TableLayout implements GameManager.EventObserver {
         menuBtn = new Widget(ButtonCommand.menu, buttonCommand -> execCommand(buttonCommand), 2, false);
         gui.add(menuBtn);
 
-        ButtonCommand[][] menuCommands;
-
         menuPanel = create(null, 3.5, .6, 3,
             new ButtonCommand[][] {
                 {ButtonCommand.showScores},
@@ -1093,12 +1091,9 @@ public class TableLayout implements GameManager.EventObserver {
         Logger.flush();     // submit the log up to this moment
         String logFilePath = host.getLogFileName();
         final String[] res = new String[1];
-        Thread worker = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                res[0] = host.getUtil().submitLog(logFilePath);
-                System.out.println(res[0]);
-            }
+        Thread worker = new Thread(() -> {
+            res[0] = host.getUtil().submitLog(logFilePath);
+            System.out.println(res[0]);
         });
         worker.start();
         try {
@@ -1245,7 +1240,7 @@ public class TableLayout implements GameManager.EventObserver {
         int tricksEstimate;
         if (gameManager.getMinBid().equals(Bid.BID_MISERE) || gameManager.getMinBid().equals(BID_ALL_PASS)) {
             boolean myTurn = gameManager.getTrick().getTurn() == 0;
-            if (gameManager.getTrick().size() > 0) {
+            if (!gameManager.getTrick().isEmpty()) {
                 myTurn = false;
             }
             tricksEstimate = player.getTricks() +

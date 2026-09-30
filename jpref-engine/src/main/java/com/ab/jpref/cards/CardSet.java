@@ -529,16 +529,6 @@ public class CardSet implements Serializable {
         return index;
     }
 
-    public static int suitCount(int bitmap) {
-        int count = 0;
-        for (int m : suitMasks) {
-            if ((bitmap & m) != 0) {
-                ++count;
-            }
-        }
-        return count;
-    }
-
     public Card getOptimalStart(CardSet leftSuit, CardSet rightSuit) {
         if (this.isEmpty()) {
             return null;
@@ -771,17 +761,6 @@ mainLoop:
             ++suitNum;
         }
         return suitNum;
-    }
-
-    // assuming parameters are single bits, same suit
-    public static boolean isLE(int bit0, int bit1) {
-        if (bit0 == bit1) {
-            return true;
-        }
-        if (suitNum(bit0) != suitNum(bit1)) {
-            return false;
-        }
-        return ((bit1 - 1) & bit0) != 0;
     }
 
     public static int holes(CardSet myHand, CardSet discarded, boolean mePlay) {
@@ -1161,7 +1140,7 @@ mainLoop:
                     break;  // last suit ♥
                 }
                 // go to next suit, m.b. next group??
-                int nextSuitCards = thisBitmap & ~suitMask & ~(suitMask - 1);
+                int nextSuitCards = thisBitmap & ~suitMask & -suitMask;
                 bit = lsb(nextSuitCards);            // new lsb, 0x80000
                 continue;
             }

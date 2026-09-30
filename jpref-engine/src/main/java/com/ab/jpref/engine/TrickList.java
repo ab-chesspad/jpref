@@ -423,15 +423,12 @@ probe:
                 while ((bit1 = CardSet.next(bm0, bit1)) != 0) {
                     final Card card0 = Card.get(bit1);
                     final int _threadNum = ++threadNum;
-                    Thread worker = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            printf("thread %s, starting with %s\n", Thread.currentThread().getName(), card0);
-                            TrickNode trickNode = new TrickNode();
-                            trickNode.init(thisNode);
-                            workerResults[_threadNum] =
-                                trickNode.buildSubList(new CardList(Arrays.asList(card0)), _threadNum, 0);
-                        }
+                    Thread worker = new Thread(() -> {
+                        printf("thread %s, starting with %s\n", Thread.currentThread().getName(), card0);
+                        TrickNode trickNode = new TrickNode();
+                        trickNode.init(thisNode);
+                        workerResults[_threadNum] =
+                            trickNode.buildSubList(new CardList(Arrays.asList(card0)), _threadNum, 0);
                     });
                     workers.add(worker);
                     worker.start();

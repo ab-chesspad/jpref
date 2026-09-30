@@ -81,8 +81,8 @@ public class Logger {
     }
 
     public interface LogHolder {
-        public static final String LOG_EXT = ".log";
-        public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
+        String LOG_EXT = ".log";
+        long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
 
         default PrintStream getLogStream() {return System.out; }
         Logger logger();
