@@ -26,17 +26,17 @@ import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 import com.ab.util.Bidder.PlayerBid;
 import com.ab.util.Logger;
 
 import java.util.*;
 
-import static com.ab.jpref.config.Config.ROUND_SIZE;
-
 public class MisereBot extends Bot {
 //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
     public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
     public static final boolean DEBUG_LOG = false;
+    public static final boolean USE_TRICK_LIST = true;
 
     static final int MAX_EVAL = 1000;   // in ‰
     // https://summoning.ru/games/miser.shtml
@@ -246,6 +246,20 @@ probes:
 
     @Override
     public Card play(Trick trick) {
+        if (USE_TRICK_LIST) {
+            if (trick.getNumber() == 0 && trick.isEmpty() &&
+                trick.getTurn() == gameManager().declarerNumber) {
+                return declarerPlay(trick);
+            } else {
+                // create and use trick list
+                Card res = TrickList.getInstance().getCard(this, trick);
+                if (res != null) {
+                    return res;
+                }
+                return this.anyCard(trick, true);
+            }
+
+        }
         getHoles(gameManager().declarerNumber, trick);
 
         Card res;
@@ -422,10 +436,55 @@ probes:
 
     @Override
     long bm4Iteration(TrickList.TrickNode trickNode) {
+        final int[] bitmaps = new int[NOP];
         int num = trickNode.getTurn();
+        bitmaps[0] = trickNode.hands[num].list(trickNode.startingSuit).getBitmap();
+        if (bitmaps[0] == 0) {
+            bitmaps[0] = trickNode.hands[num].list().getBitmap();
+        }
+        bitmaps[1] = trickNode.hands[(num + 1) % NOP].getBitmap();
+        bitmaps[2] = trickNode.hands[(num + 2) % NOP].getBitmap();
+        for (int i = 0; i < trickNode.size(); ++i) {
+            Card card = trickNode.getCard(i);
+            int bit = 1 << CardSet.offset(card);
+            int n = (i + 3 - trickNode.size()) % NOP;
+            bitmaps[n] |= bit;
+        }
+        // declarer and defenders alike: only cards with no outstanding card between them are equivalent.
+        // CardSet.bm4build() (friend/foe) is for play for tricks, in misère it drops the defenders'
+        // discards that catch the declarer, e.g. the 1st test in fixedplay
+        int others = bitmaps[1] | bitmaps[2];
+        return ((long)CardSet.bm4buildBackward(bitmaps[0], others) & 0x0ffffffffL | BACKWARD_FLAG);
+/*
+        if (USE_TRICK_LIST) {
+            int bitmap = trickNode.hands[num].list(trickNode.startingSuit).getBitmap();
+            int others = trickNode.hands[(num + 1) % NOP].getBitmap() |
+                trickNode.hands[(num + 2) % NOP].getBitmap();
+            for (int i = 0; i < trickNode.size(); ++i) {
+                Card card = trickNode.getCard(i);
+                int bit = 1 << CardSet.offset(card);
+                int n = (i + 3 - trickNode.size()) % NOP;
+                if (n == 0) {
+                    bitmap |= bit;
+                } else {
+                    others |= bit;
+                }
+            }
+            return ((long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL | BACKWARD_FLAG);
+        }
+        int num = trickNode.getTurn();
+        int n1 = (num + 1) % NOP;
+        int n2 = (num + 2) % NOP;
+        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
+        if (bitmap == 0) {
+            bitmap = trickNode.hands[num].getBitmap();
+        }
         if (num == 0) {
             Card card = play4Build(trickNode);
             return card == null ? 0L : CardSet.bit(card);
+
+            int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
+            return ((long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL | BACKWARD_FLAG);
         }
         int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
         if (bitmap == 0) {
@@ -441,6 +500,7 @@ probes:
         }
         long res = (long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL;
         return res | BACKWARD_FLAG;
+*/
     }
 
     private Card play4Build(TrickList.TrickNode trickNode) {
@@ -479,16 +539,17 @@ probes:
         int probeFutureTricks = BaseTrick.getFutureTricks(probeTrickData);
         int probeTricks = probePastTricks + probeFutureTricks;
 
-        int diff = 10 * (bestSoFarTricks - probeTricks);
+        // misère: declarer wants the least tricks, opposite to ForTricksBot.compare()
+        int diff = 10 * (probeTricks - bestSoFarTricks);
         if (diff != 0) {
-            if (num != 0) {
+            if (num == 0) {
                 return diff;
             }
             return -diff;
         }
-        diff = bestSoFarPastTricks - probePastTricks;
+        diff = probePastTricks - bestSoFarTricks;
         if (diff != 0) {
-            if (num != 0) {
+            if (num == 0) {
                 return diff;
             }
             return -diff;

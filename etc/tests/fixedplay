@@ -1,33 +1,20 @@
 #fixedplay: hands, talon, elderhand -> bid, tricks
+# declarer #0, must drop talon
 
-deal: ♠79K ♣9Q ♦QKA ♥JA  ♣XJA ♦7XJ ♥79XK  ♠8XQA ♣78K ♦8 ♥8Q  ♦9 ♠J  1 -> 6♠ 5
-
+#*** exit ***
 #########
-# stress test
-analyzing: ♠9 ♦789JQA ♥9JK  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A
-list build duration: 829 msec, positions 662,796, similar 6,117,598
-[♥AJQ, ♣X ♥9 ♣8, ♣K ♦Q ♣9, ♣7 ♦J ♣J, ♣A ♥8 ♦9, ♠JK9, ♠8 ♦8 ♠Q, ♠AX ♦7, ♥7 ♦X ♥K, ♦A ♥X ♦K]
-deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6- 2
-
-# same deal, hands rotated among seats, elderHand 1: worse than the above under the current bm4Iteration
-analyzing: ♠8XK ♣7XK ♥89JA  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ
-list build duration: 2,196 msec, positions 1,615,153, similar 17,866,365
-[♦7 ♥QJ, ♦8 ♥X9, ♦9 ♥7A, ♥K ♣A ♥8, ♦J ♣JX, ♦Q ♣8K, ♦A ♣97, ♣Q ♠AX, ♠9JK, ♠87Q]
-deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  1 -> 6- 1
+deal: ♣X ♦78XJQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♠7 ♣8  1 -> 6♦ 6
 
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
-
 deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
 deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # ловится
 
-deal: ♠89 ♣9A ♦9Q ♥8JKA  ♠7JA ♣7JQ ♦7K ♥7Q  ♠QK ♣8XK ♦8XJ ♥9X  ♦A ♠X  1 -> 6♥ 7
+deal: ♣7KA ♦78A ♥79JA  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♠8J  1 -> 6♥ 6
+deal: ♠79K ♣9Q ♦QKA ♥JA  ♣XJA ♦7XJ ♥79XK  ♠8XQA ♣78K ♦8 ♥8Q  ♦9 ♠J  1 -> 6♠ 3
+deal: ♠89 ♣9A ♦9Q ♥8JKA  ♠7JA ♣7JQ ♦7K ♥7Q  ♠QK ♣8XK ♦8XJ ♥9X  ♦A ♠X  1 -> 6♥ 5
 deal: ♠XQK ♣7XKA ♦9XQ  ♠9J ♣9J ♦8 ♥78XJA  ♠7A ♣8Q ♦7JK ♥9QK  ♦A ♠8  2 -> 6♣ 6
-deal: ♠8QA ♦8KA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦9XJ ♥XJ  ♣A ♥A  0 -> 9♥ 9
 deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥89  ♥7X  0 -> 6- 6
-deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
-
-deal: ♠8J ♣7KA ♦78A ♥7A  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♥J9  1 -> 6♥ 6
 
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9Q ♣XQ ♦JQK ♥9XK   ♠78 ♣9J ♦89XA ♥8A     ♥JQ 1  -> 6♣ 8
 
@@ -37,32 +24,9 @@ deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89
 [♥AJ9, ♥8QK, ♥X ♣JK, ♠K9Q, ♣AX9, ♠X ♣Q ♠7, ♦XA ♣7, ♠J ♦J ♠8, ♠A ♦Q8, ♣8 ♦K9]
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
 
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  1 -> 6♦ 6
-
-deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 6♦ 5
-
-list build duration: 53 msec, positions 64,974, similar 352,495
-[♥K7A, ♥8JQ, ♥X ♦K ♥9, ♠K9J, ♦XA ♣8, ♦Q ♣9K, ♦J ♣J7, ♦9 ♣AX, ♦8 ♠Q8, ♦7 ♠AX]
-deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  0 -> 6♦ 6
-
-list build duration: 171 msec, positions 198,618, similar 1,298,905
-[♣KQA, ♠QAK, ♠XJ ♦9, ♥KX ♦A, ♦QK ♥J, ♥7A ♦J, ♦X7 ♣X, ♦8 ♥9 ♣7, ♠9 ♥Q ♠7, ♠8 ♣98]
-deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 6
-
-deal: ♠7 ♣JA ♦8QKA ♥XJK  ♠9JKA ♣89Q ♦J ♥9A  ♠8XQ ♣7K ♦7X ♥78Q  ♦9 ♣X  1 -> 7♦ 7
-
-[♠AX7, ♠9JQ, ♠K ♥K7, ♣8K7, ♣AXJ, ♣9 ♥J ♣Q, ♦X8 ♥8, ♥AQ ♦9, ♥9 ♦QJ, ♥X ♦KA]
-deal: ♠8J ♣9KA ♦7 ♥789A  ♠7QK ♣7X ♦XQK ♥JQ  ♠9A ♣8JQ ♦89JA ♥K  ♥X ♠X  2 -> 6♥ 6
-
+deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 4
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится
-
 deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится
-
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  0 -> 6♦ 6
-deal: ♠7 ♣9QK ♦7JQK ♥8X  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♦X8  2 -> 6♦ 6
-
-deal: ♠7 ♣8X ♦7JQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♦X8  1 -> 6♦ 6
-
 deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
 
 [♠X89, ♠7AK, ♠J ♦Q ♣K, ♣89X, ♦7X ♥A, ♦8 ♥J ♦9, ♦J ♥QX, ♦K ♥89, ♦A ♣AJ, ♥7 ♣Q7]
@@ -70,26 +34,10 @@ deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q �
 
 deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # , diff drop, не ловится
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
-
 deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
-
-list build duration: 193 msec, positions 198,618, similar 1,298,905
-[♣KQA, ♠QAK, ♠XJ ♦9, ♥KX ♦A, ♦QK ♥J, ♥7A ♦J, ♦X7 ♣X, ♦8 ♥9 ♣7, ♠9 ♥Q ♠7, ♠8 ♣98]
-deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 6
-
-list build duration: 54 msec, positions 63,014, similar 390,339
-[♥9A ♠J, ♦9KA, ♣AJX, ♠AQ ♥X, ♠K8 ♥J, ♠X9 ♥Q, ♣Q7K, ♥K8 ♦X, ♦7 ♠7 ♦Q, ♣98 ♦8]
-deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
-
-list build duration: 102 msec, positions 131,009, similar 735,639
-[♦A9J, ♥8X ♣A, ♦K7X, ♣KJQ, ♣X7 ♠7, ♣9 ♥J ♠9, ♣8 ♥K ♠X, ♦8 ♥A ♦Q, ♥7 ♠K8, ♠AJQ]
-deal: ♠JK ♣89A ♦8JK ♥9Q  ♠8Q ♣7J ♦7A ♥8JKA  ♠79XA ♣Q ♦9XQ ♥7X  ♣XK  1 -> 6♣ 6
 
 [♠87 ♥7, ♣87J, ♠9 ♥J ♠X, ♣9 ♥X ♣Q, ♠JA ♥Q, ♣A ♠K ♣K, ♣X ♦7 ♥8, ♦9A8, ♦JQ ♥9, ♥AK ♦K]
 deal: ♣89XA ♦XA ♥7JQK  ♠8XJK ♣7 ♦78QK ♥X  ♠79A ♣JQK ♦9 ♥89A  ♠Q ♦J  1 -> 6♥ 5
-
-[♠X79, ♠J8A, ♣K97, ♣AJ8, ♦7JX, ♣QX ♦8, ♦A ♥7 ♦Q, ♥8X9, ♥J ♦K ♥Q, ♠Q ♦9 ♥K]
-deal: ♠9A ♣KA ♦789A ♥8Q  ♠XJ ♣9JQ ♦J ♥7XJK  ♠78Q ♣78X ♦XQK ♥9  ♥A ♠K  1 -> 7♦ 7
 
 list build duration: 20 msec, positions 25,705, similar 120,474
 [♦QAK, ♦7J ♠J, ♥8Q ♠A, ♦X ♥9 ♦8, ♠K ♥J ♠9, ♦9 ♥K7, ♠Q ♥AX, ♠X ♣A9, ♠8 ♣KJ, ♠7 ♣7Q]
@@ -99,10 +47,7 @@ list build duration: 60 msec, positions 63,636, similar 381,103
 [♠A9 ♥7, ♦A7J, ♦K89, ♥KA8, ♦Q ♥X ♦X, ♠K ♥J ♠X, ♣XA ♠Q, ♥9 ♠J ♥Q, ♣JQ ♠8, ♠7 ♣K9]
 deal: ♠78XQA ♦XKA ♥9K  ♠9JK ♣XJK ♦78Q ♥A  ♣9QA ♦9J ♥7X8JQ  ♣78  0 -> 6♠ 6
 
-deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> 6♠ 5
-
 deal: ♠9QK ♣8K ♦XQA ♥9K  ♠7XJA ♣JQ ♦78 ♥78  ♠8 ♣79X ♦9JK ♥JQA  ♣A ♥X  0 -> 6♦ 5
-
 deal: ♠JK ♣9 ♦89JQKA ♥7  ♠8 ♣78JK ♦7 ♥8JQA  ♠9XQA ♣XA ♦X ♥9XK  ♣Q ♠7  0 -> 6♦ 6
 
 list build duration: 104 msec, positions 121,512, similar 792,071
@@ -110,12 +55,13 @@ list build duration: 104 msec, positions 121,512, similar 792,071
 deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
 
 deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
-
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79 ♣8JQK ♦89Q ♥7   ♥9K  2 -> 6♦ 6
-
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
 
-######## todo: test all-pass
+######## todo: test all-pass tricks
+deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> All-pass
+deal: ♠JK ♣89A ♦8JK ♥9Q  ♠8Q ♣7J ♦7A ♥8JKA  ♠79XA ♣Q ♦9XQ ♥7X  ♣XK  1 -> All-pass
+deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> All-pass
 deal: ♠89XA ♣7XK ♦KA ♥9  ♠7JK ♣89 ♦8X ♥8JA  ♠Q ♣JA ♦79J ♥7XQK  ♦Q ♣Q  1 -> All-pass # 6♣ 7
 deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♣KA  1 -> All-pass
 deal: ♠9QK ♣8K ♦XQA ♥9K  ♠7XJA ♣JQ ♦78 ♥78  ♠8 ♣79X ♦9JK ♥JQA  ♣A ♥X  0 -> All-pass

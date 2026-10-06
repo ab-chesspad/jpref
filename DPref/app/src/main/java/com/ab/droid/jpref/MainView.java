@@ -478,6 +478,8 @@ public class MainView extends View implements TableLayout.GUI {
             } else if (jComponent instanceof TextView) {
                 ((TextView)jComponent).setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
                 ((TextView)jComponent).setText(DLabel.suitGlyphs(context, text));
+                ((TextView)jComponent).setGravity(widget.isLeftAligned() ?
+                    Gravity.START | Gravity.CENTER_VERTICAL : Gravity.CENTER);
                 ((TextView)jComponent).setTextColor(textColor);
                 Player p = getInstance().getCurrentPlayer();
                 if (p == null || p.getNumber() != widget.getNumber()) {
@@ -840,7 +842,7 @@ public class MainView extends View implements TableLayout.GUI {
     }
 
     @Override
-    public void showLastTrick(CardList cards) {
+    public void showLastTrick(CardList cards, int startedBy) {
         Dialog dialog = new Dialog(context);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.getWindow().setDimAmount(0f);
@@ -851,7 +853,7 @@ public class MainView extends View implements TableLayout.GUI {
             @Override
             protected void onDraw(Canvas canvas) {
                 super.onDraw(canvas);
-                getInstance().paintTrick(canvas, cards, getWidth() / 2, getHeight() / 2);
+                getInstance().paintTrick(canvas, cards, startedBy, getWidth() / 2, getHeight() / 2);
             }
         };
         trickView.setBackgroundColor(Color.GREEN);

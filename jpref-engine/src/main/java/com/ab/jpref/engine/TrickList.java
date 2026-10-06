@@ -46,16 +46,16 @@ import java.util.List;
 
 public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
-    public static final boolean DEBUG_CHECK_HANDS = false;    // for debug
     public static final boolean PRINT_BEST_PATH = true;    // for debug
     // alpha-beta style cutoffs in buildSubList(); toggle to A/B the search
     public static final boolean PRUNE = true;
 
     public static final boolean MULTI_THREADED = true;
     public static boolean DEBUG_IGNORE_DEADLINE = true;
+    public static boolean DEBUG_CHECK_HANDS = false;    // for debug
 
-
-//static final String testPath = "[♦AJ ♥X, ♥A7J, ♦K7 ♥Q, ♦Q8 ♥K, ♦X ♥8 ♠K, ♦9 ♥9 ♠9";
+//static final String testPath = "[♥9K8, ♥A7X, ♦87Q, ♥J ♠Q";
+//static final String testPath = "[♥9K8, ♥A7X, ♦";
 static final String testPath = null;
 int testNumber = -2;
 String path;
@@ -121,13 +121,6 @@ String path;
 
     public TrickList() {
         init();
-    }
-
-    public void init() {
-        instance = this;
-        lock = new Object();
-        positions = new SimpleLongIntMap(MULTI_THREADED);
-        trickPool = new com.ab.jpref.trickpool.TrickPool();
         for (int i = 0; i <= ROUND_SIZE; ++i) {
             bestNodes[i] = new TrickNode();
             probesBestNodes[i] = new TrickNode();
@@ -136,6 +129,13 @@ String path;
                 probesBestNodes[i].hands[j] = new CardSet();
             }
         }
+    }
+
+    public void init() {
+        instance = this;
+        lock = new Object();
+        positions = new SimpleLongIntMap(MULTI_THREADED);
+        trickPool = new com.ab.jpref.trickpool.TrickPool();
     }
 
     GameManager gameManager() {
@@ -247,37 +247,22 @@ String path;
     private void rebuild(Bot targetBot, Trick trick) {
         nodeIndex = -1;
         setDeadline();
-        CardSet hand0 = new CardSet(gameManager().declarerHand);
-        int diff;
-
-        if (gameManager().declarerNumber == trick.getTurn()) {
-            // biddedplay: deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
-            diff = 0;
-        } else {
-            // gameManager().declarerHand only ever has *played* cards removed from it (see
-            // Trick.drop()) - it never accounts for the 2 cards the declarer actually dropped,
-            // so hand0 alone is only a correct "declarer's true remaining hand" fallback when
-            // that drop happens to equal the talon. In this double-dummy engine the drop is
-            // never actually unknown (Bot.playerBid.drops has it exactly), so the fallback
-            // below should use it - not silently reintroduce cards that were already discarded.
-            CardSet knownHand = new CardSet(hand0);
-            knownHand.remove(Bot.playerBid.drops);
-            if (!gameManager().discarded.intersection(Bot.playerBid.drops).isEmpty()) {
-                targetBot.myHand = knownHand;
-            }
-            diff = targetBot.myHand.size() - targetBot.rightHand.size();
-            if (trick.size() == 1) {
-                ++diff;
-            }
-            if (diff != 0) {
-                targetBot.myHand = knownHand;
-            }
-            diff = targetBot.myHand.size() - targetBot.rightHand.size();
-            if (trick.size() == 1) {
-                ++diff;
-            }
+        // what defenders know of the declarer's hand: dealt cards with talon, minus played cards
+        // and suits the declarer has shown void in (see Trick.drop())
+        CardSet knownHand = new CardSet(gameManager().declarerHand);
+        int declarerSize = ROUND_SIZE - trick.getNumber();
+        if ((gameManager().declarerNumber - trick.getStartedBy() + NOP) % NOP < trick.size()) {
+            --declarerSize;     // already played in this trick
         }
-        if (diff == 0) {
+        if (knownHand.contains(targetBot.myHand) && targetBot.myHand.size() == declarerSize) {
+            // the drop guess still fits
+            build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
+            return;
+        }
+        // the cards not played and not revealed as dropped yet, 1 or 2
+        int diff = knownHand.size() - declarerSize;
+        targetBot.myHand = new CardSet(knownHand);
+        if (diff <= 0) {
             build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
             return;
         }
@@ -286,35 +271,46 @@ String path;
         CardSet drops = new CardSet();
         int maxSize = TOTAL_RANKS + 1;
         probesBestNodes[0].trickData = 0;
-        CardSet dropCandidates = new CardSet(hand0);
+        CardSet dropCandidates0 = new CardSet(targetBot.myHand);
         Suit trumpSuit = gameManager().getMinBid().getTrump();
         if (trumpSuit != null) {
-            // don't consider dropping trump cards
-            dropCandidates.remove(hand0.list(trumpSuit));
+            // don't consider dropping trump cards, unless there are not enough others
+            CardSet nonTrump = new CardSet(dropCandidates0);
+            nonTrump.remove(nonTrump.list(trumpSuit));
+            if (nonTrump.size() >= diff) {
+                dropCandidates0 = nonTrump;
+            }
+        }
+        // in case no probe completes
+        CardSet fallbackDrops = new CardSet();
+        for (Card card : dropCandidates0.toCardList()) {
+            if (fallbackDrops.size() >= diff) {
+                break;
+            }
+            fallbackDrops.add(card);
         }
         int bit0 = 0;
-        int bm = dropCandidates.getBitmap();
+        int bm = dropCandidates0.getBitmap();
         int bm0 = CardSet.bm4buildForward(bm);
         int probeIndex = -1;
 probe:
         while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
             Card card0 = Card.get(bit0);
             Suit suit0 = card0.getSuit();
-            dropCandidates.remove(card0);
-            CardSet hand = dropCandidates;
+            dropCandidates0.remove(card0);
+            CardSet dropCandidates1 = dropCandidates0;
             if (diff == 1) {
-                hand = new CardSet(card0);
+                dropCandidates1 = new CardSet(card0);
             }
-            int turn = (NOP - BaseTrick.getStartedBy(this.bestNodes[0].trickData)) % NOP;
             int bit1 = 0;
-            bm = hand.getBitmap();
+            bm = dropCandidates1.getBitmap();
             int bm1 = CardSet.bm4buildForward(bm);
             while ((bit1 = CardSet.next(bm1, bit1)) != 0) {
                 Card card1 = Card.get(bit1);
                 Suit suit1 = card1.getSuit();
                 printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
-                hand0.remove(card0);
-                hand0.remove(card1);
+                targetBot.myHand.remove(card0);
+                targetBot.myHand.remove(card1);
                 // check the original lengths
                 int _maxSize = gameManager().initialDeclarerHand.list(suit0).size();
                 int size1 = gameManager().initialDeclarerHand.list(suit1).size();
@@ -322,11 +318,13 @@ probe:
                     _maxSize = size1;
                 }
                 // do analysis
-                targetBot.myHand = hand0;
                 build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
                 if (nodeIndex < 0) {
                     break probe;
                 }
+                // drops are the declarer's choice: compare from the declarer's side, turn has to
+                // offset the probe's own starter (the list before the probe could start elsewhere)
+                int turn = (NOP - BaseTrick.getStartedBy(this.bestNodes[0].trickData)) % NOP;
                 int _diff = -1;
                 if (probesBestNodes[0].trickData != 0) {
                     _diff = targetBot.compare(probesBestNodes[0].trickData, this.bestNodes[0].trickData, turn);
@@ -340,8 +338,9 @@ probe:
                     probeIndex = 0;
                 }
                 println();
-                hand0.add(card1);
-                hand0.add(card0);
+                // restore:
+                targetBot.myHand.add(card1);
+                targetBot.myHand.add(card0);
             }
         }
         if (probeIndex < 0) {
@@ -349,15 +348,16 @@ probe:
             // empty, or every attempt hit the "nodeIndex < 0" break above. Committing drops
             // (still empty) and probesBestNodes (still its initial zeroed state) here would
             // leave nodeIndex at its initial -1, corrupting the very next getCard() call's
-            // bestNodes[nodeIndex] lookup. Fall back to a fresh build on the hand as-is instead.
+            // bestNodes[nodeIndex] lookup. Fall back to a fresh build with any drops of the right size.
+            targetBot.myHand = new CardSet(knownHand);
+            targetBot.myHand.remove(fallbackDrops);
             build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
             return;
         }
         printf("selecting new drops %s\n", drops.toColorString());
         Bot.playerBid.drops.clear();
         Bot.playerBid.drops.add(drops);
-        hand0.remove(drops);
-        targetBot.myHand = hand0;   // replace for the newly found cards
+        targetBot.myHand.remove(drops);
         copy(probesBestNodes, this.bestNodes);
         nodeIndex = probeIndex;
         printf(DEBUG_LOG, "list rebuilt after %s\n", trick);
@@ -418,6 +418,8 @@ probe:
                 thisNode.init(this);
                 int threadNum = -1;
                 long bm0 = this.bm4Iteration(cards);
+                // the rest of a partially played trick, every thread has to replay it
+                final CardList rest = cards == null ? new CardList() : new CardList(cards);
                 int bit0 = CardSet.next(bm0, 0);
                 int bit1 = bit0;            // keep it for current thread
                 while ((bit1 = CardSet.next(bm0, bit1)) != 0) {
@@ -428,7 +430,7 @@ probe:
                         TrickNode trickNode = new TrickNode();
                         trickNode.init(thisNode);
                         workerResults[_threadNum] =
-                            trickNode.buildSubList(new CardList(Arrays.asList(card0)), _threadNum, 0);
+                            trickNode.buildSubList(startCards(card0, rest), _threadNum, 0);
                     });
                     workers.add(worker);
                     worker.start();
@@ -436,7 +438,7 @@ probe:
                 // now current thread:
                 Card card0 = Card.get(bit0);
                 printf("current thread %s, starting with %s\n", Thread.currentThread().getName(), card0);
-                nextIndex = this.buildSubList(new CardList(Arrays.asList(card0)), ++threadNum, 0);
+                nextIndex = this.buildSubList(startCards(card0, rest), ++threadNum, 0);
                 try {
                     for (Thread worker : workers) {
                         worker.join();
@@ -514,6 +516,12 @@ probe:
             positions.clear();
         }
 
+        private CardList startCards(Card card0, CardList rest) {
+            CardList cards = new CardList(Arrays.asList(card0));
+            cards.addAll(rest);
+            return cards;
+        }
+
         private int buildSubList(CardList cards, int threadNum, int prevIndex) {
             if (this.hands[0].size() <= 0) {
                 return 0;
@@ -576,7 +584,6 @@ probe:
                         path = path(prevIndex);
                         if (testNumber < 0 && path.startsWith(testPath)) {
                             println(path);
-                            testNumber = this.number;
                         }
                     }
                     int bestNode2 = 0;
@@ -616,6 +623,7 @@ probe:
                             if (TRACE) {
                                 if (this.number == testNumber) {
                                     printf("old: %s\n", fullPath(oldIndex));
+                                    testNumber = this.number;
                                 }
                             }
                             long oldData = trickPool.get(oldIndex);
@@ -641,13 +649,6 @@ probe:
                         // deadlineExceeded() check *before* this point left that registration
                         // permanently unfinished - the waiter then blocks forever, since nothing
                         // will ever mark it done. That was the MT trick-list hang.
-                        if (TRACE) {
-                            path = path(prevIndex);
-                            if (path.startsWith(testPath)) {
-                                println(path);
-                                testNumber = this.number;
-                            }
-                        }
                         if (compare(bestNode2, probeIndex, 2) < 0) {
                             if (TRACE) {
                                 if (this.number == testNumber) {

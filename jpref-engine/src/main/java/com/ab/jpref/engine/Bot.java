@@ -70,7 +70,6 @@ public class Bot extends Player implements Serializable {
         super.clear();
         playerBid = null;
         targetBot = null;
-        debugDrop = null;
     }
 
     @Override

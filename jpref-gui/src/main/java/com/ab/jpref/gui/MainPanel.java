@@ -221,6 +221,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             String text = m(widget.getText());
             if (jComponent instanceof JLabel) {
                 ((JLabel)jComponent).setText(text);
+                ((JLabel)jComponent).setHorizontalAlignment(widget.isLeftAligned() ? JLabel.LEFT : JLabel.CENTER);
                 Player p = tableLayout().getCurrentPlayer();
                 if (p == null || p.getNumber() != widget.getNumber()) {
                     jComponent.setBackground(LBL_BG_COLOR);
@@ -344,7 +345,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     }
 
     @Override
-    public void showLastTrick(CardList cards) {
+    public void showLastTrick(CardList cards, int startedBy) {
         // non-modal: a modal dialog blocks input to the owner frame entirely, so a
         // click outside the dialog would never even reach it to dismiss anything
         JDialog dialog = new JDialog(Main.mainFrame, null, false);
@@ -365,7 +366,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                tableLayout().paintTrick(g, cards, getWidth() / 2, getHeight() / 2);
+                tableLayout().paintTrick(g, cards, startedBy, getWidth() / 2, getHeight() / 2);
             }
         };
         trickPanel.setBackground(Color.green);

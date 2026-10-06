@@ -20,6 +20,8 @@
 package com.ab.util;
 
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 public class Logger {
     public static boolean DEBUG_LOG = true;
@@ -62,6 +64,13 @@ public class Logger {
 
     public static void printf(String format, Object... args) {
         logHolder.logger()._printf(format, args);
+    }
+
+    // route through printf so the trace is mirrored to System.out when DEBUG_LOG
+    public static void printStackTrace(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        printf("%s", sw);
     }
 
     // the log stream may be buffered, write everything logged so far to the file

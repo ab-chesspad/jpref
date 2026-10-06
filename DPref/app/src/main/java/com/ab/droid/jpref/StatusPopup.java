@@ -122,7 +122,7 @@ public class StatusPopup {
 
         if (scoresheet.isGameOver()) {
             TextView gameOverLabel = new TextView(host);
-            gameOverLabel.setText("Game Over");
+            gameOverLabel.setText(m("Game Over"));
             gameOverLabel.setTextColor(Color.RED);
             gameOverLabel.setAlpha(0.3f);
             gameOverLabel.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (popupWidth * 0.12));
@@ -167,8 +167,8 @@ public class StatusPopup {
         lp.rightMargin = pad;
         panel.addView(goonButton, lp);
 
-        Button replayButton = styledButton(m(TableLayout.ButtonCommand.replay.getName()));
-        replayButton.setOnClickListener(v -> finish(RestartCommand.replay));
+        Button replayButton = styledButton(m(TableLayout.ButtonCommand.verify.getName()));
+        replayButton.setOnClickListener(v -> finish(RestartCommand.verify));
         panel.addView(replayButton, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         return panel;

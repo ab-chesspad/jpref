@@ -57,6 +57,7 @@ public class DConfig extends Config {
         instance.mainPosition.setX(this.mainPosition.getX());
         instance.mainPosition.setY(this.mainPosition.getY());
         instance.mainSize.second = this.mainSize.second;
+        instance.eventObserver = this.eventObserver;    // transient, not restored by unserialize()
         host.setConfig(instance);
         return instance;
     }

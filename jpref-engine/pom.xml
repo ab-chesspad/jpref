@@ -11,6 +11,11 @@
 
     <artifactId>jpref-engine</artifactId>
 
+    <properties>
+        <!-- mvn test -Dslow=true runs the slow tests -->
+        <slow>false</slow>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -25,4 +30,18 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <slow>${slow}</slow>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

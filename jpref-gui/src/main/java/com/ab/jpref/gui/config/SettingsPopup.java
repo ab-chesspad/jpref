@@ -55,8 +55,13 @@ public class SettingsPopup extends JDialog {
     final SettingsPopup popupInstance;
     final BufferedImage lineImage;
     final BufferedImage selectedLineImage;
+    final BufferedImage checkBoxImage;
+    final BufferedImage selectedCheckBoxImage;
     final JButton okButton;
     final JButton cancelButton;
+    // text set once at construction, re-localized on language change;
+    // titled borders and list cells call m() on every repaint and need no refresh
+    final List<Runnable> labelRefreshers = new ArrayList<>();
 
     final Host host;
     Rectangle popupRectangle;
@@ -69,6 +74,8 @@ public class SettingsPopup extends JDialog {
         pUtil = (PUtil)host.getUtil();
         lineImage = pUtil.loadImage("buttons/radio.png");
         selectedLineImage = pUtil.loadImage("buttons/radio-sel.png");
+        checkBoxImage = pUtil.loadImage("buttons/checkbox.png");
+        selectedCheckBoxImage = pUtil.loadImage("buttons/checkbox-sel.png");
         metrics = host.getMetrics();
         popupInstance = this;
         setTitle(m(popupTitle));
@@ -76,7 +83,7 @@ public class SettingsPopup extends JDialog {
         setLayout(new BorderLayout(1, 4));
         popupRectangle = pConfig.settingsPopupRectangle.get();
         if (popupRectangle.width == 0) {
-            popupRectangle.width = pConfig.mainSize.first / 2;
+            popupRectangle.width = pConfig.mainSize.first * 2 / 3;
             popupRectangle.height = pConfig.mainSize.second;
             popupRectangle.x = pConfig.mainPosition.first + pConfig.mainSize.first / 4;
             popupRectangle.y = pConfig.mainPosition.second;
@@ -196,6 +203,7 @@ public class SettingsPopup extends JDialog {
 
         final String label = property.getLabel();
         final Object propValue = property.get();
+        boolean createBorder = true;
         JComponent editor;
         if (propValue instanceof Tuple) {
             JPanel editorPanel = new JPanel();
@@ -251,6 +259,9 @@ public class SettingsPopup extends JDialog {
                     popupInstance.setTitle(m(popupTitle));
                     okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
                     cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
+                    for (Runnable refresher : labelRefreshers) {
+                        refresher.run();
+                    }
 
                     Container thisContainer = popupInstance.getContentPane();
                     thisContainer.validate();
@@ -264,6 +275,7 @@ public class SettingsPopup extends JDialog {
         } else if (propValue instanceof Integer) {
             Logger.printf(DEBUG_LOG, "%s -> integer %s\n", label, propValue);
             final JTextField jTextField = new JTextField(MAX_NUMBER_SIZE);
+            jTextField.setFont(font);
             jTextField.setText(propValue.toString());
             jTextField.setHorizontalAlignment(SwingConstants.RIGHT);
             jTextField.addFocusListener(new FocusAdapter() {
@@ -291,7 +303,27 @@ public class SettingsPopup extends JDialog {
                     }
                 }
             });
-            editor = jTextField;
+            section.add(jTextField);
+            JLabel jLabel = new JLabel(m(label), JLabel.LEFT);
+            labelRefreshers.add(() -> jLabel.setText(m(label)));
+            jLabel.setFont(font);
+            editor = jLabel;
+            createBorder = false;
+        } else if (propValue instanceof Boolean) {
+            Logger.printf(DEBUG_LOG, "%s -> boolean %s\n", label, propValue);
+            JCheckBox checkBox = new JCheckBox(m(label));
+            labelRefreshers.add(() -> checkBox.setText(m(label)));
+            checkBox.setFont(font);
+            // the default icon is tiny next to the scaled font, use the radio buttons' size
+            checkBox.setIcon(new ImageIcon(pUtil.scale(checkBoxImage, size, size)));
+            checkBox.setSelectedIcon(new ImageIcon(pUtil.scale(selectedCheckBoxImage, size, size)));
+            checkBox.setIconTextGap(size / 3);
+            checkBox.setSelected((Boolean) propValue);
+            // like the other editors: set right away, OK serializes, Cancel restores
+            checkBox.addItemListener(itemEvent ->
+                ((Config.Property<Boolean>) property).set(checkBox.isSelected()));
+            editor = checkBox;
+            createBorder = false;
         } else {
             editor = null;
             Logger.printf(DEBUG_LOG, "%s -> %s\n", label, propValue);
@@ -301,20 +333,22 @@ public class SettingsPopup extends JDialog {
             section.add(editor);
         }
 
-        TitledBorder sectionBorder = new TitledBorder(label) {
-            @Override
-            public void paintBorder(Component c,
-                                    Graphics g,
-                                    int x,
-                                    int y,
-                                    int width,
-                                    int height) {
-                TitledBorder border = (TitledBorder) ((JPanel)c).getBorder();
-                border.setTitle(m(label));
-                super.paintBorder(c, g, x, y, width, height);
-            }
-        };
-        section.setBorder(sectionBorder);
+        if (createBorder) {
+            TitledBorder sectionBorder = new TitledBorder(label) {
+                @Override
+                public void paintBorder(Component c,
+                                        Graphics g,
+                                        int x,
+                                        int y,
+                                        int width,
+                                        int height) {
+                    TitledBorder border = (TitledBorder) ((JPanel) c).getBorder();
+                    border.setTitle(m(label));
+                    super.paintBorder(c, g, x, y, width, height);
+                }
+            };
+            section.setBorder(sectionBorder);
+        }
         return section;
     }
 }

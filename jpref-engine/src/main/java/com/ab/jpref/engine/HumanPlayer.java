@@ -77,6 +77,8 @@ public class HumanPlayer extends Player implements Serializable {
             Logger.printf(DEBUG_LOG, "%s, human blocking:%s\n", gameManager().getRoundStage().name(), currentThread().getName());
             Config.Queueable q = queue.take();
             Logger.printf(DEBUG_LOG, "%s, human unblock:%s got %s\n", gameManager().getRoundStage().name(), currentThread().getName(), q);
+            // not this player's turn anymore, so the view shows the progress bar while bots think
+            clickable.setCurrentPlayer(null);
             if (RestartCommand.reset.equals(q)) {
                 throw new Config.PrefExceptionReset(RestartCommand.reset.name());
             }

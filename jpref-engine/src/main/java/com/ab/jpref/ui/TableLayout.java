@@ -133,6 +133,8 @@ public class TableLayout implements GameManager.EventObserver {
     // widgets:
     private final List<ButtonPanel> buttonPanels = new ArrayList<>();
     public final Widget[] labels = new Widget[NOP];
+    // bot declarer's misère hand as defenders know it, one line per suit
+    private final Widget[] declarerHandLines = new Widget[Suit.values().length];
     public final Widget menuBtn;
     public final ButtonPanel menuPanel;
     public final ButtonPanel declareRoundPanel;
@@ -191,6 +193,12 @@ public class TableLayout implements GameManager.EventObserver {
         for (int i = 0; i < NOP; ++i) {
             labels[i] = new Widget(i);
             gui.add(labels[i]);
+        }
+        for (int i = 0; i < declarerHandLines.length; ++i) {
+            declarerHandLines[i] = new Widget(-1);     // never highlighted as the current player
+            declarerHandLines[i].setVisible(false);
+            declarerHandLines[i].setLeftAligned(true);
+            gui.add(declarerHandLines[i]);
         }
 
         // menu
@@ -328,6 +336,7 @@ public class TableLayout implements GameManager.EventObserver {
                     }
                     label.setBounds(x, y, w, h);
                 }
+                placeDeclarerHand(panelWidth, panelHeight, w, h);
 
                 // menu
                 w = (int)(metrics.cardW * metrics.wButton);
@@ -384,6 +393,9 @@ public class TableLayout implements GameManager.EventObserver {
     }
 
     private void placeMenuPanel() {
+        if (!menuPanel.isVisible()) {
+            return;
+        }
         int panelWidth = config().mainSize.first;
         int panelHeight = config().mainSize.second;
 
@@ -569,8 +581,8 @@ public class TableLayout implements GameManager.EventObserver {
             draggedCard = null;
             paintTalon(graphics);
             int centerX = metrics.panelX + metrics.panelWidth / 2;
-            int centerY = (labels[0].y - labels[1].y - labels[1].height) / 2;
-            paintTrick(graphics, gameManager.getTrick().cards2List(), centerX, centerY);
+            int centerY = (labels[0].y + labels[0].height - labels[1].y) / 2;
+            paintTrick(graphics, gameManager.getTrick().cards2List(), gameManager.getTrick().getStartedBy(), centerX, centerY);
             int index = 1;
             if (currentPlayer != null) {
                 index = currentPlayer.getNumber() + 1;
@@ -775,19 +787,19 @@ public class TableLayout implements GameManager.EventObserver {
 
     }
 
-    public <T> void paintTrick(T graphics, CardList trickCards, int centerX, int centerY) {
+    public <T> void paintTrick(T graphics, CardList trickCards, int startedBy, int centerX, int centerY) {
         Point[] positions = {
-            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .9)),
-            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .25)),
-            new Point(-(int)(metrics.cardW * .75), -(int)(metrics.cardH * .75)),
-            new Point(-(int)(metrics.cardW * .25), -(int)(metrics.cardH * .7)),
+            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .9)),      // top
+            new Point(-(int)(metrics.cardW * .5), -(int)(metrics.cardH * .25)),     // left
+            new Point(-(int)(metrics.cardW * .75), -(int)(metrics.cardH * .75)),    // right
+            new Point(-(int)(metrics.cardW * .25), -(int)(metrics.cardH * .7)),     // bottom
         };
 
         if (trickCards.isEmpty()) {
             return;
         }
 
-        int turn = 0;
+        int turn = startedBy;
         for (int j = 0; j < trickCards.size(); ++j) {
             Card card = trickCards.get(j);
             int i = turn + 1;
@@ -797,7 +809,7 @@ public class TableLayout implements GameManager.EventObserver {
             }
             int x = positions[i].getX() + centerX;
             int y = positions[i].getY() + centerY;
-            Logger.printf(DEBUG_LOG, "trick %s %d\n", card, i);
+            Logger.printf(DEBUG_LOG, "trick card %s %dx%d\n", card, x, y);
             gui.paint(graphics, card, x, y);
             turn = ++turn % NOP;
         }
@@ -845,6 +857,38 @@ public class TableLayout implements GameManager.EventObserver {
         }
         selectedCards.clear();
         update(null);
+    }
+
+    // when a bot plays misère, show its hand as defenders know it (with talon),
+    // centered vertically at the screen border on the bot's side
+    private void placeDeclarerHand(int panelWidth, int panelHeight, int w, int h) {
+        Player declarer = gameManager.getDeclarer();
+        CardSet declarerHand = gameManager.getDeclarerHand();
+        boolean visible = declarer != null && !(declarer instanceof HumanPlayer) && declarerHand != null &&
+            BID_MISERE.equals(gameManager.getMinBid()) &&
+            (isStage(RoundStage.play) || isStage(RoundStage.trickTaken) || isStage(RoundStage.confirmMove));
+        for (Widget line : declarerHandLines) {
+            line.setVisible(visible);
+        }
+        if (!visible) {
+            return;
+        }
+        int x;
+        if (Alignment.values()[declarer.getNumber()].equals(Alignment.West)) {
+            x = metrics.xMargin;
+        } else {
+            x = panelWidth - w - metrics.xMargin;
+        }
+        int y = metrics.panelY + (panelHeight - declarerHandLines.length * h) / 2;
+        for (Suit suit : Suit.values()) {
+            Widget line = declarerHandLines[suit.getValue()];
+            CardSet cards = declarerHand.list(suit);
+            String text = cards.isEmpty() ? "" + suit.getCode() : cards.toString();
+            int color = Suit.DIAMOND.equals(suit) || HEART.equals(suit) ? Widget.RED_COLOR : Widget.BLACK_COLOR;
+            line.setText(text, color);
+            line.setBounds(x, y, w, h);
+            y += h;
+        }
     }
 
     public HumanPlayer getCurrentPlayer() {
@@ -902,6 +946,13 @@ public class TableLayout implements GameManager.EventObserver {
     public void onMouseClick(int x, int y) {
         if (isStage(RoundStage.showTalon)) {
             currentPlayer.accept(BID_XN);   // fake value
+            return;
+        }
+        if (isStage(RoundStage.confirmMove)) {
+            if (currentPlayer != null) {
+                currentPlayer.accept(BID_XN);   // fake value
+                currentPlayer = null;           // a stray click must not queue a card
+            }
             return;
         }
         menuPanel.setVisible(false);
@@ -1000,7 +1051,7 @@ public class TableLayout implements GameManager.EventObserver {
                 break;
             case lastTrick:
                 gui.update();
-                gui.showLastTrick(gameManager.getLastTrickCards());
+                gui.showLastTrick(gameManager.getLastTrickCards(), gameManager.getLastTrickStartedBy());
                 break;
             case yourOffer:
                 getOffer();
@@ -1230,7 +1281,9 @@ public class TableLayout implements GameManager.EventObserver {
     }
 
     int getEstimate() {
-        if (!gameManager.getRoundStage().equals(RoundStage.play)) {
+        if (!gameManager.getRoundStage().equals(RoundStage.play) &&
+                !gameManager.getRoundStage().equals(RoundStage.trickTaken) &&
+                !gameManager.getRoundStage().equals(RoundStage.confirmMove)) {
             return -1;
         }
         Player player = gameManager.getDeclarer();
@@ -1239,10 +1292,8 @@ public class TableLayout implements GameManager.EventObserver {
         }
         int tricksEstimate;
         if (gameManager.getMinBid().equals(Bid.BID_MISERE) || gameManager.getMinBid().equals(BID_ALL_PASS)) {
-            boolean myTurn = gameManager.getTrick().getTurn() == 0;
-            if (!gameManager.getTrick().isEmpty()) {
-                myTurn = false;
-            }
+            boolean myTurn = gameManager.getTrick().getTurn() == gameManager.declarerNumber &&
+                gameManager.getTrick().isEmpty();
             tricksEstimate = player.getTricks() +
                 CardSet.holes(player.getMyHand(), gameManager.getDiscarded(), myTurn);
             if (myTurn) {
@@ -1256,55 +1307,67 @@ public class TableLayout implements GameManager.EventObserver {
         return tricksEstimate;
     }
 
+    // offer always for player[0]
     private void getOffer() {
         int minTricks, maxTricks;
         Player[] players = gameManager.getPlayers();
-        Player player0 = players[0];
-        Player player1 = players[1];
-        Player player2 = players[2];
-        int theirTricks = player1.getTricks() + player2.getTricks();
         int tricksEstimate = getEstimate();
+        int _minTricks;
 
-        if (player0.getBid().equals(Bid.BID_MISERE)) {
-            int _minTricks = tricksEstimate;
-            maxTricks = ROUND_SIZE - theirTricks;
-            minTricks = Math.min(_minTricks, maxTricks);
-        } else if (player0.getBid().equals(Bid.BID_WHIST) ||
-                player0.getBid().equals(BID_WHIST_LAYING) ||
-                player0.getBid().equals(BID_WHIST_STANDING)) {
-            int _minTricks = player0.getTricks();
-            if (player1.getBid() == Bid.BID_PASS) {
-                _minTricks += player1.getTricks();
-            } else {
-                _minTricks += player2.getTricks();
-            }
-            if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
-                minTricks = ROUND_SIZE - tricksEstimate;
-                maxTricks = ROUND_SIZE - player0.getTricks();
-            } else {
-                minTricks = _minTricks;
-                maxTricks = ROUND_SIZE - tricksEstimate;
-            }
-        } else if (gameManager.getMinBid().equals(BID_ALL_PASS)) {
-            minTricks = tricksEstimate;
-            maxTricks = Math.min(ROUND_SIZE - theirTricks, tricksEstimate);
-        } else {
-            // for tricks play
-            minTricks = Math.max(player0.getTricks(), 0);
-            maxTricks = Math.min(ROUND_SIZE - theirTricks, tricksEstimate);
+        switch (players[0].getBid()) {
+            case BID_MISERE:
+                minTricks = tricksEstimate;
+                maxTricks = ROUND_SIZE - players[1].getTricks() - players[2].getTricks();
+                minTricks = Math.min(minTricks, maxTricks);
+                break;
+
+            case BID_WHIST:
+            case BID_WHIST_LAYING:
+            case BID_WHIST_STANDING:
+                minTricks = players[0].getTricks();
+                if (players[1].getBid() == Bid.BID_PASS) {
+                    minTricks += players[1].getTricks();
+                } else {
+                    minTricks += players[2].getTricks();
+                }
+                if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
+                    minTricks =
+                    maxTricks = ROUND_SIZE - gameManager.getDeclarer().getTricks();
+                } else {
+                    maxTricks = ROUND_SIZE - tricksEstimate;
+                }
+                break;
+
+            case BID_ALL_PASS:
+                minTricks = tricksEstimate;
+                maxTricks = ROUND_SIZE - players[1].getTricks() - players[2].getTricks();
+                break;
+
+
+            default:
+                // game for tricks, declarer
+                minTricks = players[0].getTricks();
+                maxTricks = Math.min(ROUND_SIZE -  - players[1].getTricks() - players[2].getTricks(), tricksEstimate);
+                break;
         }
         int acceptedTricks = gui.showOffer(minTricks, maxTricks);
         if (acceptedTricks < 0) {
             return;     // rejected
         }
-        int others = ROUND_SIZE - acceptedTricks;
-        player0.setTricks(acceptedTricks);          // human
-        if (player2.getBid() == Bid.BID_PASS) {
-            player2.setTricks(0);
-            player1.setTricks(others);              // whist/declarer
+        players[0].setTricks(acceptedTricks);          // human
+        if (gameManager.getDeclarer() == null) {
+            // all-pass
+            int others = ROUND_SIZE - acceptedTricks - players[2].getTricks();
+            players[1].setTricks(others);              // whist/declarer
         } else {
-            player1.setTricks(0);
-            player2.setTricks(others);
+            int others = ROUND_SIZE - acceptedTricks;
+            if (players[2].getBid() == Bid.BID_PASS) {
+                players[2].setTricks(0);
+                players[1].setTricks(others);              // whist/declarer
+            } else {
+                players[1].setTricks(0);
+                players[2].setTricks(others);
+            }
         }
         GameManager.getInstance().restart(GameManager.RestartCommand.offer);
     }
@@ -1322,7 +1385,7 @@ public class TableLayout implements GameManager.EventObserver {
         void showMessage(String title, String text);
         // shows a button for each msgFlagXXX set in flags, returns the flag of the clicked one
         int showMessage(String title, String text, int flags);
-        void showLastTrick(CardList cards);
+        void showLastTrick(CardList cards, int startedBy);
         GameManager.RestartCommand showScores(boolean showButtons);
         int showOffer(int minTricks, int maxTricks);
     }

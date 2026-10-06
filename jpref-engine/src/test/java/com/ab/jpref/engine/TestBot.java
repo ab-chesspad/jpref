@@ -113,6 +113,7 @@ public class TestBot extends BaseTest {
                     minBid = Config.Bid.fromName("6" + expectedBid.getTrump());
                 }
                 Bot.playerBid = null;
+                Bot.debugDrop = null;       // other tests may leave a forced drop
                 Bot bot = new Bot(0);
                 bot.clear();
                 CardSet cardSet = new CardSet(hand);

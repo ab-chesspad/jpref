@@ -67,6 +67,7 @@ public class PConfig extends Config {
         instance.scoresPopupRectangle.set(this.scoresPopupRectangle.get());
         instance.settingsPopupRectangle.set(this.settingsPopupRectangle.get());
         instance.helpPopupRectangle.set(this.helpPopupRectangle.get());
+        instance.eventObserver = this.eventObserver;    // transient, not restored by unserialize()
         host.setConfig(instance);
         return instance;
     }

@@ -41,6 +41,7 @@ public class Widget {
     Object userObject;  // Swing - Image, Android - Bitmap
     int zOrder;
     boolean textFace;
+    private volatile boolean leftAligned;   // label text, centered by default
 
     protected Widget() {
         number = ++count;
@@ -114,6 +115,14 @@ public class Widget {
     public void setText(String text, int color) {
         this.text = text;
         this.color = color;
+    }
+
+    public boolean isLeftAligned() {
+        return leftAligned;
+    }
+
+    public void setLeftAligned(boolean leftAligned) {
+        this.leftAligned = leftAligned;
     }
 
     public boolean isEnabled() {

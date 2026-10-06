@@ -88,7 +88,7 @@ public abstract class Player implements Serializable {
             myHand = new CardSet(other.myHand);
             leftHand = new CardSet(other.leftHand);
             rightHand = new CardSet(other.rightHand);
-            gameHistory = other.gameHistory;
+            gameHistory = new ArrayList<>(other.gameHistory);
         }
         tricks = 0;
 

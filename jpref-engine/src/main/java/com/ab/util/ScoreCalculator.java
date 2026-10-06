@@ -313,10 +313,16 @@ public abstract class ScoreCalculator {
             int factor = factors.get(goal);
             int declarerDiff = declarerTricks - goal;
             int defendersDiff = 10 - declarerTricks - bid.defenderGoal();
-
-            if (whistNum >= 0 && passNum >= 0) {
-                players[whistNum].setTricks(players[whistNum].getTricks() + players[passNum].getTricks());
-                players[passNum].setTricks(0);
+            boolean whistTotus = config.whistTotus.get() || goal < 10;
+            if (whistTotus) {
+                if (whistNum >= 0 && passNum >= 0) {
+                    players[whistNum].setTricks(players[whistNum].getTricks() + players[passNum].getTricks());
+                    players[passNum].setTricks(0);
+                }
+            } else {
+                if (defendersDiff < 0) {
+                    defendersDiff = 0;
+                }
             }
 
             for (Player player : players) {
@@ -324,19 +330,25 @@ public abstract class ScoreCalculator {
                 if (declarerNum == (player.getNumber() + 1) % NOP) {
                     points = Player.PlayerPoints.leftPoints;
                 }
+                int tricks;
                 switch (player.getBid()) {
                     case BID_PASS:
+                        tricks = 0;
                         if (declarerDiff < 0) {
-                            player.getRoundResults().setPoints(points, -declarerDiff * factor);
+                            tricks = -declarerDiff;
                         }
+                        if (!whistTotus) {
+                            tricks += player.getTricks();
+                        }
+                        player.getRoundResults().setPoints(points, tricks * factor);
                         break;
                     case BID_WHIST:
                     case BID_WHIST_LAYING:
                     case BID_WHIST_STANDING:
-                        int tricks = player.getTricks();
+                        tricks = player.getTricks();
                         if (declarerDiff < 0) {
-                            player.getRoundResults().setPoints(points,
-                                (tricks - declarerDiff) * factor);
+                            tricks -= declarerDiff;
+                            player.getRoundResults().setPoints(points, tricks* factor);
                         } else {
                             player.getRoundResults().setPoints(points, tricks * factor);
                             if (defendersDiff < 0) {

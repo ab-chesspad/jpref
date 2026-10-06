@@ -52,7 +52,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Main implements Logger.LogHolder, Host {
-    static final boolean release = true;
+    static final boolean release = false;
     static boolean DEBUG_LOG = false;
     public static boolean SHOW_ALL = true;
     public static final double MAGIC_ASPECT_RATIO = 1109d / 1297d;
@@ -64,7 +64,9 @@ public class Main implements Logger.LogHolder, Host {
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
             SHOW_ALL = false;
+            Logger.DEBUG_LOG = false;
             TrickList.DEBUG_IGNORE_DEADLINE = false;
+            TrickList.DEBUG_CHECK_HANDS = false;
         }
     }
 
@@ -222,7 +224,7 @@ public class Main implements Logger.LogHolder, Host {
                     // user reset after submitLog, the loop starts a new game
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } catch (Throwable t) {
-                    t.printStackTrace(getLogStream());
+                    Logger.printStackTrace(t);
                     if (mainPanel.showMessage(m("Program crash"), m("Submit log") + "?",
                             TableLayout.GUI.msgFlagYes | TableLayout.GUI.msgFlagNo) == TableLayout.GUI.msgFlagYes) {
                         tableLayout.submitLog(null);

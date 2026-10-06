@@ -16,6 +16,7 @@ import com.ab.util.SimpleLongIntMap;
 import static com.ab.util.Util.DEAL_MARK;
 import static com.ab.util.Util.currMethodName;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -154,8 +155,20 @@ if (++count[0] > 0) {
     // enforce bid and drop
     public void testFixedPlay() throws IOException {
         println("running: " + currMethodName());
+        playFixed("fixedplay");
+    }
+
+    @Test
+    // like testFixedPlay, deals with the most expensive TrickList builds, run with -Dslow=true
+    public void testStressPlay() throws IOException {
+        println("running: " + currMethodName());
+        Assume.assumeTrue(Boolean.getBoolean("slow"));
+        playFixed("stressplay");
+    }
+
+    private void playFixed(String testFileName) throws IOException {
         final int[] count = {0};
-        final InputStream testInputStream = getInputStream("fixedplay");
+        final InputStream testInputStream = getInputStream(testFileName);
         gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
 
         util.getList(testInputStream,
@@ -213,6 +226,9 @@ if (++count[0] > 0) {
                             if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
                                 Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
                             } else {
+//                                if (declarerTricks != gameManager.getDeclarer().getTricks()) {
+//                                    Logger.printf("ERR! %d != %d\n", declarerTricks, gameManager.getDeclarer().getTricks());
+//                                }
                                 Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                             }
                         }
@@ -238,10 +254,10 @@ if (++count[0] > 0) {
 
     @Test
     // let players bid and play the highest bid
-    public void testBiddedPlay() throws IOException {
+    public void testFreePlay() throws IOException {
         println("running: " + currMethodName());
         final int[] count = {0};
-        final InputStream testInputStream = getInputStream("biddedplay");
+        final InputStream testInputStream = getInputStream("freeplay");
         gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
 
         util.getList(testInputStream,

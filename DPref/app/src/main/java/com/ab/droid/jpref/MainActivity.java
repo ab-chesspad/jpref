@@ -65,6 +65,8 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     static final boolean release = true;
     static boolean DEBUG_LOG = true;
     public static boolean SHOW_ALL = true;
+    public static boolean DEBUG_INPUT = false;
+
     public static final String LOG_EXT = ".log";
     public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
     // deleteLogsAfter lives on PConfig (Swing-only) now, not the shared Config -
@@ -76,11 +78,14 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     static {
         if (release) {
             DEBUG_LOG = false;
+            DEBUG_INPUT = true;
             GameManager.BOTS[0] = false;
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
             SHOW_ALL = false;
             Logger.DEBUG_LOG = false;
+            TrickList.DEBUG_IGNORE_DEADLINE = false;
+            TrickList.DEBUG_CHECK_HANDS = false;
         }
     }
     public static final long buildDate = BuildConfig.TIMESTAMP;
@@ -163,14 +168,14 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         tableLayout = new TableLayout(this, mainView);
         config.eventObserver = tableLayout;
 
-/*
-        try {
-            testInputStream = getAssets().open("tests/fixedplay");
-            Logger.println(testInputStream.toString());
-        } catch (IOException e) {
-            Logger.println(e.getMessage());
+        if (DEBUG_INPUT) {
+            try {
+                testInputStream = getAssets().open("tests/freeplay");
+                Logger.println(testInputStream.toString());
+            } catch (IOException e) {
+                Logger.println(e.getMessage());
+            }
         }
-//*/
 
         TrickList trickList;
         if (testInputStream == null) {
@@ -189,7 +194,6 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
             while (true) {
                 try {
                     gameManager.runGame(testInputStream, 0);
-//                    gameManager.runGame(null, 0);
                     Logger.println("game ended!");
                     testInputStream = null;
                 } catch (Config.PrefExceptionRerun e) {
@@ -198,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
                     // user reset after submitLog, the loop starts a new game
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } catch (Throwable t) {
-                    t.printStackTrace(getLogStream());
+                    Logger.printStackTrace(t);
                     getLogStream().flush();
                     if (mainView.showMessage(m("Program crash"), m("Submit log") + "?",
                             TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {

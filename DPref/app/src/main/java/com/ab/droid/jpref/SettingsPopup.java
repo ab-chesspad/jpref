@@ -30,6 +30,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -39,6 +40,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -53,6 +55,7 @@ import java.util.List;
 
 public class SettingsPopup {
     static final boolean DEBUG_LOG = false;
+    static final int MAX_NUMBER_SIZE = 4;
 
     private final MainActivity host;
     private final DConfig dConfig;
@@ -60,6 +63,8 @@ public class SettingsPopup {
     private final Bitmap buttonImage;
     private final Bitmap radioImage;
     private final Bitmap radioSelectedImage;
+    private final Bitmap checkBoxImage;
+    private final Bitmap checkBoxSelectedImage;
     private final int fontSize;
     // section labels/editors only, 30% smaller than the popup's base font
     private final float sectionFontSize;
@@ -84,6 +89,8 @@ public class SettingsPopup {
         this.buttonImage = dUtil.loadBitmap("/buttons/button.jpg");
         this.radioImage = dUtil.loadBitmap("/buttons/radio.png");
         this.radioSelectedImage = dUtil.loadBitmap("/buttons/radio-sel.png");
+        this.checkBoxImage = dUtil.loadBitmap("/buttons/checkbox.png");
+        this.checkBoxSelectedImage = dUtil.loadBitmap("/buttons/checkbox-sel.png");
         this.fontSize = (int) (dMetrics.cardW * .24);
         this.sectionFontSize = fontSize / 2f * 0.7f;
 
@@ -122,6 +129,16 @@ public class SettingsPopup {
 
         dialog.setContentView(root);
         dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            // after show(), otherwise the theme's default width overrides it;
+            // a plain background, the theme's default is inset and padded,
+            // so the visible popup would be narrower than requested
+            window.setBackgroundDrawable(new ColorDrawable(Color.WHITE));
+            View content = host.findViewById(android.R.id.content);
+            int width = (int) (content.getWidth() * .9);
+            window.setLayout(width, window.getAttributes().height);
+        }
     }
 
     private void save() {
@@ -205,23 +222,32 @@ public class SettingsPopup {
         TextView labelView = new TextView(host);
         labelView.setTextSize(sectionFontSize);
         labelView.setTextColor(Color.BLACK);
-        labelView.setBackgroundColor(Color.rgb(0xD5, 0xEA, 0xFA));
-        labelView.setPadding(pad, pad, pad, pad);
         labelView.setText(I18n.m(label));
-        section.addView(labelView);
         labelRefreshers.add(() -> labelView.setText(I18n.m(label)));
 
-        View editor;
-        if (propValue instanceof Config.Selection) {
-            editor = buildSelectionEditor(property, (Config.Selection<?>) propValue);
-        } else if (propValue instanceof Integer) {
-            editor = buildIntegerEditor((Config.Property<Integer>) property);
+        if (propValue instanceof Integer) {
+            // like Swing: the number field followed by its label on one row, no header
+            LinearLayout row = new LinearLayout(host);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.addView(buildIntegerEditor((Config.Property<Integer>) property));
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.leftMargin = pad;
+            row.addView(labelView, labelParams);
+            section.addView(row);
+        } else if (propValue instanceof Boolean) {
+            // like Swing: a checkbox with the label as its text, no header
+            section.addView(buildBooleanEditor((Config.Property<Boolean>) property));
         } else {
-            editor = null;
-            Logger.printf(DEBUG_LOG, "%s -> %s\n", label, propValue);
-        }
-        if (editor != null) {
-            section.addView(editor);
+            labelView.setBackgroundColor(Color.rgb(0xD5, 0xEA, 0xFA));
+            labelView.setPadding(pad, pad, pad, pad);
+            section.addView(labelView);
+            if (propValue instanceof Config.Selection) {
+                section.addView(buildSelectionEditor(property, (Config.Selection<?>) propValue));
+            } else {
+                Logger.printf(DEBUG_LOG, "%s -> %s\n", label, propValue);
+            }
         }
 
         View divider = new View(host);
@@ -278,16 +304,33 @@ public class SettingsPopup {
                 value.toString().split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
     }
 
+    private View buildBooleanEditor(Config.Property<Boolean> property) {
+        String label = property.getLabel();
+        CheckBox checkBox = new CheckBox(host);
+        checkBox.setTextSize(sectionFontSize);
+        checkBox.setTextColor(Color.BLACK);
+        checkBox.setText(I18n.m(label));
+        labelRefreshers.add(() -> checkBox.setText(I18n.m(label)));
+        checkBox.setButtonDrawable(stateDrawable(checkBoxImage, checkBoxSelectedImage));
+        checkBox.setChecked(property.get());
+        commitActions.add(() -> property.set(checkBox.isChecked()));
+        return checkBox;
+    }
+
     private StateListDrawable radioDrawable() {
+        return stateDrawable(radioImage, radioSelectedImage);
+    }
+
+    private StateListDrawable stateDrawable(Bitmap image, Bitmap selectedImage) {
         int size = fontSize / 2;
         StateListDrawable drawable = new StateListDrawable();
-        if (radioSelectedImage != null) {
-            Bitmap scaled = Bitmap.createScaledBitmap(radioSelectedImage, size, size, true);
+        if (selectedImage != null) {
+            Bitmap scaled = Bitmap.createScaledBitmap(selectedImage, size, size, true);
             drawable.addState(new int[]{android.R.attr.state_checked},
                     new BitmapDrawable(host.getResources(), scaled));
         }
-        if (radioImage != null) {
-            Bitmap scaled = Bitmap.createScaledBitmap(radioImage, size, size, true);
+        if (image != null) {
+            Bitmap scaled = Bitmap.createScaledBitmap(image, size, size, true);
             drawable.addState(new int[]{}, new BitmapDrawable(host.getResources(), scaled));
         }
         return drawable;
@@ -303,6 +346,10 @@ public class SettingsPopup {
         editText.setBackgroundColor(Color.rgb(0xDF, 0xF5, 0xDF));
         int editPad = fontSize / 4;
         editText.setPadding(editPad, editPad, editPad, editPad);
+        // exactly MAX_NUMBER_SIZE digits, setEms() sizes by 'M' and comes out much wider
+        String digits = new String(new char[MAX_NUMBER_SIZE]).replace('\0', '0');
+        editText.setWidth((int) Math.ceil(editText.getPaint().measureText(digits)) + 2 * editPad);
+        editText.setGravity(Gravity.END);
         editText.setText(String.valueOf(property.get()));
         editText.setOnClickListener(v -> showKeyboard(editText));
         commitActions.add(() -> {

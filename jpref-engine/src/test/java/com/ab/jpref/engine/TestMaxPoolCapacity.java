@@ -12,6 +12,8 @@ import com.ab.jpref.config.Config;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,6 +33,11 @@ public class TestMaxPoolCapacity extends BaseTest {
         Bot.targetBot = null;
     }
 
+    @After
+    public void clearDebugDrop() {
+        Bot.debugDrop = null;   // static, would force this drop on later tests
+    }
+
     private void run(String hand0, String hand1, String hand2, String talon,
                       Config.Bid bid, int elderHand, String label) throws IOException {
         CardList deck = new CardList();
@@ -47,7 +54,11 @@ public class TestMaxPoolCapacity extends BaseTest {
         gameManager.prepareTest(0, bid, talonCards);
 
         long start = System.currentTimeMillis();
-        gameManager.playRoundForTricks();
+        if (Config.Bid.BID_MISERE.equals(bid)) {
+            gameManager.playRoundMisere();
+        } else {
+            gameManager.playRoundForTricks();
+        }
         long dur = System.currentTimeMillis() - start;
 
         printf("=== %s: bid %s, elderHand %d, declarer 0, duration %,d msec, declarerTricks %d ===\n",
@@ -131,5 +142,47 @@ public class TestMaxPoolCapacity extends BaseTest {
         init();
         run("♠789XJQKA ♣78", "♣9XJQKA ♦789X", "♦JQKA ♥789XJQ", "♥KA",
             Config.Bid.BID_6N, 2, "NT, defender(2) leads, clumped suits");
+    }
+
+    // the heaviest deals found by a random search + hill climbing (swapping cards between hands)
+    // over first-trick TrickList builds; positions/time are for that first build. Slow, run with -Dslow=true
+    @Test
+    public void misereHeaviest() throws IOException {
+        println("running: misereHeaviest");
+        Assume.assumeTrue(Boolean.getBoolean("slow"));
+        init();
+        // positions 6,967,582, 9.2 sec
+        run("♠8XA ♣79J ♦9XQA", "♠7JK ♣XQK ♥8JKA", "♠9Q ♣A ♦78JK ♥7XQ", "♣8 ♥9",
+            Config.Bid.BID_MISERE, 2, "misère, defender(2) leads, heaviest");
+    }
+
+    @Test
+    public void ntHeaviest() throws IOException {
+        println("running: ntHeaviest");
+        Assume.assumeTrue(Boolean.getBoolean("slow"));
+        init();
+        // positions 6,273,789, 5.6 sec
+        run("♠8XA ♣9JA ♦7XQA", "♠79JQK ♣7K ♥7JK", "♣XQ ♦89JK ♥8XQA", "♣8 ♥9",
+            Config.Bid.BID_6N, 1, "NT, defender(1) leads, heaviest");
+    }
+
+    @Test
+    public void ntHeavyOtherDefenderLeads() throws IOException {
+        println("running: ntHeavyOtherDefenderLeads");
+        Assume.assumeTrue(Boolean.getBoolean("slow"));
+        init();
+        // positions 3,960,634, 3.5 sec
+        run("♠9Q ♣8JK ♦9JK ♥9Q", "♠7XJK ♦78XA ♥JA", "♠8A ♣79XQA ♥78X", "♦Q ♥K",
+            Config.Bid.BID_6N, 2, "NT, defender(2) leads, heavy");
+    }
+
+    @Test
+    public void trumpHeaviest() throws IOException {
+        println("running: trumpHeaviest");
+        Assume.assumeTrue(Boolean.getBoolean("slow"));
+        init();
+        // positions 2,725,830, 2.6 sec
+        run("♠8QA ♣9JK ♦9J ♥9Q", "♠7XJK ♦7XA ♥7JA", "♠9 ♣78XQA ♦8K ♥8X", "♦Q ♥K",
+            Config.Bid.BID_6C, 1, "6♣ trump, defender(1) leads, heaviest");
     }
 }

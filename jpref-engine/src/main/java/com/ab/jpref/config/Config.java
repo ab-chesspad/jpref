@@ -42,8 +42,8 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 15L;
-    public static final String VERSION = "0.1.5";
+    public static final long projectSerialVersionUID = 16L;
+    public static final String VERSION = "1.0.0";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -77,7 +77,7 @@ public abstract class Config implements Serializable {
     public final Property<Integer> poolSize = new Property<>("Pool Size", 20);
 
     public enum WhistType implements Selectable<WhistType> {
-        Redneck,
+        Greedy,
 //        Gentleman,  // todo
         ;
         @Override
@@ -87,6 +87,8 @@ public abstract class Config implements Serializable {
     }
     public final Property<Selection<WhistType>> whistType =
         new Property<>("Whist Type", new Selection<>(WhistType.values()));
+
+    public final Property<Boolean> whistTotus = new Property<>("Whist Totus", true);
 
     public enum MoveMethod implements Selectable<MoveMethod> {
         SingleClick,
@@ -100,6 +102,8 @@ public abstract class Config implements Serializable {
     }
     public final Property<Selection<MoveMethod>> moveMethod =
         new Property<>("Move Method", new Selection<>(MoveMethod.values()));
+
+    public final Property<Boolean> trickConfirmation = new Property<>("Trick Confirmation", false);
 
     public final Property<Integer> maxMoveTime = new Property<>("Maximum move delay, sec", 7);
 

@@ -260,6 +260,9 @@ public abstract class Util {
                 if (line.isEmpty() || line.startsWith("#")) {
                     continue;
                 }
+                if (line.equals("*** exit ***")) {
+                    break;
+                }
                 Logger.println(line);
                 String[] parts = line.split(" -> ");
                 String res = "...";
