@@ -436,9 +436,7 @@ public class GameManager implements Serializable {
     }
 
     public RestartCommand playRound(CardList deck) {
-        if (!RoundStage.dealing.equals(roundStage)) {
-            printDeck();
-        }
+        printDeck(false);
         if (replayMode) {
             avatars4Round();
         }
@@ -517,6 +515,7 @@ public class GameManager implements Serializable {
         }
 
         updateFromAvatars();
+        printDeck(true);
         if (!replayMode && (next == null || next == RestartCommand.offer)) {
             int param = 1;
             if (declarer == null) {
@@ -533,7 +532,6 @@ public class GameManager implements Serializable {
             next = eventObserver.showScores();
             sleep(config().pauseBetweenRounds.get());
         }
-
         replayMode = (RestartCommand.verify.equals(next) || RestartCommand.replay.equals(next))
             && trick.getNumber() == 9;
         if (!replayMode) {
@@ -586,7 +584,8 @@ loop:
                 if (bidder.equals(declarer)) {
                     continue;
                 }
-                if (Bid.BID_PASS.equals(bidder.getBid())) {
+                Bid bid = bidder.getBid();
+                if (Bid.BID_PASS.equals(bid)) {
                     continue;
                 }
                 Bid savedBid = minBid;
@@ -602,7 +601,8 @@ loop:
                 if (bidder instanceof HumanPlayer) {
                     update(null);
                 }
-                Bid bid = bidder.getBid(minBid, elderHand);
+                bid = bidder.getBid(minBid, elderHand);
+                printf("%s bid: %s\n", bidder.getName(), bid);
                 if (Bid.BID_MISERE.equals(bid)) {
                     misereDeclared = true;
                 }
@@ -636,16 +636,34 @@ loop:
         return declarer;
     }
 
-    private void printDeck() {
+    private void printDeck(boolean roundEnd) {
         if (deck == null) {
             return;
         }
-        StringBuilder sb = new StringBuilder(DEAL_MARK);
+        StringBuilder sb = new StringBuilder();
+        if (roundEnd) {
+            sb.append(DEAL_MARK);
+        } else {
+            sb.append(DEAL_MARK, 0, DEAL_MARK.length() - 1).append(" start");
+        }
         sb.append(" ").append(new CardSet(deck.subList(0, 10)).toColorString()).append("  ")
             .append(new CardSet(deck.subList(10, 20)).toColorString()).append("  ")
             .append(new CardSet(deck.subList(20, 30)).toColorString()).append("  ")
             .append(new CardList(deck.subList(30, 32)).toColorString()).append("  ")
-            .append(elderHand).append(" -> ").append(minBid);
+            .append(elderHand);
+        if (roundEnd) {
+            sb.append(" -> ");
+            if (declarerNumber > 0) {
+                sb.append(declarerNumber);
+            }
+            int num = declarerNumber;
+            if (num < 0) {
+                num = 0;
+            }
+            sb.append(String.format(" %s %d", minBid, players[num].getTricks()));
+        } else {
+            sb.append(String.format(", replay %b, all-pass factor %d", replayMode, allPassFactor + 1));
+        }
         println(sb);
     }
 
@@ -665,10 +683,6 @@ loop:
         }
         talonCards.clear();
         talonCards = new CardList(deck.subList(30, 32));
-
-        if (testInputStream == null) {
-            printDeck();
-        }
     }
 
     void playRoundAllPass() {
@@ -705,7 +719,7 @@ loop:
             if (!confirmTrick(lastPlayer)) {
                 sleep(config().pauseBetweenTricks.get());
             }
-            printf("%s takes it, total %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
+            printf("%s takes it, tricks %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
             lastTrickCards.addAll(trick.cards2List());
             lastTrickStartedBy = trick.getStartedBy();
             if (talonCard != null) {
@@ -854,16 +868,22 @@ loop:
                     p2.setBid(Bid.BID_UNDEFINED);
                     if ((p1 instanceof Bot) && (p2 instanceof Bot)) {
                         p1.respondOnDeclaration();  // selects pass
+                        printf("%s whist: %s\n", p1.getName(), p1.getBid());
                         p2.respondOnDeclaration();  // selects whist
+                        printf("%s whist: %s\n", p2.getName(), p2.getBid());
                     } else {
                         update(RoundStage.whistSelection);
                         p1.respondOnDeclaration();
+                        printf("%s whist: %s\n", p1.getName(), p1.getBid());
                         p2.respondOnDeclaration();
+                        printf("%s whist: %s\n", p2.getName(), p2.getBid());
                         if (p2.getBid().equals(Bid.BID_HALF_WHIST)) {
                             // 2nd chance
                             p1.respondOnDeclaration();
+                            printf("%s whist: %s\n", p1.getName(), p1.getBid());
                             if (p1.getBid().equals(Bid.BID_WHIST_LAYING)) {
                                 p2.setBid(Bid.BID_PASS);
+                                printf("%s whist: %s\n", p2.getName(), p2.getBid());
                             }
                         }
                     }
@@ -958,7 +978,7 @@ loop:
                     println(trick.toColorString());
                     lastTrickCards.clear();
                     incrementTricks();
-                    printf("%s takes it, total %d\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
+                    printf("%s takes it, tricks %d\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
                     lastTrickCards.addAll(trick.cards2List());
                     lastTrickStartedBy = trick.getStartedBy();
                     trick.clear();  // not to repaint
@@ -1028,7 +1048,7 @@ loop:
             if (!confirmTrick(lastPlayer)) {
                 sleep(config().pauseBetweenTricks.get());
             }
-            printf("%s takes it, total %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
+            printf("%s takes it, tricks %d\n\n", players[trick.getTop()].getName(), players[trick.getTop()].getTricks());
             lastTrickCards.addAll(trick.cards2List());
             lastTrickStartedBy = trick.getStartedBy();
             trick.clear();  // not to repaint

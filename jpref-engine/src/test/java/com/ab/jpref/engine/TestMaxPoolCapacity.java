@@ -12,7 +12,6 @@ import com.ab.jpref.config.Config;
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 
-import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,11 +30,6 @@ public class TestMaxPoolCapacity extends BaseTest {
         GameManager.DEBUG_LOG = false;
         config.pauseBetweenRounds.set(0);
         Bot.targetBot = null;
-    }
-
-    @After
-    public void clearDebugDrop() {
-        Bot.debugDrop = null;   // static, would force this drop on later tests
     }
 
     private void run(String hand0, String hand1, String hand2, String talon,

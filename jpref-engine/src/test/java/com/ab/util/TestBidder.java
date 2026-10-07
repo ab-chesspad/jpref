@@ -11,7 +11,14 @@ public class TestBidder extends BaseTest {
     public void testGetBid() {
         String[] sources = {
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
-            "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦Q ♥J",
+//            "♠QKA ♣7JKA ♦8KA ♥KA  1 -> X- : ♣7 ♦8", // utyatsky #68
+//            "♠7 ♣9JA ♦8Q ♥JQKA",
+//            deal: ♠7JQK ♦7XJK ♥7J  ♠89X ♣789XJ ♦Q ♥9  ♠A ♣QKA ♦89 ♥8XQA  ♦A ♥K  1 -> X♥ 9 # X♥?? X-!!
+            // 1st hand no-trump:
+//            "♠A ♣QKA ♦89A ♥8XQKA  0 -> X- : ♦89",
+//            "♠K ♣JKA ♦89A ♥8XQKA  0 -> 8- : ♠K ♦8",
+
+//            "♠7Q ♣9K ♦8XJKA ♥JA  0 -> 6♦",
 /////////
             "♠9 ♣89JQ ♦78XA ♥7XQ  0 -> 6♦ : ♥7 ♠9",
             "♠9 ♣89JQ ♦78XA ♥7XQ  1 -> 6♣ : ♥7 ♠9",
@@ -79,10 +86,10 @@ public class TestBidder extends BaseTest {
 
             Bidder.PlayerBid playerBid = Bidder.getInstance().getBid(hand, minBid, elderhand, hand.size() - 10);
             Bid bid = playerBid.toBid();
+            Assert.assertEquals("bid", expectedBid, bid);
             if (expectedDrops != null) {
                 Assert.assertEquals("drops", expectedDrops, playerBid.drops);
             }
-            Assert.assertEquals("bid", expectedBid, bid);
         }
     }
 

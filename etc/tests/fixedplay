@@ -5,6 +5,7 @@
 #########
 deal: ♣X ♦78XJQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♠7 ♣8  1 -> 6♦ 6
 
+deal: ♠7Q ♣78Q ♦79XK ♥8  ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♦Q ♥X  2 -> Misère 1 # ловится
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
 deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
@@ -27,12 +28,12 @@ deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89
 deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 4
 deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится
 deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится
-deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
+deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 1 не ловится
 
 [♠X89, ♠7AK, ♠J ♦Q ♣K, ♣89X, ♦7X ♥A, ♦8 ♥J ♦9, ♦J ♥QX, ♦K ♥89, ♦A ♣AJ, ♥7 ♣Q7]
 deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> Misère 1 # ловится xx
 
-deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # , diff drop, не ловится
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # 2, diff drop, не ловится
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
 deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
 

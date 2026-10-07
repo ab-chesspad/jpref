@@ -827,6 +827,20 @@ mainLoop:
         return holes;
     }
 
+    public static int topTricks(int bitmap) {
+        int topTricks = 0;
+/*  todo!
+        int suitMask = SUIT_MASK;
+        while (bitmap != 0) {
+            while ((bitmap & suitMask) == 0) {
+
+            }
+        }
+
+*/
+        return topTricks;
+    }
+
     // assuming always self's turn
     public Pair<Integer, Card> minWantedTricks(CardSet _leftSuit, CardSet _rightSuit) {
         CardSet[] hands = simplifyHands(_leftSuit, _rightSuit, false);

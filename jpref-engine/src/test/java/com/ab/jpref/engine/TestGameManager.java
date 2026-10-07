@@ -421,7 +421,7 @@ if (++count[0] > 0) {
             , gameManager.getPlayers()[1].getTricks()
             , gameManager.getPlayers()[2].getTricks()
         );
-        String[] parts =  res.split("[:|,|#] ");
+        String[] parts =  res.split("[:|,#] ");
         int k = 1;
         if (parts.length == 6) {
             k = 2;

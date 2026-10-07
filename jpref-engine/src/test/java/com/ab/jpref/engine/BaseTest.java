@@ -16,10 +16,20 @@ public class BaseTest {
 
     @BeforeClass
     public static void initClass() {
+        Util.DEBUG_LOG = true;
         host = new TestHost();
         config = new TestConfig(host);
         config.maxMoveTime.set(20);
         util = new TestUtil(host);
+    }
+
+    // Bot statics survive between tests, and maven runs them all in one JVM, in an order
+    // the IDE does not: e.g. a debugDrop left by testFixedPlay forces wrong drops in testFreePlay
+    @Before
+    public void resetBotStatics() {
+        Bot.debugDrop = null;
+        Bot.playerBid = null;
+        Bot.targetBot = null;
     }
 
     public static class TestConfig extends Config {

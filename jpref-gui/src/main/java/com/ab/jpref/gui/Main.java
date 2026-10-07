@@ -230,6 +230,10 @@ public class Main implements Logger.LogHolder, Host {
                         tableLayout.submitLog(null);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
+                } finally {
+                    // test input is read to its end or to "*** exit ***", or aborted, and closed in any case:
+                    // continue with a normal game
+                    testInputStream = null;
                 }
             }
         }).start();

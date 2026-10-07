@@ -245,6 +245,22 @@ public class Bidder {
         // not found or overbidding or invalid drops, use suit lists
         pairs = toSuitChunks(hand, elderHand, trumpCandidate);
 
+        // check 1st hand no-trump:
+        int noTrumpTricks = 0;
+        if (elderHand == 0) {
+/* todo:
+            for (Pair<String, Integer> pair : pairs) {
+                Suit suit = getSuit(pair.first);
+                int bm = hand.list(suit).getBitmap();
+                noTrumpTricks += CardSet.topTricks(bm);
+
+                String chunk = pair.first;
+                int len = Integer.parseInt(pair.first.substring(0, 1));
+                if ()
+            }
+*/
+        }
+
         // create CardList sorted by suit lengths
         CardList handList0 = new CardList();
         for (int i = pairs.size() - 1; i >= 0; --i) {
@@ -308,6 +324,10 @@ public class Bidder {
         pairs = toSuitChunks(hand, elderHand, trumpCandidate);
         int tricks = calcTricks(hand, elderHand, trumpCandidate);
         hand.add(playerBid.drops);
+        if (tricks >= 6) {
+
+        }
+
 
         String chunk0 = pairs.get(0).first;
         int len0 = Integer.parseInt(chunk0.substring(0, 1));
@@ -356,6 +376,10 @@ public class Bidder {
         }
         playerBid.value = bidValue;
         return playerBid;
+    }
+
+    int topTricks(int bm) {
+        return 0;
     }
 
     // get diff between number of cards and tricks in this suit

@@ -20,7 +20,6 @@ deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q �
 #clean - slowest
 deal: ♠78XQ ♣8 ♦8 ♥7XQA  ♠9JK ♣7JA ♦9K ♥JK   ♠A ♣9XQK ♦7XJ ♥89  ♦QA 2 -> 0 # не ловится 1
 deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK ♥QA  ♠KA 1 -> 0 # не ловится 0
-#tree build duration: 3 sec, positions 42058
 deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> 0 # не ловится ♣9 2
 deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣8XJ ♦XA ♥XQA  ♠9QKA ♣9Q ♦8QK ♥K  ♣KA  1 -> 0 # не ловится ♠7X 0
 deal: ♠7X ♣7 ♦79J ♥789J  ♠8 ♣9XJQ ♦XA ♥XKA  ♠9JQKA ♣8 ♦8QK ♥Q  ♣KA  1 -> 0 # не ловится 0
@@ -34,16 +33,14 @@ deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣XJ ♦XA ♥XQKA  ♠9QKA ♣89Q ♦8Q
 # delayed drop
 deal: ♠789 ♣89 ♦789X ♥8  ♠Q ♣XQKA ♦JK ♥9JA  ♠XJKA ♣7J ♦QA ♥7Q  ♥XK 1 -> d 1 # Скуратов 1
 deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34, incorrect drop
-#[♥QA8, ♥K7J, ♣AXJ, ♦87Q, ♥X ♠K ♣9, ♥9 ♠Q ♦X, ♠J ♣K ♠9, ♠X ♣Q ♠7, ♣7 ♦K ♣8]
 deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> d 1 # Ковалевская
-#[♦AK9, ♥XJ9, ♦Q8 ♠A, ♦J7 ♠Q, ♦X ♣8 ♥A, ♠KX ♥K, ♠J7 ♥Q, ♥78 ♣Q, ♠8 ♣J9]
 deal: ♠789X ♣89 ♦789 ♥8  ♠QA ♣XQKA ♦A ♥XJQ   ♠JK ♣7J ♦XJQK ♥79  ♥KA 1 -> d 1 # Ковалевская mod
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK  1 -> d 1 # Ласкер, 2 или 3 взятки
 deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣JQKA ♦K ♥QK  ♠7J ♣7X ♦XJQA ♥JA   ♠QK  1 -> d 1 # Ласкер модиф
-#deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> 0 # preferans.de/004
 deal: ♠89 ♣89 ♦7XJ ♥789  ♠QKA ♣KA ♦9KA ♥QK  ♠7J ♣7XJQ ♦8Q ♥XJ  ♠X ♥A  2 -> d # preferans.de/006, де Голль
 
 ###
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> 0 # preferans.de/004
 deal: ♠7XJ ♣89 ♦89 ♥79J  ♠89Q ♣7XK ♦XQ ♥8X  ♠KA ♣JQ ♦7JK ♥QKA  ♦A ♣A  1 -> 1 #etude 1
 deal: ♠789XJ ♣9 ♦78X ♥7  ♠K ♣8XJQK  ♥8XQK  ♠QA ♣7A ♦9JQK ♥9J  ♦A ♥A  1 -> 1 #etude 2
 deal: ♠79QK ♣8K ♦XQ ♥XK  ♠X ♣79JQ ♦J ♥78JQ  ♠A ♣XA ♦789KA ♥9A  ♠J8  1 -> 1 #etude 3

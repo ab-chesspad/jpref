@@ -1347,7 +1347,7 @@ public class TableLayout implements GameManager.EventObserver {
             default:
                 // game for tricks, declarer
                 minTricks = players[0].getTricks();
-                maxTricks = Math.min(ROUND_SIZE -  - players[1].getTricks() - players[2].getTricks(), tricksEstimate);
+                maxTricks = Math.min(ROUND_SIZE - players[1].getTricks() - players[2].getTricks(), tricksEstimate);
                 break;
         }
         int acceptedTricks = gui.showOffer(minTricks, maxTricks);

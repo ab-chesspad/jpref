@@ -36,6 +36,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public abstract class Util {
+    public static boolean DEBUG_LOG = false;
+
     public static final String DATA_FILE_NAME = Config.PROJECT_NAME + ".state";
     public static final String DEAL_MARK = "deal:";
     private static final String SUBMIT_LOG_URL = "http://jpref.elementfx.com/upload.php";
@@ -263,7 +265,9 @@ public abstract class Util {
                 if (line.equals("*** exit ***")) {
                     break;
                 }
-                Logger.println(line);
+                if (DEBUG_LOG) {
+                    Logger.println(line);
+                }
                 String[] parts = line.split(" -> ");
                 String res = "...";
                 if (parts.length >= 2) {
@@ -318,7 +322,12 @@ public abstract class Util {
             }
             if (suit != null) {
                 String cardName = suit + src.charAt(i);
-                cards.add(Card.fromName(cardName));
+                try {
+                    cards.add(Card.fromName(cardName));
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException(e);
+                }
+
                 ++i;
                 continue;
             }

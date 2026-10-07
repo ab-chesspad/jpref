@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     static {
         if (release) {
             DEBUG_LOG = false;
-            DEBUG_INPUT = true;
+            DEBUG_INPUT = false;
             GameManager.BOTS[0] = false;
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
@@ -195,7 +195,6 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
                 try {
                     gameManager.runGame(testInputStream, 0);
                     Logger.println("game ended!");
-                    testInputStream = null;
                 } catch (Config.PrefExceptionRerun e) {
                     // ignore
                 } catch (Config.PrefExceptionReset e) {
@@ -209,6 +208,10 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
                         tableLayout.submitLog(null);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
+                } finally {
+                    // test input is read to its end or to "*** exit ***", or aborted, and closed in any case:
+                    // continue with a normal game
+                    testInputStream = null;
                 }
             }
         }).start();

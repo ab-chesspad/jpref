@@ -1,10 +1,12 @@
-/*
-     Copyright (C) 2025-2026	Alexander Bootman, alexbootman@gmail.com
+/*  This file is part of JPref project.
  *
  * Randomized crash-hunting for the game engine. These tests don't check trick counts or
  * bidding outcomes (unlike TestGameManager's fixed-deal tests) - they only check that a full
  * round can be played to completion without throwing. Every iteration uses a seed derived from
  * a fixed base seed, so any failure prints everything needed to replay that exact deal.
+ *
+ * Created: 10/1/2026 by claude.ai
+ *
  */
 package com.ab.jpref.engine;
 

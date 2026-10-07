@@ -1,9 +1,12 @@
 freeplay: hands, talon, elderhand -> bid, tricks
 
-*** exit ***
+#*** exit ***
+#deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥89  ♥7X  0 -> 6♠ 6 # 6- 6 # overbidding
 deal: ♠7JQK ♦7XJK ♥7J  ♠89X ♣789XJ ♦Q ♥9  ♠A ♣QKA ♦89 ♥8XQA  ♦A ♥K  1 -> X♥ 9 # X♥?? X-!!
 deal: ♠A ♣QKA ♦89 ♥8XQA  ♠7JQK ♦7XJK ♥7J  ♠89X ♣789XJ ♦Q ♥9  ♦A ♥K  2 -> X♥ 9 # X♥?? X-!!
 ############
+deal: ♠8J ♣89A ♦89KA ♥X  ♠7A ♣7JQK ♦7J ♥JQ  ♠9QK ♣X ♦Q ♥789KA  ♠X ♦X  1 -> 6♥ 8
+deal: ♠7XA ♣8XQ ♦7JA ♥7  ♠JK ♣9KA ♥8XJQA  ♠89Q ♣7J ♦8XK ♥9K  ♦9Q  2 -> 6♥ 7
 deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 deal: ♠8QA ♦8KA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦9XJ ♥XJ  ♣A ♥A  0 -> 9♥ 9
 deal: ♠9A ♣KA ♦789A ♥8Q  ♠XJ ♣9JQ ♦J ♥7XJK  ♠78Q ♣78X ♦XQK ♥9  ♥A ♠K  1 -> 7♦ 7
@@ -18,10 +21,12 @@ deal: ♠7 ♣9QK ♦78XJQK  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  �
 deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 deal: ♠8QA ♦8KA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦9XJ ♥XJ  ♣A ♥A  0 -> 9♥ 9
 deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
-
 deal: ♠8QA ♦JKA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦89X ♥XJ  ♣A ♥A  0 -> 9♥ 10
-deal: ♠79 ♣89 ♦78X ♥78X  ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♣A ♦J  2 -> Misère 1 # 10 ловится
-deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 10 ловится
+
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ  ♥KA  1 -> Misère 1 # 18 ловится
+deal: ♠QKA ♣79K ♦JQK ♥X  ♠78J ♣8A ♥789KA  ♠X ♣XJ ♦789XA ♥JQ  ♣Q ♠9  2 -> Misère 1 # 17 ловится
+deal: ♠79 ♣89 ♦78X ♥78X  ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♣A ♦J  2 -> Misère 1 # 15 ловится
+deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 16 ловится
 deal: ♠7QK ♦9XK ♥7JKA  ♠XJ ♣9XA ♦Q ♥89XQ  ♠8A ♣78JQ ♦78JA  ♠9 ♣K  1 -> Misère 1 # 14 ловится, All-pass # strange offer
 deal: ♠8XJK ♣J ♦Q ♥XQKA  ♠A ♣789X ♦XJA ♥7J  ♠79Q ♣QA ♦789K ♥9  ♣K ♥8  2 -> 6♥ 7 # Misère 1 # 12 ловится
 deal: ♠JK ♣789 ♦7 ♥79XQ  ♠7XQA ♣XJ ♦9JK ♥J  ♠89 ♣QA ♦8XQA ♥KA  ♣K ♥8  2 -> 7♦ 8 # Misère 1 # 13 offer??
@@ -134,7 +139,4 @@ deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠9 ♣8JQK ♦8Q �
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♣8JQK ♦89Q ♥79K  ♠79  0 -> 7♠ 8
 deal: ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠Q ♣8J ♦7XJK ♥78Q  ♠8K  1 -> 8♠ 9
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
-
-# only 6 cards make 9♠
-#deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ  ♥KA  1 -> 9♠ 10
 

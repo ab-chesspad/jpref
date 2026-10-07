@@ -26,6 +26,7 @@ import com.ab.jpref.engine.BaseTest;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.InputMismatchException;
@@ -357,6 +358,25 @@ public class TestCardSet extends BaseTest {
         }
     }
 
+    @Test
+    @Ignore("todo!")
+    public void TestTopTricks() {
+        String[] sources = {
+            "♥89QKA : 5",
+            "♥789QKA : 6",
+            "♠789JA ♣78 : 1",
+            "♠789JA ♠78A : 1",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split("\\s+:\\s+");
+            CardSet cardSet = new CardSet(util.toCardList(parts[0]));
+            String expected = parts[1].trim();
+            int topTricks = CardSet.topTricks(cardSet.getBitmap());
+            Assert.assertEquals(expected, topTricks);
+        }
+    }
 
     @Test
     public void testClean4Misere() {
