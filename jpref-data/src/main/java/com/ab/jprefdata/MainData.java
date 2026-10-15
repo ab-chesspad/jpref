@@ -27,6 +27,7 @@ import com.ab.util.Logger;
 import com.ab.util.Pair;
 import com.ab.util.Bidder;
 import static com.ab.util.Bidder.OneBid;
+import static com.ab.util.Bidder.SuitTricks;
 import com.ab.util.Tuple;
 
 import java.io.*;
@@ -44,7 +45,7 @@ public class MainData implements Logger.LogHolder {
     static final String BIDS_FILE_NAME = "utyatsky-12";
 
     final List<Tuple<Object>> allBidData = new ArrayList<>();
-    List<Pair<String, int[]>> tricks = new ArrayList<>();
+    List<SuitTricks> tricks = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         MainData mainData = new MainData();
@@ -92,34 +93,25 @@ public class MainData implements Logger.LogHolder {
             }
             String key = bidPair.getValue(1).toString();
 
-            int[] values = new int[3];
+            int[] values = new int[4];
             Pattern p0 = Pattern.compile("(\\d[BCDE]*)");
             Matcher m0 = p0.matcher(key);
             while (m0.find()) {
                 String chunk = m0.group();
                 printf(DEBUG_LOG, "%s\n", chunk);
-//                int suitTricks = 0;
-                for (Pair<String, int[]> pair : tricks) {
-                    String list = pair.first;
+                for (SuitTricks pair : tricks) {
+                    String list = pair.chunk;
                     if (list.compareTo(chunk) < 0) {
                         break;
                     }
                     if (list.equals(chunk)) {
-//                        suitTricks = pair.second;
-                        int[] v = pair.second;
+                        int[] v = pair.tricks;
                         for (int i = 0; i < v.length; ++i) {
                             values[i] += v[i];
                         }
                         break;
                     }
                 }
-/*
-                totalTricks += suitTricks;
-                if (totalTricks > 10) {
-                    totalTricks = 10;
-                    break;
-                }
-*/
             }
             for (int i = 0; i < bidData.length; ++i) {
                 OneBid oneBid = bidData[i];
@@ -140,7 +132,7 @@ public class MainData implements Logger.LogHolder {
 
     }
 
-    private List<Pair<String, int[]>> loadTricks(String dataFileName) throws IOException {
+    private List<SuitTricks> loadTricks(String dataFileName) throws IOException {
         final String[] charMap = {
             // hexadecimal ASCII code
             "A->E",
@@ -150,7 +142,7 @@ public class MainData implements Logger.LogHolder {
             "X->A",
         };
 
-        List<Pair<String, int[]>> tricks = new ArrayList<>();
+        List<SuitTricks> tricks = new ArrayList<>();
         String dataDirName = MainData.SRC_DIR_NAME;
         File f = new File(dataDirName, dataFileName);
         println(DEBUG_LOG, f.getAbsolutePath());
@@ -173,22 +165,24 @@ public class MainData implements Logger.LogHolder {
                 }
                 String[] parts = line.split("\\s+");
                 int len = parts[0].length();
-                String key = len + parts[0].replaceAll("x", "");
-                int[] values = new int[3];
+                SuitTricks suitTricks = new SuitTricks(len);
+                suitTricks.chunk = len + parts[0].replaceAll("x", "");
+                suitTricks.moves = Integer.parseInt(parts[1]);
                 int oldVal = -1;
-                for (int i = 0; i < values.length; ++i) {
-                    if (i < parts.length - 1) {
-                        values[i] = Integer.parseInt(parts[i + 1]);
-                        oldVal = values[i];
+                for (int i = 0; i < suitTricks.tricks.length; ++i) {
+                    // parts[1] is moves
+                    if (i < parts.length - 2) {
+                        suitTricks.tricks[i] = Integer.parseInt(parts[i + 2]);
+                        oldVal = suitTricks.tricks[i];
                     } else {
-                        values[i] = oldVal;
+                        suitTricks.tricks[i] = oldVal;
                     }
                 }
-                tricks.add(new Pair<>(key, values));
+                tricks.add(suitTricks);
             }
         }
         // descending order
-        Collections.sort(tricks, (p1, p2) -> p2.first.compareTo(p1.first));
+        Collections.sort(tricks, (p1, p2) -> p2.chunk.compareTo(p1.chunk));
         return tricks;
     }
 
@@ -261,11 +255,12 @@ public class MainData implements Logger.LogHolder {
         File f = new File(OUTPUT_DIR_NAME, fileName);
         printf("saveTricks to %s\n", f.getAbsolutePath());
         try (PrintStream pr = new PrintStream(f, StandardCharsets.UTF_8.name())) {
-            for (Pair<String, int[]> pair : tricks) {
+            for (SuitTricks pair : tricks) {
 //                pr.printf("%s\t%d\n", pair.first, pair.second);
-                pr.printf("%s", pair.first);
-                for (int v : pair.second) {
-                    pr.printf("\t%s", v);
+                pr.printf("%s", pair.chunk);
+                pr.printf("\t%d", pair.moves);
+                for (int v : pair.tricks) {
+                    pr.printf("\t%d", v);
                 }
                 pr.println();
             }

@@ -824,6 +824,10 @@ public class TableLayout implements GameManager.EventObserver {
 
     boolean showCards(int index) {
         GameManager gameManager = GameManager.getInstance();
+        if (gameManager.getMinBid().goal() == 10 && !config().whistTotus.get()) {
+            return true;
+        }
+
         if (gameManager.replayMode || (host.specialOption() & Host.SPECIAL_OPTION_SHOW_CARDS) != 0) {
             return true;
         }
@@ -862,9 +866,8 @@ public class TableLayout implements GameManager.EventObserver {
     // when a bot plays misère, show its hand as defenders know it (with talon),
     // centered vertically at the screen border on the bot's side
     private void placeDeclarerHand(int panelWidth, int panelHeight, int w, int h) {
-        Player declarer = gameManager.getDeclarer();
-        CardSet declarerHand = gameManager.getDeclarerHand();
-        boolean visible = declarer != null && !(declarer instanceof HumanPlayer) && declarerHand != null &&
+        int declarerNumber = gameManager.declarerNumber;
+        boolean visible = declarerNumber != 0 &&
             BID_MISERE.equals(gameManager.getMinBid()) &&
             (isStage(RoundStage.play) || isStage(RoundStage.trickTaken) || isStage(RoundStage.confirmMove));
         for (Widget line : declarerHandLines) {
@@ -873,8 +876,9 @@ public class TableLayout implements GameManager.EventObserver {
         if (!visible) {
             return;
         }
+        CardSet declarerHand = gameManager.getDeclarerHand();
         int x;
-        if (Alignment.values()[declarer.getNumber()].equals(Alignment.West)) {
+        if (Alignment.values()[declarerNumber].equals(Alignment.West)) {
             x = metrics.xMargin;
         } else {
             x = panelWidth - w - metrics.xMargin;
@@ -1079,6 +1083,31 @@ public class TableLayout implements GameManager.EventObserver {
                 showHelp();
                 break;
 
+            // declare round panel:
+            case greaterGame:
+            case prevSuit:
+            case nextSuit:
+            case lesserGame:
+                setDeclareRoundPanel(buttonCommand);
+                gui.update();
+                return;
+
+            default:
+                // a button stays visible while bots move, a tap then or a double tap must not
+                // reach the human player: no currentPlayer -> ignored.
+                // Cleared before accept(), after it the game thread may already ask the human again
+                HumanPlayer player = currentPlayer;
+                if (player != null) {
+                    currentPlayer = null;
+                    execCommand4currentPlayer(player, buttonCommand);
+                }
+                break;
+        }
+        update(null);
+    }
+
+    private void execCommand4currentPlayer(HumanPlayer currentPlayer, ButtonCommand buttonCommand) {
+        switch (buttonCommand) {
             // bidding panel:
             case minBid:
                 currentPlayer.accept(gameManager.getMinBid());
@@ -1101,13 +1130,6 @@ public class TableLayout implements GameManager.EventObserver {
                 break;
 
             // declare round panel:
-            case greaterGame:
-            case prevSuit:
-            case nextSuit:
-            case lesserGame:
-                setDeclareRoundPanel(buttonCommand);
-                gui.update();
-                return;
             case select:
                 currentPlayer.accept(currentBid);
                 break;
@@ -1129,7 +1151,6 @@ public class TableLayout implements GameManager.EventObserver {
                 currentPlayer.accept(Bid.BID_WHIST_STANDING);
                 break;
         }
-        update(null);
     }
 
     public synchronized void submitLog(GUI gui) {
@@ -1286,21 +1307,16 @@ public class TableLayout implements GameManager.EventObserver {
                 !gameManager.getRoundStage().equals(RoundStage.confirmMove)) {
             return -1;
         }
+        int declarerNumber = gameManager.declarerNumber;
         Player player = gameManager.getDeclarer();
         if (player == null) {
             player = gameManager.getPlayers()[0];   // all-pass, player is user
+            declarerNumber = 0;
         }
         int tricksEstimate;
         if (gameManager.getMinBid().equals(Bid.BID_MISERE) || gameManager.getMinBid().equals(BID_ALL_PASS)) {
-            boolean myTurn = gameManager.getTrick().getTurn() == gameManager.declarerNumber &&
-                gameManager.getTrick().isEmpty();
             tricksEstimate = player.getTricks() +
-                CardSet.holes(player.getMyHand(), gameManager.getDiscarded(), myTurn);
-            if (myTurn) {
-                if (tricksEstimate < 10) {
-                    ++tricksEstimate;   // this is a pessimistic estimate
-                }
-            }
+                CardSet.holes(player.getMyHand(), gameManager.getDiscarded(), gameManager.getTrick().getCard(0));
         } else {
             tricksEstimate = TrickList.getInstance().getEstimate();
         }
@@ -1312,7 +1328,6 @@ public class TableLayout implements GameManager.EventObserver {
         int minTricks, maxTricks;
         Player[] players = gameManager.getPlayers();
         int tricksEstimate = getEstimate();
-        int _minTricks;
 
         switch (players[0].getBid()) {
             case BID_MISERE:
@@ -1331,18 +1346,23 @@ public class TableLayout implements GameManager.EventObserver {
                     minTricks += players[2].getTricks();
                 }
                 if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
-                    minTricks =
+                    minTricks = ROUND_SIZE - tricksEstimate;
                     maxTricks = ROUND_SIZE - gameManager.getDeclarer().getTricks();
                 } else {
                     maxTricks = ROUND_SIZE - tricksEstimate;
                 }
                 break;
 
-            case BID_ALL_PASS:
-                minTricks = tricksEstimate;
-                maxTricks = ROUND_SIZE - players[1].getTricks() - players[2].getTricks();
+            case BID_PASS:
+                if (gameManager.getMinBid().equals(Bid.BID_MISERE)) {
+                    minTricks = ROUND_SIZE - tricksEstimate;
+                    maxTricks = ROUND_SIZE - gameManager.getDeclarer().getTricks();
+                } else {
+                    // all-pass
+                    minTricks = tricksEstimate;
+                    maxTricks = ROUND_SIZE - players[1].getTricks() - players[2].getTricks();
+                }
                 break;
-
 
             default:
                 // game for tricks, declarer
@@ -1350,6 +1370,10 @@ public class TableLayout implements GameManager.EventObserver {
                 maxTricks = Math.min(ROUND_SIZE - players[1].getTricks() - players[2].getTricks(), tricksEstimate);
                 break;
         }
+        if (minTricks > maxTricks) {
+            minTricks = maxTricks;
+        }
+        Logger.printf("estimated: %d, min: %d, max: %d\n", tricksEstimate, minTricks, maxTricks);
         int acceptedTricks = gui.showOffer(minTricks, maxTricks);
         if (acceptedTricks < 0) {
             return;     // rejected

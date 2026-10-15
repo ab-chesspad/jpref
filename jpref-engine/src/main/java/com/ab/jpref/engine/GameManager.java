@@ -40,6 +40,7 @@ import java.util.*;
 public class GameManager implements Serializable {
     public static boolean DEBUG_LOG = false;
     public static final boolean DEBUG_END_OF_GAME = false;
+    public static final boolean DEBUG_ALL_PASS = false;
 
     public static final boolean[] BOTS = new boolean[NOP];
     static {
@@ -91,6 +92,7 @@ public class GameManager implements Serializable {
     private CardList talonCards = new CardList();
     private Player[] players = new Player[NOP];
     public int elderHand;
+    public boolean newGame;
 
     // bidding:
     int biddingPassCount = 0;
@@ -98,6 +100,7 @@ public class GameManager implements Serializable {
     int nextBidder;
 
     final CardSet discarded = new CardSet();
+    final CardSet declarerPlayed = new CardSet();     // cards the declarer played, not the shown voids
     private Player[] savedPlayers;
     private final Trick trick = new Trick();
     private final CardList lastTrickCards = new CardList();
@@ -239,11 +242,16 @@ public class GameManager implements Serializable {
         return discarded;
     }
 
+    public boolean isNewGame() {
+        return newGame;
+    }
+
     public void runGame(InputStream testInputStream, int skip) {
         this.testInputStream = testInputStream;
         if (roundStage == RoundStage.dealing) {
             TrickList.getInstance().initBuild(null);
             biddingPassCount = 0;
+            newGame = true;
         }
         if (DEBUG_END_OF_GAME) {
             int poolPoints = config().poolSize.get();
@@ -312,6 +320,7 @@ public class GameManager implements Serializable {
         if (roundStage == RoundStage.dealing) {
             elderHand = new Random().nextInt(NOP);
             nextBidder = elderHand;
+            newGame = true;
         }
         do {
             if (roundStage == RoundStage.dealing) {
@@ -601,7 +610,18 @@ loop:
                 if (bidder instanceof HumanPlayer) {
                     update(null);
                 }
-                bid = bidder.getBid(minBid, elderHand);
+                if (DEBUG_ALL_PASS) {
+                    if (bidder instanceof HumanPlayer) {
+                        bid = bidder.getBid(minBid, elderHand);
+                    } else {
+                        bidder.setBid(Bid.BID_6S);
+                    }
+                } else {
+                    bid = bidder.getBid(minBid, elderHand);
+                }
+                if (bidder instanceof HumanPlayer) {
+                    newGame = false;
+                }
                 printf("%s bid: %s\n", bidder.getName(), bid);
                 if (Bid.BID_MISERE.equals(bid)) {
                     misereDeclared = true;
@@ -668,6 +688,7 @@ loop:
     }
 
     void deal(CardList deck) {
+        this.deck = new CardList(deck);
         CardSet[] cardSets = new CardSet[NOP];
         for (int i = 0; i < NOP; ++i) {
             int index = i * ROUND_SIZE;

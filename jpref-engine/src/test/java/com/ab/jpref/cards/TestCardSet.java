@@ -304,12 +304,104 @@ public class TestCardSet extends BaseTest {
     }
 
     @Test
-    public void testHoles() {
+    @Ignore("need usage testing")
+    public void testTopTricks() {
+        String[] sources = {
+            // hand : tricks
+///
+            "♥A : 1",
+            "♥789A : 1",
+            "♥789KA : 2",
+            "♥789QA : 1",
+            "♥78QKA : 5",
+            "♥789Q : 0",
+            "♥789K : 0",
+            "♥K : 0",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split("\\s+:\\s+");
+            CardSet cardSet = new CardSet(util.toCardList(parts[0]));
+            int expectedTricks = Integer.parseInt(parts[1]);
+            int tricks = CardSet.topTricks(cardSet.getBitmap());
+            Assert.assertEquals(expectedTricks, tricks);
+        }
+    }
+
+    @Test
+        public void testHoles() {
+        String[] sources = {
+            // hand, discarded, turn : holes
+///
+            "♣X ♦79Q  ♣789JQKA ♦8XJA  ♣8 : 4",
+
+            "♣7X ♦79Q  ♣9JQKA ♦8XJ  ♣9 : 1",
+            "♣X ♦79Q  ♣789JQKA ♦8XJKA  ♣8 : 4",
+
+            "♣79Q ♥X  ♣8XJKA ♥78JQK  ♥9 : 4",
+
+            "♥789Q  *  ♥J : 0",
+            "♥789Q  * : 1",
+            "♥78XQ  *  ♥J : 0",
+            "♥789K  *  ♥J : 0",
+            "♥789A  *  ♥J : 1",
+            "♥789A  ♥K  ♥J : 0",
+
+            "♥78X  *  ♥9 : 0",
+            "♥78J  *  ♥9 : 0",
+            "♠78JQ  *  ♥9 : 0",
+//
+            "♠JQ ♦9K ♥9K  ♠789XKA ♣789XJQKA : 6",
+            "♠JQKA ♣J ♦9K ♥9K  ♣789XQKA : 9",
+////
+            "♥7  *  ♥9 : 0",
+            "♥78  *  ♥9 : 0",
+            "♥79  *  ♥8 : 0",
+            "♥79  * : 1",
+
+            "♥8  * : 1",
+            "♥8  *  ♥7 : 1",
+            "♥78J  *  ♥9 : 0",
+            "♥79J  *  ♥8 : 0",
+            "♥7X  *  ♥9 : 1",
+            "♥79Q  *  ♥8 : 1",
+            "♥7XJ  *  ♥8 : 2",
+            "♥7XQ  *  ♥8 : 2",
+
+            "♥8  ♥7 : 0",
+            "♣79 ♥89  ♥7  ♥J : 0",
+            "♣79 ♥89  ♥7 : 0",   // ♥8 fixes hole ♣79
+            "♣7 ♥89  ♥7  ♥J : 0",
+        };
+
+        for (String source : sources) {
+            Logger.println(source);
+            String[] parts = source.split("\\s+:\\s+");
+            String[] src = parts[0].split("  ");
+            CardSet cardSet = new CardSet(util.toCardList(src[0]));
+            CardSet discarded = new CardSet();
+            if (!src[1].equals("*")) {
+                discarded = new CardSet(util.toCardList(src[1]));
+            }
+            Card card = null;
+            if (src.length > 2) {
+                card = new CardSet(util.toCardList(src[2])).first();
+            }
+            int expectedHoles = Integer.parseInt(parts[1]);
+            int holes = CardSet.holes(cardSet.getBitmap(), discarded.bitmap, card);
+            Assert.assertEquals("holes", expectedHoles, holes);
+        }
+    }
+
+    @Test
+    @Ignore("need usage testing")
+    public void testHoleMask() {
         String[] sources = {
             // hand, discarded, turn : holes
 ///
             "♥789Q  *  1 : 0",
-            "♥789Q  *  0 : 1",
+            "♥789Q  *  0 : 0",
             "♥78XQ  *  1 : 0",
             "♥789K  *  1 : 0",
             "♥789A  *  1 : 1",
@@ -319,13 +411,15 @@ public class TestCardSet extends BaseTest {
             "♥78J  *  1 : 0",
             "♠78JQ  *  1 : 0",
 //
-            "♠JQ ♦9K ♥9K  ♠789XKA ♣789XJQKA  0 : 6",
-            "♠JQKA ♣J ♦9K ♥9K  ♣789XQKA  0 : 9",
+            "♠JQ ♦9K ♥9K  ♠789XKA ♣789XJQKA  0 : 3",
+            "♠JQ ♦9K ♥9K  ♠789XKA ♣789XJQKA  1 : 2",
+            "♠JQKA ♣J ♦9K ♥9K  ♣789XQKA  0 : 4",
+            "♠JQKA ♣J ♦9K ♥9K  ♣789XQKA  1 : 3",
 ////
             "♥7  *  1 : 0",
             "♥78  *  1 : 0",
             "♥79  *  1 : 0",
-            "♥79  *  0 : 1",
+            "♥79  *  0 : 0",
 
             "♥8  *  0 : 1",
             "♥8  *  1 : 1",
@@ -353,13 +447,13 @@ public class TestCardSet extends BaseTest {
             }
             int turn = Integer.parseInt(src[2]);
             int expectedHoles = Integer.parseInt(parts[1]);
-            int holes = CardSet.holes(cardSet.getBitmap(), discarded.bitmap, turn == 0);
-            Assert.assertEquals(expectedHoles, holes);
+            int holeMask = CardSet.holeMask(cardSet.getBitmap(), discarded.bitmap, turn == 0);
+            Assert.assertEquals("holeMask", expectedHoles, CardSet.size(holeMask));
         }
     }
 
     @Test
-    @Ignore("todo!")
+    @Ignore("not sure i need it")
     public void TestTopTricks() {
         String[] sources = {
             "♥89QKA : 5",

@@ -223,8 +223,13 @@ public class Bot extends Player implements Serializable {
                     }
 
                     if (checkHand == null) {
+                        // a suit with unavoidable tricks stays the choice, the one
+                        // without tricks is kept as an exit for later,
+                        // unless the suit with tricks has an exit of its own
                         if (noProblemSuit.suit == null ||
-                                noProblemSuit.cardsLeft > listData.cardsLeft) {
+                                noProblemSuit.maxMeStart == 0 &&
+                                noProblemSuit.cardsLeft > listData.cardsLeft ||
+                                noProblemSuit.maxMeStart > 0 && exitSuit(noProblemSuit.suit)) {
                             noProblemSuit = listData;
                         }
                     } else {
@@ -238,7 +243,7 @@ public class Bot extends Player implements Serializable {
                                 continue;
                             }
                             Card _theirMin = CardSet.min(leftHand.list(checkSuit), rightHand.list(checkSuit));
-                            if (cardSet1.first().compareInTrick(theirMin) < 0) {
+                            if (cardSet1.first().compareInTrick(_theirMin) < 0) {
                                 continue; // no point to start with this cardSet, I'll have a chance to do it later
                             }
 
@@ -246,10 +251,6 @@ public class Bot extends Player implements Serializable {
                                 cardSet1.maxUnwantedTricks(dummy, checkHand.list(checkSuit),2);
                             if (listData1.maxTheyStart > 0) {
                                 //?? I hope I will shove cardSet.first() with the next trick
-                                theirMin = CardSet.min(leftHand.list(checkSuit), rightHand.list(checkSuit));
-                                if (cardSet1.size() > 1 && cardSet1.first().compareInTrick(_theirMin) < 0) {
-                                    return cardSet1.get(1);
-                                }
                                 if (cardSet1.size() > 1 && cardSet1.prevIndex(cardSet1.get(1)) == 0) {
                                     return cardSet1.get(1);
                                 }
@@ -259,6 +260,8 @@ public class Bot extends Player implements Serializable {
                         // todo: check if she can shove a trick to the 3rd player, and that one can get me
                         return cardSet.first();
                     }
+                } else if (noProblemSuit.suit != null && noProblemSuit.maxMeStart == 0 && exitSuit(suit)) {
+                    // the zero-trick suit stays the choice
                 } else if (noProblemSuit.maxMeStart == 0 ||
                         noProblemSuit.maxMeStart > listData.maxMeStart && noProblemSuitSize < cardSet.size()) {
                     if (!(listData.maxMeStart > 0 && listData.cardsLeft >= 0
@@ -268,14 +271,13 @@ public class Bot extends Player implements Serializable {
                 } else if (listData.maxMeStart > 0 && cardSet.size() >= 4) {
                     noProblemSuit = listData;
                 } else { // if (noProblemSuit.maxMeStart == listData.maxMeStart) {
-                    // compare number of smaller cards
-                    Card prev = rightHand.list(_suit).prev(myHand.list(_suit).first());
-                    Card curr = rightHand.list(suit).prev(myHand.list(suit).first());
-                    if (curr != null && curr.compareInTrick(prev) > 0) {
+                    // compare the highest unseen cards below my lowest, by rank: the suits differ
+                    Card prev = unseenBelow(_suit);
+                    Card curr = unseenBelow(suit);
+                    // a suit with my lowest card below all theirs is kept as an exit for later
+                    if (curr != null && (prev == null || curr.getRank().compare(prev.getRank()) > 0)) {
                         noProblemSuit = listData;
-                    } else if (cardSet.size() > 1 && cardSet.first().compareInTrick(theirMin) < 0) {
-                        noProblemSuit = listData;
-                    } if (curr == prev && cardSet.size() > myHand.list(_suit).size()) {
+                    } else if (curr == null && prev == null && cardSet.size() > myHand.list(_suit).size()) {
                         noProblemSuit = listData;
                     }
                 }
@@ -308,9 +310,12 @@ public class Bot extends Player implements Serializable {
         if (noProblemSuit.suit != null) {
             Card.Suit suit = noProblemSuit.suit;
             CardSet cardList = myHand.list(suit);
+            CardSet theirs = new CardSet(leftHand.list(suit), rightHand.list(suit));
             if (cardList.size() > 1 &&
-                    (rightHand.list(suit).size() > 1 || leftHand.list(suit).size() > 1)) {
-                res = cardList.get(1);  // further check?
+                    (rightHand.list(suit).size() > 1 || leftHand.list(suit).size() > 1) &&
+                    theirs.prevIndex(cardList.get(1)) <= 0) {
+                // the second card only with at most one unseen card below it, ♥7QA - ♥89XJK leads ♥7
+                res = cardList.get(1);
             } else {
                 res = cardList.first();
             }
@@ -322,7 +327,88 @@ public class Bot extends Player implements Serializable {
         return res;
     }
 
+    // a few cards left: solve all the possible splits of the unseen cards
+    private Card playAllPassEndgame(Trick trick) {
+        int myCount = myHand.size();
+        if (trick.getNumber() < 2 || myCount > AllPassEndgame.MAX_CARDS || myCount < 2) {
+            return null;    // the talon tricks, too many cards, or nothing to choose
+        }
+        return new AllPassEndgame().bestCard(myHand.getBitmap(), leftHand.getBitmap(), rightHand.getBitmap(), trick);
+    }
+
+    // the top card whose discard saves the most unwanted tricks, whoever starts the suit;
+    // of equal savings not a nearly safe one, then the one from the shorter suit, then the higher one.
+    // null when none saves any
+    // two cards, they hold cards below and above my lowest: dropping my top card does not help,
+    // it can go under their higher cards and my lowest can be forced anyway, ♣9K - ♣7JA keeps ♣K.
+    // Not when my top card is above all theirs, it is a guaranteed trick, ♣QA - ♣789XJK drops ♣A.
+    // In 3+ cards the low ones cannot all go under, ♦89Q - ♦7XJKA drops ♦Q
+    private boolean keepTop(CardSet cardSet, CardSet theirs) {
+        Card myMin = cardSet.first();
+        // a card below my lowest and a card above my top (then also above my lowest)
+        return cardSet.size() == 2 && theirs.prev(myMin) != null && theirs.next(cardSet.last()) != null;
+    }
+
+    private Card bestSavingDiscard() {
+        Card res = null;
+        boolean resGuaranteed = false;
+        int bestSaving = -1;
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
+            CardSet cardSet = new CardSet(bitset);
+            Card.Suit suit = cardSet.first().getSuit();
+            CardSet left = leftHand.list(suit);
+            CardSet right = rightHand.list(suit);
+            if (CardSet.min(left, right) == null) {
+                continue;
+            }
+            CardSet theirs = new CardSet(left, right);
+            if (keepTop(cardSet, theirs)) {
+                continue;
+            }
+            CardSet.ListData full = cardSet.getUnwantedTricks(left, right);
+            CardSet rest = new CardSet(cardSet);
+            Card top = rest.last();
+            rest.remove(top);
+            int saving = full.maxMeStart + full.maxTheyStart;
+            if (!rest.isEmpty()) {
+                CardSet.ListData less = rest.getUnwantedTricks(left, right);
+                saving -= less.maxMeStart + less.maxTheyStart;
+            }
+            // a top card above all theirs is a guaranteed trick, dropping it is never wasted, ♠9JQ - ♠8
+            boolean guaranteed = theirs.next(top) == null;
+            if (saving <= 0 && !guaranteed) {
+                continue;
+            }
+            boolean better = saving > bestSaving;
+            if (!better && saving == bestSaving && res != null && guaranteed != resGuaranteed) {
+                better = guaranteed;
+            } else if (!better && saving == bestSaving && res != null) {
+                int shorter = myHand.list(res.getSuit()).size() - cardSet.size();
+                // a top card with at most one unseen card below is nearly safe, ♥79 - ♥8XJQA
+                boolean topSafe = new CardSet(left, right).prevIndex(top) <= 0;
+                boolean resSafe = new CardSet(leftHand.list(res.getSuit()), rightHand.list(res.getSuit()))
+                    .prevIndex(res) <= 0;
+                if (topSafe != resSafe) {
+                    better = resSafe;
+                } else {
+                    better = shorter > 0 || shorter == 0 && top.getRank().compare(res.getRank()) > 0;
+                }
+            }
+            if (better) {
+                bestSaving = saving;
+                res = top;
+                resGuaranteed = guaranteed;
+            }
+        }
+        return res;
+    }
+
     private Card drop4AllPass(Trick trick) {
+        Card saving = bestSavingDiscard();
+        if (saving != null) {
+            return saving;
+        }
         CardSet.ListData problemList = null;
         CardSet.ListData noProblemList = null;
         Card res;
@@ -418,6 +504,31 @@ public class Bot extends Player implements Serializable {
         return res;
     }
 
+    // the top card of the lowest group of my cards with no unseen card between them
+    private Card lowestGroupTop(CardSet cardSet) {
+        Card.Suit suit = cardSet.first().getSuit();
+        CardSet theirs = new CardSet(leftHand.list(suit), rightHand.list(suit));
+        Card res = cardSet.first();
+        Card next;
+        while ((next = cardSet.next(res)) != null && theirs.prev(next) == theirs.prev(res)) {
+            res = next;
+        }
+        return res;
+    }
+
+    // my lowest card is below all theirs: when they lead the suit I play the higher cards first
+    // and keep the lowest as an exit, so it is better not to lead it, ♠7J - ♠89XQK
+    private boolean exitSuit(Card.Suit suit) {
+        Card theirMin = CardSet.min(leftHand.list(suit), rightHand.list(suit));
+        return myHand.list(suit).first().compareInTrick(theirMin) < 0;
+    }
+
+    // the highest unseen card of the suit below my lowest one
+    private Card unseenBelow(Card.Suit suit) {
+        CardSet theirs = new CardSet(leftHand.list(suit), rightHand.list(suit));
+        return theirs.prev(myHand.list(suit).first());
+    }
+
     Card absMax(Card.Suit suit) {
         CardSet cardList = myHand.list(suit);
 
@@ -444,6 +555,10 @@ public class Bot extends Player implements Serializable {
     // https://review-pref.ru/school/147/111/
     // all-pass: https://review-pref.ru/school/145/17/
     public Card playAllPass(Trick trick) {
+        Card endgame = playAllPassEndgame(trick);
+        if (endgame != null) {
+            return endgame;
+        }
         Card res = null;
         if (trick.startingSuit == null) {
             return playAllPass1stHand(trick);
@@ -464,6 +579,21 @@ public class Bot extends Player implements Serializable {
         Card topTrickCard = trick.topCard;
 
         Card theirMin = CardSet.min(leftHand.list(suit), rightHand.list(suit));
+        if (topTrickCard == null && theirMin != null && myMin.compareInTrick(theirMin) > 0) {
+            // 1st in a talon trick, they can go under my lowest: the top of my lowest group,
+            // the cards with no unseen card between them are equal, ♠9JK - ♠78QA, talon ♠X -> ♠J
+            return lowestGroupTop(cardSet);
+        }
+        if (topTrickCard == null && theirMin != null && cardSet.size() > 1) {
+            // 1st in a talon trick, my lowest card is the lowest: keep it as an exit and play the next one
+            // if at most one unseen card is below it and they hold enough cards to follow,
+            // ♥79J - ♥8XKA, talon ♥Q -> ♥9
+            CardSet theirs = new CardSet(leftHand.list(suit), rightHand.list(suit));
+            Card second = cardSet.get(1);
+            if (theirs.prevIndex(second) <= 0 && theirs.size() >= 3) {
+                return second;
+            }
+        }
         if (topTrickCard != null && topTrickCard.compareInTrick(myMin) > 0 &&
             (totalCards() == 2 || theirMin == null || theirMin.compareInTrick(myMax) > 0)) {
             return cardSet.prev(topTrickCard);
@@ -491,10 +621,6 @@ public class Bot extends Player implements Serializable {
             if (myMin.compareInTrick(trick.topCard) > 0 ||
                     myMax.compareInTrick(trick.topCard) < 0) {
                 // all my cards are either greater than trick or less than trick
-                return myMax;
-            }
-            if (myMin.compareInTrick(trick.topCard) > 0) {
-                // all my cards are greater than trick
                 return myMax;
             }
             // ♣8JKA ♥J   ♣7Q ♦79X   ♣9X ♥89X
@@ -551,24 +677,12 @@ public class Bot extends Player implements Serializable {
             if (cardSet.size() == 2 && left <= 2 && !rightHand.list(suit).isEmpty()) {
                 res = myMax;
             } else {
-                if (cardSet.size() > 1) {
-                    if (rightHand.list(suit).size() > 2 &&
-                            rightHand.list(suit).prevIndex(myMin) == 0) {
-                        // there is a single card less than my min
-                        if (trick.getNumber() == 0) {
-                            res = cardSet.first();
-                        } else {
-                            // better take this trick
-                            res = cardSet.get(1);
-                        }
-                    }
-                }
-                if (res == null) {
-                    // ♣8JKA ♥J   ♠J ♣7Q ♦79   ♣9X ♥789   -> ♣Q ♣X, should take it, play ♠J and ♣8
-                    // instead she plays ♣J, then ♣7 ♣9 ♣8 and gets 4 tricks
-                    // on the other hand, for ♣8JKA ♥J   ♠J ♣9Q ♦79   ♣7X ♥789 it does not work
-                    res = cardSet.prev(topTrickCard);
-                }
+                // go under the top card even with a single unseen card below my lowest:
+                // taking the trick now is certain, my lowest may still avoid one later, ♦9JQ - ♦7KA, ♦8 ♦X -> ♦9
+                // ♣8JKA ♥J   ♠J ♣7Q ♦79   ♣9X ♥789   -> ♣Q ♣X, should take it, play ♠J and ♣8
+                // instead she plays ♣J, then ♣7 ♣9 ♣8 and gets 4 tricks
+                // on the other hand, for ♣8JKA ♥J   ♠J ♣9Q ♦79   ♣7X ♥789 it does not work
+                res = cardSet.prev(topTrickCard);
             }
         }
 

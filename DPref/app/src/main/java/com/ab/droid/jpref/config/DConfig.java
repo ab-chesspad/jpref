@@ -69,11 +69,11 @@ public class DConfig extends Config {
     public static class ColorProperty extends Property<String> {
 
         public ColorProperty(String name, String value) {
-            super(name, true, value);
+            super(name, Visual.yes, value);
         }
 
         public ColorProperty(String name, int color) {
-            super(name, true, String.format("#%06X", color));
+            super(name, Visual.yes, String.format("#%06X", color));
         }
 
         public void setColor(Color color) {

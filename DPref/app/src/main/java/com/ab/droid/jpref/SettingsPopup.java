@@ -22,6 +22,7 @@ import com.ab.droid.jpref.config.DMetrics;
 import com.ab.droid.jpref.util.DUtil;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.I18n;
+import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
 
@@ -37,6 +38,7 @@ import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -250,6 +252,15 @@ public class SettingsPopup {
             }
         }
 
+        if (isLocked(property)) {
+            // text colors are fixed to black, so gray out by fading instead
+            for (int i = 0; i < section.getChildCount(); ++i) {
+                View child = section.getChildAt(i);
+                setEnabled(child, false);
+                child.setAlpha(.4f);
+            }
+        }
+
         View divider = new View(host);
         divider.setBackgroundColor(Color.LTGRAY);
         LinearLayout.LayoutParams dividerParams =
@@ -258,6 +269,23 @@ public class SettingsPopup {
         section.addView(divider, dividerParams);
 
         return section;
+    }
+
+    // properties that take effect only in a new game can't be changed once it has started
+    private static boolean isLocked(Config.Property<?> property) {
+        GameManager gameManager = GameManager.getInstance();
+        return property.getNewGame() == Config.NewGame.yes
+            && gameManager != null && !gameManager.isNewGame();
+    }
+
+    private static void setEnabled(View view, boolean enabled) {
+        view.setEnabled(enabled);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); ++i) {
+                setEnabled(group.getChildAt(i), enabled);
+            }
+        }
     }
 
     private View buildSelectionEditor(Config.Property<?> property, Config.Selection<?> selection) {

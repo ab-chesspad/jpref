@@ -80,55 +80,6 @@ public class TestBot extends BaseTest {
             });
     }
 
-    // todo: merge with duplicating TestBidData.testGetBid
-    @Test
-    public void testDeclareRound() throws IOException {
-        println("running: " + currMethodName());
-        util.getList(getInputStream("declare-round"),
-            (res, tokens) -> {
-                String[] parts = res.split(", ");
-                Card drop0 = Card.fromName(parts[0]);
-                Card drop1 = Card.fromName(parts[1]);
-                Config.Bid expectedBid = Config.Bid.fromName(parts[2]);
-
-                int _elderHand = 0;
-                CardList hand = new CardList();
-                Config.Bid minBid = null;
-                for (String token : tokens) {
-                    try {
-                        _elderHand = Integer.parseInt(token);
-                        continue;
-                    } catch (NumberFormatException e) {
-                        // ignore
-                    }
-                    Config.Bid bid = Config.Bid.fromName(token);
-                    if (bid != null) {
-                        minBid = bid;
-                        continue;
-                    }
-                    hand.addAll(util.toCardList(token));
-                }
-                Assert.assertEquals(12, hand.size());
-                if (minBid == null) {
-                    minBid = Config.Bid.fromName("6" + expectedBid.getTrump());
-                }
-                Bot.playerBid = null;
-                Bot bot = new Bot(0);
-                bot.clear();
-                CardSet cardSet = new CardSet(hand);
-                bot.myHand = new CardSet(cardSet);
-                bot.bid = minBid;
-                bot.declareRound(minBid, _elderHand, null);
-                Config.Bid bid = bot.getBid();
-                Assert.assertEquals(expectedBid, bid);
-                if (!bid.equals(Config.Bid.BID_PASS)) {
-                    CardSet drops = cardSet.diff(bot.myHand);
-                    Assert.assertTrue(String.format("%s drop not found", drop0.toColorString()), drops.contains(drop0));
-                    Assert.assertTrue(String.format("%s drop not found", drop1.toColorString()), drops.contains(drop1));
-                }
-            });
-    }
-
     @Test
     @Ignore("test MisereBot later")
     public void testMove() {

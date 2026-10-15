@@ -42,8 +42,8 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 16L;
-    public static final String VERSION = "1.0.0";
+    public static final long projectSerialVersionUID = 17L;
+    public static final String VERSION = "1.0.1";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -54,8 +54,16 @@ public abstract class Config implements Serializable {
     public final Couple<Integer> mainSize = new Couple<>(0, 0);
     public int insetsTop;
 
+    public enum NewGame {
+        no, yes
+    }
+
+    public enum Visual {
+        no, yes
+    }
+
     public final Property<Selection<Couple<String>>> language =
-        new Property<>("Language", true, new Selection<>(
+        new Property<>("Language", Visual.yes, new Selection<>(
             new Couple<>("English", "en"),
             new Couple<>("Русский", "ru"),
             new Couple<>("Олбанский", "ol")   // nerd's joke
@@ -72,13 +80,13 @@ public abstract class Config implements Serializable {
     }
 
     public final Property<Selection<GameType>> gameType =
-        new Property<>("Game Type", new Selection<>(GameType.values()));
+        new Property<>("Game Type", new Selection<>(GameType.values()), NewGame.yes);
 
-    public final Property<Integer> poolSize = new Property<>("Pool Size", 20);
+    public final Property<Integer> poolSize = new Property<>("Pool Size", 20, NewGame.yes);
 
     public enum WhistType implements Selectable<WhistType> {
+        Gentleman,
         Greedy,
-//        Gentleman,  // todo
         ;
         @Override
         public WhistType[] getAll() {
@@ -86,9 +94,9 @@ public abstract class Config implements Serializable {
         }
     }
     public final Property<Selection<WhistType>> whistType =
-        new Property<>("Whist Type", new Selection<>(WhistType.values()));
+        new Property<>("Whist Type", new Selection<>(WhistType.values()), NewGame.yes);
 
-    public final Property<Boolean> whistTotus = new Property<>("Whist Totus", true);
+    public final Property<Boolean> whistTotus = new Property<>("Whist Totus", true, NewGame.yes);
 
     public enum MoveMethod implements Selectable<MoveMethod> {
         SingleClick,
@@ -135,6 +143,7 @@ public abstract class Config implements Serializable {
            }
         }
         GUID = java.util.UUID.randomUUID().toString();
+        this.whistType.get().setSelected(0);
     }
 
     public static Config unserialize(Host host) {
@@ -232,6 +241,7 @@ public abstract class Config implements Serializable {
 
         private final String label;
         private final boolean visual;
+        private final NewGame newGame;
         // the constructor-provided default, kept separately from the mutable
         // value so get() can fall back to it - Java's default deserialization
         // leaves a field at null (skipping this class's own field initializer)
@@ -246,13 +256,23 @@ public abstract class Config implements Serializable {
             this.visual = false;
             this.value = value;
             this.defaultValue = value;
+            this.newGame = NewGame.no;
         }
 
-        public Property(String label, boolean visual, T value) {
-            this.visual = visual;
+        public Property(String label, T value, NewGame newGame) {
             this.label = label;
             this.value = value;
             this.defaultValue = value;
+            this.visual = false;
+            this.newGame = newGame;
+        }
+
+        public Property(String label, Visual visual, T value) {
+            this.visual = visual == Visual.yes;
+            this.label = label;
+            this.value = value;
+            this.defaultValue = value;
+            this.newGame = NewGame.no;
         }
 
         public int getOrder() {
@@ -265,6 +285,10 @@ public abstract class Config implements Serializable {
 
         public boolean isVisual() {
             return visual;
+        }
+
+        public NewGame getNewGame() {
+            return newGame;
         }
 
         public void set(T value) {

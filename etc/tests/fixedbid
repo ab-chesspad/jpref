@@ -1,5 +1,12 @@
 #fixedbid: hands, talon, elderhand -> bid, tricks
 # expected bid, any drop
+# [2] All-Pass
+# [2] Misère 1
+# [2] 6♦ 7
+
+deal: ♠89 ♣789JA ♦7J ♥J  ♠K ♣XQ ♦9Q ♥789QK  ♠7XJQA ♦8XA ♥XA  ♦K ♣K  0 -> 2 7♠ 10
+
+deal: ♠9X ♣78A ♦8 ♥78JK  ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠A ♦X  0 -> Misère 1 # 19 должен ловиться
 
 #*** exit ***
 deal: ♠7Q ♣9K ♦8XJKA ♥J  ♠9XA ♣8J ♦79 ♥8XA  ♠8JK ♣7XQ ♦Q ♥79K  ♣A ♥Q  0 -> 6♦ 7

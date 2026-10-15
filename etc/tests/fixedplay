@@ -3,6 +3,16 @@
 
 #*** exit ***
 #########
+deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> All-pass
+deal: ♠79 ♣79JQA ♦XJ ♥J  ♠8A ♣8 ♦89A ♥89KA  ♠XJQ ♣XK ♦7Q ♥7XQ  ♦K ♠K  1 -> All-pass
+
+deal: ♠X ♣78A ♦8X ♥78JK  ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠9A  0 -> Misère 1 # 19 ловится
+deal: ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠X ♣78A ♦8X ♥78JK  ♠9A  2 -> 2 Misère 1 # ловится
+deal: ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♠7Q ♣78Q ♦79XK ♥8  ♦Q ♥X  2 -> 2 Misère 1 # ловится
+
+deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
+
+
 deal: ♣X ♦78XJQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♠7 ♣8  1 -> 6♦ 6
 
 deal: ♠7Q ♣78Q ♦79XK ♥8  ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♦Q ♥X  2 -> Misère 1 # ловится

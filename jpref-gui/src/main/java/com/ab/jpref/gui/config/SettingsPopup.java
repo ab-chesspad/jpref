@@ -22,6 +22,7 @@ package com.ab.jpref.gui.config;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Metrics;
 import com.ab.jpref.config.I18n;
+import com.ab.jpref.engine.GameManager;
 import static com.ab.jpref.config.I18n.m;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.jpref.ui.Host;
@@ -244,6 +245,7 @@ public class SettingsPopup extends JDialog {
                     jLabel = new JLabel(text, lineIcon, JLabel.LEFT);
                 }
                 jLabel.setFont(font);
+                jLabel.setEnabled(jList1.isEnabled());
                 Dimension d = jLabel.getPreferredSize();
                 d.width = I18n.maxPhraseLength * font.getSize() / 3;
                 jLabel.setPreferredSize(d);
@@ -349,6 +351,28 @@ public class SettingsPopup extends JDialog {
             };
             section.setBorder(sectionBorder);
         }
+        if (isLocked(property)) {
+            setEnabled(section, false);
+            if (createBorder) {
+                ((TitledBorder) section.getBorder()).setTitleColor(Color.GRAY);
+            }
+        }
         return section;
+    }
+
+    // properties that take effect only in a new game can't be changed once it has started
+    static boolean isLocked(Config.Property<?> property) {
+        GameManager gameManager = GameManager.getInstance();
+        return property.getNewGame() == Config.NewGame.yes
+            && gameManager != null && !gameManager.isNewGame();
+    }
+
+    static void setEnabled(Component component, boolean enabled) {
+        component.setEnabled(enabled);
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                setEnabled(child, enabled);
+            }
+        }
     }
 }

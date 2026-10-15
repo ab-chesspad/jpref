@@ -127,13 +127,13 @@ public class ForTricksBot extends Bot {
     // returns sorted in ascending order
     List<SuitInfo> getAllSuitInfo() {
         List<SuitInfo> allSuitInfo = new ArrayList<>();
-        List<Pair<String, Integer>> pairs = Bidder.getInstance().toSuitChunks(myHand, 0, null);
-        for (Pair<String, Integer> pair : pairs) {
+        List<Bidder.SuitTricks> pairs = Bidder.getInstance().toSuitChunks(myHand);
+        for (Bidder.SuitTricks pair : pairs) {
             SuitInfo suitInfo = new SuitInfo();
             allSuitInfo.add(suitInfo);
-            suitInfo.suit = Bidder.getInstance().getSuit(pair.first);
+            suitInfo.suit = pair.suit;
             suitInfo.cardSet = myHand.list(suitInfo.suit);
-            suitInfo.chunk = pair.first.substring(1, pair.first.length() - 1);
+            suitInfo.chunk = pair.chunk.substring(1);
             suitInfo.length = suitInfo.cardSet.size();
             Pair<Integer, Card> p = suitInfo.cardSet.minWantedTricks(leftHand.list(suitInfo.suit), rightHand.list(suitInfo.suit));
             suitInfo.minTricks = p.first;
@@ -163,6 +163,29 @@ public class ForTricksBot extends Bot {
             return s0.length - s1.length;
         });
         return allSuitInfo;
+    }
+
+    // the suit that needs a move to get its tricks, when all the other suits stop the defenders
+    private Card noTrumpMove(List<SuitInfo> allSuitInfo) {
+        SuitInfo moveSuitInfo = null;
+        for (SuitInfo suitInfo : allSuitInfo) {
+            CardSet theirs = new CardSet(leftHand.list(suitInfo.suit), rightHand.list(suitInfo.suit));
+            if (theirs.isEmpty() || suitInfo.cardSet.last().compareInTrick(theirs.last()) > 0) {
+                continue;   // stopped
+            }
+            if (moveSuitInfo != null || suitInfo.minTricks == 0) {
+                return null;    // more than one suit open, or nothing to win there
+            }
+            moveSuitInfo = suitInfo;
+        }
+        if (moveSuitInfo == null || moveSuitInfo.best == null) {
+            return null;
+        }
+        // a missing suit cannot be stopped
+        if (allSuitInfo.size() < Card.TOTAL_SUITS) {
+            return null;
+        }
+        return moveSuitInfo.best;
     }
 
     // always 1st hand
@@ -226,6 +249,27 @@ public class ForTricksBot extends Bot {
                 }
             }
         }
+        if (trumpSuitInfo == null) {
+            // no trump: give up the lead while every other suit is still stopped,
+            // cashing first leaves the defenders free to run their suit later
+            Card move = noTrumpMove(allSuitInfo);
+            if (move != null) {
+                return move;
+            }
+            // a suit that needs moves: never start with a top card with no cushion, it is a stopper
+            // deal: ♠8X ♣XJQ ♦XK ♥8QK  ♠7JA ♣8K ♦9JQA ♥A  ♠9QK ♣79 ♦7 ♥79XJ  ♣A ♦8  1 -> 1 8-
+            // ♥A ♥7 ♥K -> 6, ♦A -> 8
+            SuitInfo moveSuitInfo = null;
+            for (SuitInfo suitInfo : allSuitInfo) {
+                if (suitInfo.length > suitInfo.minTricks && suitInfo.minTricks > 0 &&
+                        (moveSuitInfo == null || suitInfo.length > moveSuitInfo.length)) {
+                    moveSuitInfo = suitInfo;
+                }
+            }
+            if (moveSuitInfo != null && moveSuitInfo.best != null) {
+                return moveSuitInfo.best;
+            }
+        }
         if (allMineSuitInfo != null) {
             return allMineSuitInfo.cardSet.last();
         }
@@ -282,6 +326,18 @@ public class ForTricksBot extends Bot {
         // deal: ♠8J ♣7KA ♦78A ♥7A  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♥J9  1 -> 6♥ 6
         int res = CardSet.bm4build(bitmaps[0], bitmaps[friend], bitmaps[foe]) |
             CardSet.bm4buildForward(trumpBM, bitmaps[foe]);
+        if (trickNode.size() > 0) {
+            // following suit with the partner's cards between mine, the top one unblocks the suit:
+            // ♥A led, ♥79XJ, ♥8QK: ♥7, ♥K keeps ♥8 to reach ♥XJ
+            int suitBM = trickNode.hands[num].list(trickNode.startingSuit).getBitmap();
+            if (suitBM != 0) {
+                int low = suitBM & -suitBM;
+                int top = CardSet.msb(suitBM);
+                if ((bitmaps[friend] & (top - 1) & ~(low | (low - 1))) != 0) {
+                    res |= top;
+                }
+            }
+        }
         return ((long)res & 0x0ffffffffL) | BACKWARD_FLAG;
     }
 

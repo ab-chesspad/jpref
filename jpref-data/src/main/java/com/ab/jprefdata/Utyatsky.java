@@ -274,8 +274,8 @@ public class Utyatsky {
         StringBuilder sb = new StringBuilder();
 //        String sep = "";
         for (String part : parts) {
-            Pair<String, Integer> pair = Bidder.getInstance().searchTricks(part, 0);
-            sb.append(pair.first);
+            Bidder.SuitTricks pair = Bidder.getInstance().searchTricks(part);
+            sb.append(pair.chunk);
 //            sep = "" + part.length();
 //            part = part.replaceAll("x", "");
 //            sb.append(sep).append(part);

@@ -78,6 +78,7 @@ public class Trick extends BaseTrick implements Serializable {
         minBid = null;
         trumpSuit = null;
         GameManager.getInstance().discarded.clear();
+        GameManager.getInstance().declarerPlayed.clear();
     }
 
     @Override
@@ -152,6 +153,7 @@ public class Trick extends BaseTrick implements Serializable {
             CardSet declarerHand = gameManager.declarerHand;
             if (declarerHand != null) {
                 if (discardingPlayer == gameManager.declarerNumber) {
+                    gameManager.discarded.add(gameManager.declarerHand.intersection(remove));
                     declarerHand.remove(remove);
                     if (targetBot != null) {
                         targetBot.myHand.remove(remove);
@@ -177,6 +179,9 @@ public class Trick extends BaseTrick implements Serializable {
             targetBot.drop(card);
         }
         if (gameManager.declarerHand != null) {
+            if (getTurn() == gameManager.declarerNumber) {
+                gameManager.declarerPlayed.add(card);
+            }
             gameManager.declarerHand.remove(card);
         }
 

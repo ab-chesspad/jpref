@@ -77,8 +77,6 @@ public class MisereBot extends Bot {
         }
     }
 
-    private transient List<CardSet.ListData> holes = new ArrayList<>();
-
     MisereBot(CardSet... hands) {
         super(hands);
     }
@@ -95,7 +93,7 @@ public class MisereBot extends Bot {
 
     // pa|b = 1 - (1-pa)(1-pb)
     // todo: adjust probabilities for elderhand
-    private int getEval4Misere(CardSet cardSet) {
+    int getEval4Misere(CardSet cardSet) {
         StringBuilder sb = new StringBuilder();
         double pab = 1;    // 1 - pa|b
         int bitset = 0;
@@ -119,6 +117,9 @@ public class MisereBot extends Bot {
         return (int)((1 - pab) * MAX_EVAL);
     }
 
+    // possible?
+    // https://www.gamblergames.com/forum/index.php?showtopic=502338
+    // https://www.gamblergames.com/forum/index.php?showtopic=501784&st=690
     // eval possible talon out of 22 remaining cards
     boolean evalMisere(int elderHand) {
         int eval = getEval4Misere(myHand);
@@ -216,31 +217,6 @@ probes:
         return playerBid;
     }
 
-    public void getHoles(int declarerNum, Trick trick) {
-        if (holes == null) {
-            // happens after unserialization
-            holes = new ArrayList<>();
-        }
-        holes.clear();
-        CardSet myHand = new CardSet(this.myHand);
-        CardSet leftHand = new CardSet(this.leftHand);
-        CardSet rightHand = new CardSet(this.rightHand);
-        int bitset = 0;
-        while ((bitset = CardSet.bm4NextSuit(myHand.getBitmap(), bitset)) != 0) {
-            // todo: use bitmaps only
-            CardSet cardSet = new CardSet(bitset);
-            Card.Suit suit = cardSet.first().getSuit();
-            CardSet.ListData listData = cardSet.maxUnwantedTricks(leftHand.list(suit), rightHand.list(suit));
-            if (listData.maxTheyStart > 0) {
-                holes.add(listData);
-                if (trick == null || trick.startingSuit == null) {
-                    // log it once per trick
-                    Logger.printf(DEBUG_LOG, "hole %s\n", listData.thisSuit);
-                }
-            }
-        }
-    }
-
     @Override
     public Card play(Trick trick) {
         if (trick.getNumber() == 0 && trick.isEmpty() &&
@@ -286,11 +262,6 @@ probes:
             CardSet cardList = listData.thisSuit;
             if (cardList.isEmpty()) {
                 continue;
-            }
-            for (CardSet.ListData hole: holes) {
-                if (hole.suit.equals(listData.suit) && listData.thisSuit.size() == 1) {
-                    return listData.thisSuit.first();
-                }
             }
             if (bestListData == null || bestListData.maxMeStart > listData.maxMeStart) {
                 bestListData = listData;

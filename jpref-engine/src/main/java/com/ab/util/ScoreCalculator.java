@@ -21,6 +21,7 @@
 package com.ab.util;
 
 import com.ab.jpref.config.Config;
+import static com.ab.jpref.config.Config.NOP;
 import com.ab.jpref.engine.Player;
 
 import java.util.HashMap;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class ScoreCalculator {
-    public static final int NOP = Config.NOP;   // Number of players
     static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
     static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
     static final int poolPoints = Player.PlayerPoints.poolPoints.ordinal();
@@ -183,13 +183,14 @@ public abstract class ScoreCalculator {
         }
 
         // calc dump whists keeping total balance == 0
-        int _dumpPoints = sumDump * 10 / NOP;
+        double _dumpPoints = sumDump * 10 / NOP;
         int sum = 0;
-        totals[0].points[dumpPoints] = _dumpPoints - 10 * totals[0].points[dumpPoints];
-        sum += totals[0].points[dumpPoints];
-        totals[1].points[dumpPoints] = _dumpPoints - 10 * totals[1].points[dumpPoints];
+        totals[1].points[dumpPoints] = (int) (_dumpPoints + 0.5 - 10 * totals[1].points[dumpPoints]);
         sum += totals[1].points[dumpPoints];
-        totals[2].points[dumpPoints] = -sum;
+        totals[2].points[dumpPoints] = (int) (_dumpPoints + .5 - 10 * totals[2].points[dumpPoints]);
+        sum += totals[2].points[dumpPoints];
+        totals[0].points[dumpPoints] = (int) (_dumpPoints + .5 - 10 * totals[0].points[dumpPoints]);
+        totals[0].points[dumpPoints] = -sum;
 
         // calculate whists:
         int diff = totals[0].points[leftPoints]
@@ -324,7 +325,6 @@ public abstract class ScoreCalculator {
                     defendersDiff = 0;
                 }
             }
-
             for (Player player : players) {
                 Player.PlayerPoints points = Player.PlayerPoints.rightPoints;
                 if (declarerNum == (player.getNumber() + 1) % NOP) {
@@ -335,6 +335,11 @@ public abstract class ScoreCalculator {
                     case BID_PASS:
                         tricks = 0;
                         if (declarerDiff < 0) {
+                            if (config.whistType.get().getSelectedValue().equals(Config.WhistType.Gentleman)) {
+                                int newPoints = (10 - declarerTricks - 2 * declarerDiff) * factor / 2;
+                                player.getRoundResults().setPoints(points, newPoints);
+                                break;
+                            }
                             tricks = -declarerDiff;
                         }
                         if (!whistTotus) {
@@ -347,6 +352,11 @@ public abstract class ScoreCalculator {
                     case BID_WHIST_STANDING:
                         tricks = player.getTricks();
                         if (declarerDiff < 0) {
+                            if (config.whistType.get().getSelectedValue().equals(Config.WhistType.Gentleman)) {
+                                int newPoints = (10 - declarerTricks - 2 * declarerDiff) * factor / 2;
+                                player.getRoundResults().setPoints(points, newPoints);
+                                break;
+                            }
                             tricks -= declarerDiff;
                             player.getRoundResults().setPoints(points, tricks* factor);
                         } else {
@@ -374,11 +384,9 @@ public abstract class ScoreCalculator {
                     default:
                         // declarer
                         if (declarerDiff >= 0) {
-                            player.getRoundResults().setPoints(Player.PlayerPoints.poolPoints,
-                                factor);
+                            player.getRoundResults().setPoints(Player.PlayerPoints.poolPoints, factor);
                         } else {
-                            player.getRoundResults().setPoints(Player.PlayerPoints.dumpPoints,
-                                -declarerDiff * factor);
+                            player.getRoundResults().setPoints(Player.PlayerPoints.dumpPoints, -declarerDiff * factor);
                         }
                 }
             }

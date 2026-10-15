@@ -26,7 +26,6 @@ package com.ab.jpref.cards;
 
 import com.ab.jpref.cards.Card.Rank;
 import com.ab.jpref.cards.Card.Suit;
-import static com.ab.jpref.cards.Card.TOTAL_RANKS;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.Bot;
 import com.ab.util.Pair;
@@ -224,21 +223,23 @@ public class CardSet implements Serializable {
         return this.bitmap == that.bitmap;
     }
 
-    // compare ranks
-    public int compareTo(CardSet that) {
-        Card thisLast = this.last();
-        Card thatLast = that.last();
-
-        if (thatLast == null) {
-            return thisLast == null ? 0 : 1;
+    // assuming single suits
+    public static int compareRanks(int bm0, int bm1) {
+        if (bm0 == 0) {
+            return  bm1 == 0 ? 0 : -1;
         }
-        if (thisLast == null) {
-            return -1;
+        if (bm1 == 0) {
+            return  1;
         }
-
-        int s0 = this.bitmap >>> suitOffset(thisLast.getSuit());
-        int s1 = that.bitmap >>> suitOffset(thatLast.getSuit());
-        return s0 - s1;
+        while ((bm0 & SUIT_MASK) == 0 || (bm1 & SUIT_MASK) == 0) {
+            if ((bm0 & SUIT_MASK) == 0) {
+                bm0 >>>= SUIT_LIST_LENGTH;
+            }
+            if ((bm1 & SUIT_MASK) == 0) {
+                bm1 >>>= SUIT_LIST_LENGTH;
+            }
+        }
+        return bm0 - bm1;
     }
 
     public CardSet complement() {
@@ -560,7 +561,7 @@ public class CardSet implements Serializable {
             CardSet common = rightSuit.intersection(leftSuit);
             leftSuit.remove(common);
         } else {
-            CardSet common = leftSuit.intersection(leftSuit);
+            CardSet common = leftSuit.intersection(rightSuit);
             rightSuit.remove(common);
         }
         CardSet[] cardLists = new CardSet[3];
@@ -763,11 +764,49 @@ mainLoop:
         return suitNum;
     }
 
-    public static int holes(CardSet myHand, CardSet discarded, boolean mePlay) {
-        return holes(myHand.bitmap, discarded.bitmap, mePlay);
+    public static int holes(CardSet myHand, CardSet discarded, Card card) {
+        return holes(myHand.bitmap, discarded.bitmap, card);
     }
 
-    public static int holes(int _bitmap, int discarded, boolean mePlay) {
+    public static int holes(int _bitmap, int discarded, Card card) {
+        if (card != null) {
+            int mySuit = _bitmap & suitMask(card.getSuit());
+            int cardBit = bit(card);
+            if (mySuit != 0 && Integer.compareUnsigned(lsb(mySuit), cardBit) > 0) {
+                // no card under it, I take the trick with the highest and start the next one
+                int played = msb(mySuit);
+                int rest = _bitmap & ~played;
+                if (rest == 0) {
+                    return 1;
+                }
+                return Math.min(size(_bitmap), 1 + afterTrick(rest, discarded | cardBit | played, card, true));
+            }
+            if (mySuit != 0) {
+                // I play the highest under it, the trick is gone and the winner starts
+                int played = msb(mySuit & (cardBit - 1));
+                return afterTrick(_bitmap & ~played, discarded | cardBit | played, card, false);
+            }
+        }
+        return holes(_bitmap, discarded, card == null);
+    }
+
+    // when no card of the led suit is left outside, the other player is void and discards any card,
+    // the worst for me: ♣X ♦79Q against ♦K, ♣8 is led, ♦K is discarded and all ♦ are mine
+    private static int afterTrick(int _bitmap, int gone, Card card, boolean meStart) {
+        int res = holes(_bitmap, gone, meStart);
+        int outside = ~(_bitmap | gone);
+        if ((outside & suitMask(card.getSuit())) != 0) {
+            return res;
+        }
+        for (int bit = next(outside, 0); bit != 0; bit = next(outside, bit)) {
+            if ((_bitmap & (SUIT_MASK << suitNum(bit) * SUIT_LIST_LENGTH)) != 0) {
+                res = Math.max(res, holes(_bitmap, gone | bit, meStart));
+            }
+        }
+        return res;
+    }
+
+    private static int holes(int _bitmap, int discarded, boolean meStart) {
         int srcBM = _bitmap;
         int bitmap = _bitmap | discarded;
         int holes = 0;
@@ -777,16 +816,19 @@ mainLoop:
         int cleanSuits = 0;
         int allSuitsMask = -1;
         while ((bmSuit = CardSet.bm4NextSuit(bitmap, bmSuit)) != 0) {
-            if (size(bmSuit) == TOTAL_RANKS) {
-                if (mePlay) {
-                    holes += size(bmSuit);
-                }
+            if ((_bitmap & bmSuit) == 0) {
                 continue;
             }
             int bit = lsb(bmSuit);
             while ((suitMask & bit) == 0) {
                 suitMask <<= SUIT_LIST_LENGTH;
                 suitLsb <<= SUIT_LIST_LENGTH;
+            }
+            if (bmSuit == suitMask) {
+                if (meStart) {
+                    holes += size(bmSuit);
+                }
+                continue;
             }
             allSuitsMask &= ~suitMask;
             int suitHoles = 0;
@@ -803,7 +845,7 @@ mainLoop:
                         holes += size(srcBM & suitMask);
                         break;
                     }
-                } else {
+                } else if ((_bitmap & bit) != 0) {     // a card out of the game changes nothing
                     --_holes;
                 }
                 bm &= ~bit;
@@ -814,7 +856,7 @@ mainLoop:
                 ++cleanSuits;
             }
         }
-        if (mePlay && cleanSuits == 0) {
+        if (meStart && cleanSuits == 0) {
             int trumpSuitSize = size(_bitmap & allSuitsMask);
             if (trumpSuitSize == 0) {
                 ++trumpSuitSize;
@@ -825,6 +867,44 @@ mainLoop:
             holes = size(_bitmap);
         }
         return holes;
+    }
+
+    public static int holeMask(int _bitmap, int discarded, boolean mePlay) {
+        int bitmap = _bitmap | discarded;
+        int holeMask = 0;
+        int suitMask = SUIT_MASK;
+        int suitLsb = 1;    // 7 of the current suit
+        int bmSuit = 0;
+        while ((bmSuit = CardSet.bm4NextSuit(bitmap, bmSuit)) != 0) {
+            int bit = lsb(bmSuit);
+            while ((suitMask & bit) == 0) {
+                suitMask <<= SUIT_LIST_LENGTH;
+                suitLsb <<= SUIT_LIST_LENGTH;
+            }
+            if (bmSuit == suitMask) {
+                if (mePlay&& (_bitmap & suitMask) != 0) {
+                    holeMask |= suitLsb;
+                }
+                continue;
+            }
+            int bm = bmSuit;
+            bit = suitLsb;
+            int _holes = 1;
+            do {
+//Logger.printf("%s - %d\n", new CardSet(bit), _holes);
+                if ((bm & bit) == 0) {
+                    if (++_holes >= 2) {
+                        holeMask |= suitLsb;
+                        break;
+                    }
+                } else {
+                    --_holes;
+                }
+                bm &= ~bit;
+                bit <<= 1;
+            } while (bm != 0);
+        }
+        return holeMask;
     }
 
     public static int topTricks(int bitmap) {

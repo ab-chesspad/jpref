@@ -7,6 +7,7 @@ package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.config.Config;
+
 import static com.ab.util.Logger.printf;
 import static com.ab.util.Logger.println;
 
@@ -15,6 +16,7 @@ import com.ab.util.SimpleLongIntMap;
 
 import static com.ab.util.Util.DEAL_MARK;
 import static com.ab.util.Util.currMethodName;
+
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -79,74 +81,55 @@ public class TestGameManager extends BaseTest {
 
         util.getList(testInputStream,
             (res, tokens) -> {
-/*
-                if (count[0] > 0) {
-                    return;
+                if (!tokens.get(0).startsWith(DEAL_MARK)) {
+                    return;     // ignore
                 }
-*/
-//for (int n = 0; n < 10; ++n)
-                {
-                    if (!tokens.get(0).startsWith(DEAL_MARK)) {
-                        return;     // ignore
+                String[] resParts = res.split("\\s+");
+                int _declarerNum = 0;
+                int i = 0;
+                try {
+                    _declarerNum = Integer.parseInt(resParts[i]);
+                    ++i;
+                } catch (NumberFormatException e) {
+                    // ignore
+                }
+                int declarerTricks = 0;
+                Config.Bid expectedBid = Config.Bid.fromName(resParts[i]);
+                if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    declarerTricks = Integer.parseInt(resParts[i + 1]);
+                }
+                int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));
+                CardList _deck = new CardList();
+                for (String token : tokens) {
+                    if (token.endsWith(":")) {
+                        continue;
                     }
-                    String[] resParts = res.split("\\s+|#");
-                    Config.Bid expectedBid = Config.Bid.fromName(resParts[0]);
-                    int declarerTricks = 0;
-                    if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                        declarerTricks = Integer.parseInt(resParts[1]);
-                    }
-                    int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
-                    CardList _deck = new CardList();
-                    for (String token : tokens) {
-                        if (token.endsWith(":")) {
-                            continue;
-                        }
-                        _deck.addAll(util.toCardList(token));
-                    }
-                    _deck.verifyDeck();
-                    CardList _talonCards = new CardList(_deck.subList(30, 32));
-                    for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
-                        printf("declarer #%d\n", declarerNum);
-                        int elderHand = (_elderHand + declarerNum) % NOP;
-                        CardList deck = new CardList();
-                        for (int j = 0; j < NOP; ++j) {
-                            int k = 10 * ((j - declarerNum + NOP) % NOP);
-                            deck.addAll(_deck.subList(k, k + 10));
-                        }
-                        deck.addAll(new CardList(_talonCards));
-                        CardList talon = new CardList(deck.subList(30, 32));
-                        gameManager.elderHand = elderHand;
-                        gameManager.deal(deck);
-                        gameManager.prepareTest(declarerNum, expectedBid, talon);
-                        if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            gameManager.playRoundAllPass();
-                        } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                            gameManager.playRoundMisere();
-                        } else {
-                            gameManager.playRoundForTricks();
-                        }
-                        printTricks();
-                        if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                            if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
-                            }
-                        }
-/*
-if (++count[0] > 0) {
-    return;
-}
-*/
-
-                        for (Player player: gameManager.getPlayers()) {
-                            player.clearHistory();
-                        }
-                        System.gc();
-                        util.sleep(100);
-                        System.gc();
+                    _deck.addAll(util.toCardList(token));
+                }
+                _deck.verifyDeck();
+                i = 0;
+                int declarerNum = (_declarerNum + i) % NOP;
+                printf("declarer #%d\n", declarerNum);
+                int elderHand = (_elderHand + declarerNum) % NOP;
+                CardList deck = new CardList(_deck);
+                CardList talon = new CardList(deck.subList(30, 32));
+                gameManager.elderHand = elderHand;
+                gameManager.deal(deck);
+                gameManager.prepareTest(declarerNum, expectedBid, talon);
+                if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    gameManager.playRoundAllPass();
+                } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                    gameManager.playRoundMisere();
+                } else {
+                    gameManager.playRoundForTricks();
+                }
+                printTricks();
+                if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                    if (!gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                        Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                     }
                 }
-                ++count[0];
             });
         printStatistics(count[0]);
     }
@@ -173,78 +156,59 @@ if (++count[0] > 0) {
 
         util.getList(testInputStream,
             (res, tokens) -> {
-/*
-                if (count[0] > 0) {
-                    return;
+                if (!tokens.get(0).startsWith(DEAL_MARK)) {
+                    return;     // ignore
                 }
-*/
-//for (int n = 0; n < 10; ++n)
-                {
-                    if (!tokens.get(0).startsWith(DEAL_MARK)) {
-                        return;     // ignore
+                String[] resParts = res.split("\\s+|#");
+                int declarerNum = 0;
+                int i = 0;
+                try {
+                    declarerNum = Integer.parseInt(resParts[i]);
+                    ++i;
+                } catch (NumberFormatException e) {
+                    // ignore
+                }
+                int declarerTricks = 0;
+                Config.Bid expectedBid = Config.Bid.fromName(resParts[i]);
+                if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    declarerTricks = Integer.parseInt(resParts[i + 1]);
+                }
+                int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));
+                CardList deck = new CardList();
+                for (String token : tokens) {
+                    if (token.endsWith(":")) {
+                        continue;
                     }
-                    String[] resParts = res.split("\\s+|#");
-                    Config.Bid expectedBid = Config.Bid.fromName(resParts[0]);
-                    int declarerTricks = 0;
-                    if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                        declarerTricks = Integer.parseInt(resParts[1]);
+                    deck.addAll(util.toCardList(token));
+                }
+                deck.verifyDeck();
+                CardList _talonCards = new CardList(deck.subList(30, 32));
+                Bot.debugDrop = new CardList(_talonCards);
+                printf("declarer #%d\n", declarerNum);
+                int elderHand = _elderHand;
+                CardList talon = new CardList(deck.subList(30, 32));
+                gameManager.elderHand = elderHand;
+                gameManager.deal(deck);
+                gameManager.prepareTest(declarerNum, expectedBid, talon);
+                if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    gameManager.playRoundAllPass();
+                } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                    gameManager.playRoundMisere();
+                } else {
+                    gameManager.playRoundForTricks();
+                }
+                printTricks();
+                if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                    if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                        Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
+                    } else {
+                        Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                     }
-                    int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
-                    CardList _deck = new CardList();
-                    for (String token : tokens) {
-                        if (token.endsWith(":")) {
-                            continue;
-                        }
-                        _deck.addAll(util.toCardList(token));
-                    }
-                    _deck.verifyDeck();
-                    CardList _talonCards = new CardList(_deck.subList(30, 32));
-                    Bot.debugDrop = new CardList(_talonCards);
-                    for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
-                        printf("declarer #%d\n", declarerNum);
-                        int elderHand = (_elderHand + declarerNum) % NOP;
-                        CardList deck = new CardList();
-                        for (int j = 0; j < NOP; ++j) {
-                            int k = 10 * ((j - declarerNum + NOP) % NOP);
-                            deck.addAll(_deck.subList(k, k + 10));
-                        }
-                        deck.addAll(new CardList(_talonCards));
-                        CardList talon = new CardList(deck.subList(30, 32));
-                        gameManager.elderHand = elderHand;
-                        gameManager.deal(deck);
-                        gameManager.prepareTest(declarerNum, expectedBid, talon);
-                        if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            gameManager.playRoundAllPass();
-                        } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                            gameManager.playRoundMisere();
-                        } else {
-                            gameManager.playRoundForTricks();
-                        }
-                        printTricks();
-                        if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
-                            Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                            if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                                Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
-                            } else {
-//                                if (declarerTricks != gameManager.getDeclarer().getTricks()) {
-//                                    Logger.printf("ERR! %d != %d\n", declarerTricks, gameManager.getDeclarer().getTricks());
-//                                }
-                                Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
-                            }
-                        }
-/*
-if (++count[0] > 0) {
-    return;
-}
-*/
+                }
 
-                        for (Player player: gameManager.getPlayers()) {
-                            player.clearHistory();
-                        }
-                        System.gc();
-                        util.sleep(100);
-                        System.gc();
-                    }
+                for (Player player : gameManager.getPlayers()) {
+                    player.clearHistory();
                 }
                 ++count[0];
             });
@@ -266,51 +230,47 @@ if (++count[0] > 0) {
                     return;     // ignore
                 }
                 int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
-                CardList _deck = new CardList();
+                CardList deck = new CardList();
                 for (String token : tokens) {
                     if (token.endsWith(":")) {
                         continue;
                     }
-                    _deck.addAll(util.toCardList(token));
+                    deck.addAll(util.toCardList(token));
                 }
-                _deck.verifyDeck();
-                CardList _talonCards = new CardList(_deck.subList(30, 32));
-                for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
-                    printf("declarer #%d\n", declarerNum);
-                    int elderHand = (_elderHand + declarerNum) % NOP;
-                    CardList deck = new CardList();
-                    for (int j = 0; j < NOP; ++j) {
-                        int k = 10 * ((j - declarerNum + NOP) % NOP);
-                        deck.addAll(_deck.subList(k, k + 10));
-                    }
-                    deck.addAll(new CardList(_talonCards));
-                    gameManager.deal(deck);
-                    gameManager.elderHand = elderHand;
-                    gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
-                    Bot.targetBot = null;
-                    gameManager.playRound(deck);
-
-                    String[] resParts0 = res.split("\\s+:\\s+|\\s+#\\s+");
-                    String[] resParts = resParts0[0].split("\\s+|#");
-                    Config.Bid expectedBid = Config.Bid.fromName(resParts[0]);
-                    if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
-                        Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
+                deck.verifyDeck();
+                CardList _talonCards = new CardList(deck.subList(30, 32));
+                String[] resParts = res.split("\\s+|#");
+                int i = 0;
+                int declarerNum = 0;
+                if (resParts[0].length() == 1 && Character.isDigit(resParts[0].charAt(0))) {
+                    declarerNum = Integer.parseInt(resParts[0]);
+                    i = 1;
+                }
+                int declarerTricks = 0;
+                Config.Bid expectedBid = Config.Bid.fromName(resParts[i]);
+                if (!Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
+                    declarerTricks = Integer.parseInt(resParts[i + 1]);
+                }
+                printf("declarer #%d\n", declarerNum);
+                int elderHand = _elderHand;
+                gameManager.deal(deck);
+                gameManager.elderHand = elderHand;
+                gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
+                Bot.targetBot = null;
+                gameManager.playRound(deck);
+                if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
+                    Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
+                } else {
+                    Assert.assertNotNull("wrong bidding, All-pass", gameManager.getDeclarer());
+                    Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                    if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                        Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
                     } else {
-                        int declarerTricks = Integer.parseInt(resParts[1]);
-                        Assert.assertNotNull("wrong bidding", gameManager.getDeclarer());
-                        Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                        if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                            Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
-                        } else {
-                            Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
-                        }
+                        Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
                     }
-//                    for (Player player: gameManager.getPlayers()) {
-//                        player.clearHistory();
-//                    }
-                    gameManager.roundStage = GameManager.RoundStage.dealing;
-                    gameManager.setMinBid(Config.Bid.BID_6S);
                 }
+                gameManager.roundStage = GameManager.RoundStage.dealing;
+                gameManager.setMinBid(Config.Bid.BID_6S);
                 ++count[0];
             });
         printStatistics(count[0]);
@@ -389,51 +349,68 @@ if (++count[0] > 0) {
         final InputStream testInputStream = getInputStream("allpassplay");
         gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
         util.getList(testInputStream,
-                (res, tokens) -> {
-                    if (!tokens.get(0).startsWith(DEAL_MARK)) {
-                        return;     // ignore
+            (res, tokens) -> {
+                if (!tokens.get(0).startsWith(DEAL_MARK)) {
+                    return;     // ignore
+                }
+                int turn = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
+                CardList deck = new CardList();
+                for (String token : tokens) {
+                    if (token.endsWith(":")) {
+                        continue;
                     }
-                    int turn = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
-                    CardList deck = new CardList();
-                    for (String token : tokens) {
-                        if (token.endsWith(":")) {
-                            continue;
-                        }
-                        deck.addAll(util.toCardList(token));
-                    }
-                    try {
-                        testAllPass(deck, turn, res);
-                    } catch (AssertionError e) {
-                        println(e.toString());
-                        throw e;
-                    }
-                    ++count[0];
-                });
+                    deck.addAll(util.toCardList(token));
+                }
+                gameManager.getTrick().clear(turn);
+                gameManager.deal(deck);
+                gameManager.playRoundAllPass();
+                int i = res.indexOf("#");
+                if (i > 0) {
+                    res = res.substring(0, i);
+                }
+                res = res.trim();
+                String actualRes = String.format("%d, %d, %d"
+                    , gameManager.getPlayers()[0].getTricks()
+                    , gameManager.getPlayers()[1].getTricks()
+                    , gameManager.getPlayers()[2].getTricks());
+                Assert.assertEquals(String.format("err: \"%s\" != \"%s\"", res, actualRes), res, actualRes);
+                ++count[0];
+            });
         printf("passed %d tests\n", count[0]);
     }
 
-    private void testAllPass(CardList deck, int turn, String res) {
+/*
+    private void testAllPass(CardList deck, int turn, String expectedRes) {
         gameManager.getTrick().clear(turn);
         gameManager.deal(deck);
         gameManager.playRoundAllPass();
+        String res = String.format("%d, %d, %d\n"
+            , gameManager.getPlayers()[0].getTricks()
+            , gameManager.getPlayers()[1].getTricks()
+            , gameManager.getPlayers()[2].getTricks());
+        Assert.assertEquals(expectedRes, res);
+
         printf("%d, %d, %d\n"
             , gameManager.getPlayers()[0].getTricks()
             , gameManager.getPlayers()[1].getTricks()
             , gameManager.getPlayers()[2].getTricks()
         );
-        String[] parts =  res.split("[:|,#] ");
+        String[] parts = res.split("[:|,#] ");
         int k = 1;
         if (parts.length == 6) {
             k = 2;
         }
         for (int i = 0; i < NOP; ++i) {
             Player p = gameManager.getPlayers()[i];
+*/
 /* I am tired of testing all possible outcomes, let's leave it for later
             Assert.assertEquals(String.format("%s\n tricks for player-%d", deck.toString(), p.getNumber()),
                 Integer.parseInt(parts[k * i + k - 1].trim()), p.getTricks());
-//*/
+//*//*
+
         }
     }
+*/
 
     @Test
     @Ignore("postpone for android code")

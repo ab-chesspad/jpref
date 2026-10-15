@@ -75,11 +75,11 @@ public class PConfig extends Config {
     public static class ColorProperty extends Property<String> {
 
         public ColorProperty(String name, String value) {
-            super(name, true, value);
+            super(name, Visual.yes, value);
         }
 
         public ColorProperty(String name, Color color) {
-            super(name, true, String.format("#%06X", color.getRGB() & 0xffffff));
+            super(name, Visual.yes, String.format("#%06X", color.getRGB() & 0xffffff));
         }
 
         public void setColor(Color color) {

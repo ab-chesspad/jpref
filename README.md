@@ -1,15 +1,15 @@
 # JPref
 JPref is a Java program to play Russian Preference (преферанс).  
 
-[documentation](http://jpref.elementfx.com/)  
+[description](http://jpref.elementfx.com/)  
 
-[документация](http://jpref.elementfx.com/ru)  
+[описание](http://jpref.elementfx.com/ru)  
 
 The program can be built with IntelliJ or Maven. There are three data files in etc/doc directory, utyatsky-1, utyatsky-2 and
 tricks-src that are the sources for JPref resource files. The script prebuild is used to build them in case the sources get
 updated.
 
-Installation on Android phone:
+Installation on Android phone/device:
 1. Open https://github.com/ab-chesspad/jpref/raw/refs/heads/main/DPref/app/build/outputs/apk/debug/app-debug.apk in Chrome (or any browser) on the phone.
 2. Chrome may block the download. Tap Keep or Download anyway. If there's no such option, you can use adb, search the Web.
 3. When the download finishes, tap the notification, or open the file in Files → Downloads.
