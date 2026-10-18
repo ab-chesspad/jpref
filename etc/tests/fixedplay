@@ -1,32 +1,69 @@
-#fixedplay: hands, talon, elderhand -> bid, tricks
-# declarer #0, must drop talon
+#fixedplay: hands, talon, elderhand -> [declarer,] bid, tricks
+# must drop talon
 
 #*** exit ***
-#########
-deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> All-pass
-deal: ♠79 ♣79JQA ♦XJ ♥J  ♠8A ♣8 ♦89A ♥89KA  ♠XJQ ♣XK ♦7Q ♥7XQ  ♦K ♠K  1 -> All-pass
+deal: ♠89 ♣789K ♥789X  ♠7J ♣X ♦789Q ♥JQK  ♠KA ♣JQA ♦XJKA ♥A  ♠XQ 1 -> Misère 1 # 64 # Скуратов 2
+deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # 63 Ласкера, 2 или 3 взятки
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣XJ ♦XA ♥XQKA  ♠9QKA ♣89Q ♦8QK   ♣KA  1 -> Misère 1 # 62 ловится ♠7X
+deal: ♠7XJ ♣89 ♦89 ♥79J  ♠89Q ♣7XK ♦XQ ♥8X  ♠KA ♣JQ ♦7JK ♥QKA  ♦A ♣A  1 -> Misère 1 # 61 etude 1
+deal: ♠789XJ ♣9 ♦78X ♥7  ♠K ♣8XJQK  ♥8XQK  ♠QA ♣7A ♦9JQK ♥9J  ♦A ♥A  1 -> Misère 1 # 60 etude 2
+deal: ♠79QK ♣8K ♦XQ ♥XK  ♠X ♣79JQ ♦J ♥78JQ  ♠A ♣XA ♦789KA ♥9A  ♠J8  1 -> Misère 1 # 59 etude 3
+deal: ♠7XJQ ♣J ♦8 ♥78XA  ♠KA ♣9XK ♦7Q ♥9JQ  ♠89 ♣78QA ♦XJA ♥K  ♦K9  1 -> Misère 1 # 58 etude 4
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣7A ♦9JQK ♥9J   ♠K ♣8XJQK  ♥8XQK   ♦A ♥A  0 -> Misère 1 # 57 ловится ♣9
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QKA ♣78 ♦9JQK ♥J   ♣XJQKA  ♥89XQK   ♦A ♥A  1 -> Misère 1 # 56 ♣9
+deal: ♠7X ♣78 ♦79J ♥79J  ♠JQK ♣9XJQ ♦XK ♥K  ♠89A ♦8QA ♥8XQA  ♣KA  1 -> Misère 1 # 55 ♠7X 1
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8JA ♣XJ ♦XA ♥XKA  ♠9QK ♣89Q ♦8QK ♥Q  ♣KA  1 -> Misère 1 # 54 ловится ♠7X 5
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠QKA ♣9XJ ♦A ♥8XK  ♠89 ♣8Q ♦8XQK ♥QA  ♣KA  1 -> Misère 1 # 53 ловится ♠7XJ 1
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠89A ♣8Q ♦8QA ♥QA  ♠QK ♣9XJ ♦XK ♥8XK  ♣KA  1 -> Misère 1 # 52 ловится ♠7XJ 2
+deal: ♠7XJ ♣7 ♦79J ♥79J  ♠89 ♣8Q ♦8XQA ♥QA  ♠QKA ♣9XJ ♦K ♥8XK  ♣KA  1 -> Misère 1 # 51 ловится ♠7XJ
+deal: ♠79Q ♣79K ♦789 ♥7   ♠8KA ♣XQ ♦XK ♥89A  ♠XJ ♣8JA ♦JQA ♥XJ  ♥QK  1 -> Misère 1 # 50 ловится ♠79Q
+deal: ♠79K ♣79Q ♦789 ♥7   ♠XQ ♣8KA ♦XK ♥89A  ♠8JA ♣XJ ♦JQA ♥XJ  ♥QK  1 -> Misère 1 # 49 ловится ♣79Q
+deal: ♠Q ♣8J ♦7XJK ♥78Q  ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠8K  2 -> Misère 1 # 48
+deal: ♠9JK ♣JK ♦78X ♥8A  ♣9QA ♦9JK ♥7XJQ  ♠78QA ♣78 ♦QA ♥9K  ♠X ♣X  0 -> Misère 1 # 46
+deal: ♠78Q ♣9J ♦89A ♥8A   ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK     ♥JQ 2  -> Misère 1 # 45
+deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> Misère 1 # 44
+deal: ♠9JQA ♣7K ♦8JQ ♥X   ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♦7X 2 -> Misère 1 # 43
+deal: ♠78KA ♣JQ ♦9XJK   ♠J ♣7KA ♦Q ♥89JKA   ♠9XQ ♣9 ♦78A ♥7XQ     ♣8X 1 -> Misère 1 # 42
+deal: ♠J ♣7KA ♦Q ♥89JKA   ♠9 ♣9JQ ♦78A ♥7XQ   ♠78XQKA ♦9XJK     ♣8X 1 -> Misère 1 # 41
+deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> Misère 1 # 40
+deal: ♠XQK ♣X ♦XA ♥89XJ  ♠9JA ♣8J ♦8JQK ♥7  ♠78 ♣79KA ♦79 ♥QA  ♥K ♣Q  1 -> Misère 1 # 39
+deal: ♠9JA ♣7Q ♦8J ♥89K   ♠8 ♣9JA ♦9QK ♥7QA   ♠7K ♣8XK ♦7XA ♥XJ     ♠XQ 1 -> Misère 1 # 38
+deal: ♠9 ♣8JQK ♦8Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♦9 ♠7  0 -> Misère 1 # 37
+deal: ♣8JQK ♦89Q ♥79K  ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79  1 -> Misère 1 # 36
+deal: ♠9Q ♣78X ♦XA ♥8KA   ♠78J ♣QKA ♦9JQ ♥X   ♠XKA ♣9 ♦78K ♥79J   ♣J ♥Q 2 -> Misère 1 # 35
+deal: ♣XK ♦789XQ ♥78Q  ♠7J ♣79J ♦K ♥9JKA  ♠9XQA ♣8QA ♦JA ♥X  ♠8K  0 -> Misère 1 # 33
+deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # 32
+deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # 31
+deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> Misère 1 # 30
+deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1 #29
+deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # 28
+deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # 26
+deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # 25 ловится ♥7X
+deal: ♠7Q ♣78Q ♦79XK ♥8  ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♦Q ♥X  2 -> Misère 1 # 24
+deal: ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠X ♣78A ♦8X ♥78JK  ♠9A  2 -> 2 Misère 1 # 23
+deal: ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♠7Q ♣78Q ♦79XK ♥8  ♦Q ♥X  2 -> 2 Misère 1 # 22
+deal: ♠9 ♣7XJQK ♦79XQ  ♠8XKA ♣A ♦8KA ♥8J  ♠7JQ ♣89 ♦J ♥79QA  ♥KX  0 -> Misère 1 # 21
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8JQKA ♦XA ♥XQK  ♠9 ♣89XJQ ♦8QK ♥A  ♣KA  1 -> Misère 1 # 20 ловится ♠7X
 
-deal: ♠X ♣78A ♦8X ♥78JK  ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠9A  0 -> Misère 1 # 19 ловится
-deal: ♠QK ♣9XJK ♦7KA ♥9  ♠78J ♣Q ♦9JQ ♥XQA  ♠X ♣78A ♦8X ♥78JK  ♠9A  2 -> 2 Misère 1 # ловится
-deal: ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♠7Q ♣78Q ♦79XK ♥8  ♦Q ♥X  2 -> 2 Misère 1 # ловится
+deal: ♠89 ♣789K ♥789X  ♠7J ♣X ♦789Q ♥JQK  ♠KA ♣JQA ♦XJKA ♥A  ♠XQ 0 -> Misère 0 # 12 Скуратов 2 ♠9 и не ловится
+deal: ♠78XQ ♣8 ♦8 ♥7XQA  ♠9JK ♣7JA ♦9K ♥JK   ♠A ♣9XQK ♦7XJ ♥89  ♦QA 2 -> Misère 0 # 11
+deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK ♥QA  ♠KA 1 -> Misère 0 #10
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 9 не ловится ♣9 2
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣8XJ ♦XA ♥XQA  ♠9QKA ♣9Q ♦8QK ♥K  ♣KA  1 -> Misère 0 # 8 не ловится ♠7X
+deal: ♠7X ♣7 ♦79J ♥789J  ♠8 ♣9XJQ ♦XA ♥XKA  ♠9JQKA ♣8 ♦8QK ♥Q  ♣KA  1 -> Misère 0 # 7
+deal: ♠789X ♣8 ♦789 ♥89  ♠JK ♣79 ♦XJQK ♥7J  ♠QA ♣XJQ ♦A ♥XQKA   ♣KA 1 -> Misère 0 # 6 reversed Ковалевская
+deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # 5 preferans.de/004
+deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> 2 Misère 0 # 4 https://preferans.de/004
+deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 2
+deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  1 -> Misère 0 # 1 не ловится ♣9
 
 deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
-
-
 deal: ♣X ♦78XJQK ♥9QK  ♠89XA ♣7JA ♥8XA  ♠JQK ♣9QK ♦9A ♥7J  ♠7 ♣8  1 -> 6♦ 6
-
-deal: ♠7Q ♣78Q ♦79XK ♥8  ♠8JKA ♣A ♦A ♥79JA  ♠9X ♣9XJK ♦8J ♥QK  ♦Q ♥X  2 -> Misère 1 # ловится
-deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
-deal: ♠89QA ♣79A ♦7 ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠J ♦K  2 -> Misère 1 # ловится
-deal: ♠7 ♣KQ ♦J ♣X ♥X ♦Q ♥8 ♦9 ♣8  ♣79 ♠98 ♦7 ♥K ♠Q ♣A ♠A ♥A ♠X ♦XA8 ♠K ♥Q97J ♣J ♠J ♦K 0 -> Misère 1 # ловится
-deal: ♠JQA ♣79A ♦7K ♥KA  ♠XK ♣J ♦8XA ♥97JQ  ♠7 ♣8XKQ ♦9JQ ♥8X  ♠89  2 -> Misère 1 # ловится
-
 deal: ♣7KA ♦78A ♥79JA  ♠9XK ♣9XQ ♦9Q ♥8Q  ♠7QA ♣8J ♦XJK ♥XK  ♠8J  1 -> 6♥ 6
 deal: ♠79K ♣9Q ♦QKA ♥JA  ♣XJA ♦7XJ ♥79XK  ♠8XQA ♣78K ♦8 ♥8Q  ♦9 ♠J  1 -> 6♠ 3
 deal: ♠89 ♣9A ♦9Q ♥8JKA  ♠7JA ♣7JQ ♦7K ♥7Q  ♠QK ♣8XK ♦8XJ ♥9X  ♦A ♠X  1 -> 6♥ 5
 deal: ♠XQK ♣7XKA ♦9XQ  ♠9J ♣9J ♦8 ♥78XJA  ♠7A ♣8Q ♦7JK ♥9QK  ♦A ♠8  2 -> 6♣ 6
 deal: ♠8JQKA ♣XQ ♦9XA  ♠7 ♣9JA ♦8Q ♥JQKA  ♠9X ♣78K ♦7JK ♥89  ♥7X  0 -> 6- 6
-
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9Q ♣XQ ♦JQK ♥9XK   ♠78 ♣9J ♦89XA ♥8A     ♥JQ 1  -> 6♣ 8
 
 [♥AJ9, ♥8QK, ♥X ♣JK, ♠K9Q, ♣AX9, ♠X ♣Q ♠7, ♦XA ♣7, ♠J ♦J ♠8, ♠A ♦Q8, ♣8 ♦K9]
@@ -36,16 +73,6 @@ deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89
 deal: ♠XJKA ♣78KA ♦7 ♥7   ♠9 ♣XQ ♦XJQK ♥9XK   ♠78Q ♣9J ♦89A ♥8A     ♥JQ 2  -> 6♣ 7
 
 deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> 6♦ 4
-deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠QK  2 -> Misère 1 # ловится
-deal: ♠9JA ♣9JK ♦XQ ♥JQ  ♠78 ♣78 ♦79K ♥78K  ♠X ♣XQA ♦8JA ♥9XA  ♠QK  2 -> Misère 1 # ловится
-deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 1 не ловится
-
-[♠X89, ♠7AK, ♠J ♦Q ♣K, ♣89X, ♦7X ♥A, ♦8 ♥J ♦9, ♦J ♥QX, ♦K ♥89, ♦A ♣AJ, ♥7 ♣Q7]
-deal: ♠7Q ♣X ♦79JKA ♥7K  ♠8JA ♣8QA ♦8X ♥8Q  ♠9K ♣79J ♦Q ♥9XJA  ♣K ♠X  0 -> Misère 1 # ловится xx
-
-deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # 2, diff drop, не ловится
-deal: ♠8 ♣89 ♦789 ♥789X   ♠9XA ♣XJQA ♦K ♥QK  ♠7J ♣7K ♦XJQA ♥JA   ♠QK   1 -> Misère 2 # Ласкера, 2 или 3 взятки
-deal: ♠78Q ♣A ♦79XQ ♥7K  ♠9XJ ♣Q ♦JK ♥89XQ  ♠KA ♣89XJK ♦8A ♥A  ♥J ♣7  0 -> Misère 1
 
 [♠87 ♥7, ♣87J, ♠9 ♥J ♠X, ♣9 ♥X ♣Q, ♠JA ♥Q, ♣A ♠K ♣K, ♣X ♦7 ♥8, ♦9A8, ♦JQ ♥9, ♥AK ♦K]
 deal: ♣89XA ♦XA ♥7JQK  ♠8XJK ♣7 ♦78QK ♥X  ♠79A ♣JQK ♦9 ♥89A  ♠Q ♦J  1 -> 6♥ 5
@@ -65,14 +92,14 @@ list build duration: 104 msec, positions 121,512, similar 792,071
 [♥XQA, ♦AXJ, ♦KQ ♥7, ♦9 ♥K8, ♦8 ♣8 ♥J, ♦7 ♣K7, ♣A ♠7 ♣9, ♠AKX, ♠JQ ♣J, ♠9 ♣Q ♠8]
 deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J ♥QJ87   ♠J8  1 -> 7♦ 8
 
-deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79 ♣8JQK ♦89Q ♥7   ♥9K  2 -> 6♦ 6
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
 
 ######## todo: test all-pass tricks
 deal: ♠89XA ♣7X ♦8JA ♥8  ♠7K ♣8A ♦79Q ♥JKA  ♠JQ ♣9JQ ♦XK ♥7XQ  ♥9 ♣K  0 -> All-pass
+deal: ♠79 ♣79JQA ♦XJ ♥J  ♠8A ♣8 ♦89A ♥89KA  ♠XJQ ♣XK ♦7Q ♥7XQ  ♦K ♠K  1 -> All-pass
+
 deal: ♠JK ♣89A ♦8JK ♥9Q  ♠8Q ♣7J ♦7A ♥8JKA  ♠79XA ♣Q ♦9XQ ♥7X  ♣XK  1 -> All-pass
-deal: ♠89K ♣J ♦8XJQA ♥8  ♠Q ♣9A ♦79K ♥79QK  ♠7XA ♣78XK ♥XJA  ♠J ♣Q  2 -> All-pass
 deal: ♠89XA ♣7XK ♦KA ♥9  ♠7JK ♣89 ♦8X ♥8JA  ♠Q ♣JA ♦79J ♥7XQK  ♦Q ♣Q  1 -> All-pass # 6♣ 7
 deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♣KA  1 -> All-pass
 deal: ♠9QK ♣8K ♦XQA ♥9K  ♠7XJA ♣JQ ♦78 ♥78  ♠8 ♣79X ♦9JK ♥JQA  ♣A ♥X  0 -> All-pass

@@ -40,11 +40,6 @@ public class TestGameManager extends BaseTest {
         config.pauseBetweenRounds.set(0);
     }
 
-    @Before
-    public void initTest() {
-        Bot.targetBot = null;
-    }
-
     private void printStatistics(int count) {
         SimpleLongIntMap.printStatistics();
         printf("done %d tests, maxTreeBuildTime %d msec, maxSimilar %,d, maxPoolCount %,d\n", count,
@@ -238,7 +233,7 @@ public class TestGameManager extends BaseTest {
                     deck.addAll(util.toCardList(token));
                 }
                 deck.verifyDeck();
-                CardList _talonCards = new CardList(deck.subList(30, 32));
+//                CardList _talonCards = new CardList(deck.subList(30, 32));
                 String[] resParts = res.split("\\s+|#");
                 int i = 0;
                 int declarerNum = 0;
@@ -256,7 +251,6 @@ public class TestGameManager extends BaseTest {
                 gameManager.deal(deck);
                 gameManager.elderHand = elderHand;
                 gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
-                Bot.targetBot = null;
                 gameManager.playRound(deck);
                 if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
                     Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
@@ -290,8 +284,8 @@ public class TestGameManager extends BaseTest {
                 }
                 String[] resParts0 = res.split("\\s+:\\s+|\\s+#\\s+");
                 String[] resParts = resParts0[0].split("\\s+|#");
-                boolean delayedDrop = "d".equals(resParts[0]);
-                boolean clean = "0".equals(resParts[0]);
+                int tot = 2;    // delayed drop, drop 1st, last
+                boolean clean = false;
                 int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
                 CardList _deck = new CardList();
                 for (String token : tokens) {
@@ -302,10 +296,6 @@ public class TestGameManager extends BaseTest {
                 }
                 _deck.verifyDeck();
                 CardList _talonCards = new CardList(_deck.subList(30, 32));
-                int tot = 1;
-                if (delayedDrop) {
-                    tot = 2;
-                }
                 for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                     printf("declarer #%d\n", declarerNum);
                     int elderHand = (_elderHand + declarerNum) % NOP;
@@ -378,39 +368,6 @@ public class TestGameManager extends BaseTest {
             });
         printf("passed %d tests\n", count[0]);
     }
-
-/*
-    private void testAllPass(CardList deck, int turn, String expectedRes) {
-        gameManager.getTrick().clear(turn);
-        gameManager.deal(deck);
-        gameManager.playRoundAllPass();
-        String res = String.format("%d, %d, %d\n"
-            , gameManager.getPlayers()[0].getTricks()
-            , gameManager.getPlayers()[1].getTricks()
-            , gameManager.getPlayers()[2].getTricks());
-        Assert.assertEquals(expectedRes, res);
-
-        printf("%d, %d, %d\n"
-            , gameManager.getPlayers()[0].getTricks()
-            , gameManager.getPlayers()[1].getTricks()
-            , gameManager.getPlayers()[2].getTricks()
-        );
-        String[] parts = res.split("[:|,#] ");
-        int k = 1;
-        if (parts.length == 6) {
-            k = 2;
-        }
-        for (int i = 0; i < NOP; ++i) {
-            Player p = gameManager.getPlayers()[i];
-*/
-/* I am tired of testing all possible outcomes, let's leave it for later
-            Assert.assertEquals(String.format("%s\n tricks for player-%d", deck.toString(), p.getNumber()),
-                Integer.parseInt(parts[k * i + k - 1].trim()), p.getTricks());
-//*//*
-
-        }
-    }
-*/
 
     @Test
     @Ignore("postpone for android code")

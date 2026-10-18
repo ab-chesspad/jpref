@@ -179,7 +179,7 @@ public class GameManager implements Serializable {
     // whisters do not know the declarer's drops
     public Player getDeclarerForDefender() {
         Bot fictitiousBot = new Bot(this.declarer);
-        fictitiousBot.myHand = new CardSet(declarerHand);
+        fictitiousBot.myHand.set(declarerHand);
         return fictitiousBot;
     }
 
@@ -370,6 +370,9 @@ public class GameManager implements Serializable {
             }
             discarded.remove(p.leftHand);
             discarded.remove(p.rightHand);
+            if (p instanceof Bot) {
+                ((Bot)p).targetBot = null;
+            }
         }
         declarer = null;
         this.trick.clear(elderHand);
@@ -383,7 +386,6 @@ public class GameManager implements Serializable {
         allPassFactor = 0;
         playedAllPass = false;
         biddingPassCount = 0;
-        Bot.targetBot = null;
         if (declarerNum >= 0) {
             this.declarerNumber = declarerNum;
             this.declarer = this.players[declarerNum];
@@ -404,25 +406,10 @@ public class GameManager implements Serializable {
             }
             this.declarerHand = new CardSet(this.declarer.myHand);
             if (declarerNum >= 0) {
-                // roundStage is still at its default (dealing) here, so playRoundForTricks()/
-                // playRoundMisere() would skip their own declareRound() call entirely; without
-                // this, Bot.play()'s targetBot==null fallback runs declareRound() on a throwaway
-                // proxy (getDeclarerForDefender(), meant only for a human declarer) instead of
-                // the real declarer, so the drop never actually reduces this.declarer.myHand -
-                // it silently drops from a discarded copy instead, leaving phantom cards in
-                // this.declarer's hand for the rest of the round. Call it directly on the real
-                // declarer here, then restore the forced bid on both this.declarer and
-                // targetBot: declareRound() (via ForTricksBot/MisereBot.getDrop()) always
-                // recomputes bid from the bot's own judgement of the hand - normally fine, since
-                // real bidding only ever reaches declareRound() with a bid the declarer judged
-                // achievable, but a bid forced here for testing can be far beyond what the dealt
-                // hand supports, in which case that judgement can come back null. targetBot (not
-                // this.declarer) is what declarerPlay()/the search actually reads afterward, so
-                // it needs the restored bid too, or it NPEs the first time it's consulted.
                 this.declarer.declareRound(bid, elderHand, null);
                 this.declarer.bid = bid;
-                if (Bot.targetBot != null) {
-                    Bot.targetBot.bid = bid;
+                if (!bid.equals(Bid.BID_MISERE)) {
+                    ForTricksBot.getInstance().bid = bid;
                 }
             }
             printf("declarer %s, round %s, %s\n",
@@ -734,6 +721,7 @@ loop:
                     break;
                 }
             }
+            println(trick);
             println(trick.toColorString());
             lastTrickCards.clear();
             players[trick.getTop()].incrementTricks();
@@ -760,23 +748,48 @@ loop:
         int declarerNum = declarer.getNumber();
         Player left = players[(declarerNum + 1) % NOP];
         Player right = players[(declarerNum + 2) % NOP];
-        declarer.leftHand = new CardSet(left.myHand);
-        declarer.rightHand = new CardSet(right.myHand);
-        if (Bot.targetBot != null) {
-            Bot.targetBot.leftHand = declarer.leftHand;
-            Bot.targetBot.rightHand = declarer.rightHand;
+        // copies, no player shares its hands with another player or a bot singleton
+        declarer.leftHand.set(left.myHand);
+        declarer.rightHand.set(right.myHand);
+        ForTricksBot.getInstance().leftHand.set(left.myHand);
+        ForTricksBot.getInstance().rightHand.set(right.myHand);
+        MisereBot.getInstance().leftHand.set(left.myHand);
+        MisereBot.getInstance().rightHand.set(right.myHand);
+        left.rightHand.set(declarerHand);
+        left.leftHand.set(right.myHand);
+        right.leftHand.set(declarerHand);
+        right.rightHand.set(left.myHand);
+    }
+
+    // the player shows the hand: the others and the target bots know it, the list is built anew
+    public void revealHand(int number) {
+        CardSet hand = players[number].myHand;
+        players[(number + 1) % NOP].rightHand.set(hand);
+        players[(number + 2) % NOP].leftHand.set(hand);
+        if (declarer == null) {
+            return;     // all-pass
         }
-        left.rightHand = new CardSet(declarerHand);
-        left.leftHand = new CardSet(right.myHand);
-        right.leftHand = new CardSet(declarerHand);
-        right.rightHand = new CardSet(left.myHand);
+        if (number == declarerNumber) {
+            // no drop to guess
+            declarerHand.set(hand);
+            ForTricksBot.getInstance().myHand.set(hand);
+            MisereBot.getInstance().myHand.set(hand);
+        } else if ((number - declarerNumber + NOP) % NOP == 1) {
+            ForTricksBot.getInstance().leftHand.set(hand);
+            MisereBot.getInstance().leftHand.set(hand);
+        } else {
+            ForTricksBot.getInstance().rightHand.set(hand);
+            MisereBot.getInstance().rightHand.set(hand);
+        }
+        TrickList.getInstance().initBuild(null);
     }
 
     private void incrementTricks() {
         Player p = players[trick.getTop()];
         p.incrementTricks();
-        if (Bot.targetBot != null && p == this.declarer) {
-            Bot.targetBot.setTricks(p.getTricks());
+        if (p == this.declarer) {
+            ForTricksBot.getInstance().setTricks(p.getTricks());
+            MisereBot.getInstance().setTricks(p.getTricks());
         }
     }
 
@@ -1039,6 +1052,8 @@ loop:
             }
             printf("\n");
             trick.minBid = this.minBid;
+            // leave trickTaken, otherwise a human leading the trick cannot drag a card
+            update(RoundStage.play);
             Player lastPlayer = null;
             for (int j = trick.size(); j < players.length; ++j) {
                 Player player = players[trick.getTurn()];
@@ -1059,6 +1074,9 @@ loop:
                 declarerHand.remove(card);
                 if (c == 0 && j == 0 && player == declarer) {
                     revealCards();
+                }
+                if (player instanceof Bot) {
+                    sleep(config().pauseBetweenMoves.get());
                 }
                 update(RoundStage.play);
             }

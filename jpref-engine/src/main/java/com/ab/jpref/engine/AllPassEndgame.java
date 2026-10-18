@@ -22,8 +22,7 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 
 import static com.ab.jpref.config.Config.NOP;
 
@@ -38,15 +37,22 @@ class AllPassEndgame {
     // in my hand; from 6 cards on, solving with open cards gains nothing and from 7 it plays worse
     static final int MAX_CARDS = 5;
 
-    // trick-start positions: who holds each card (2 bits per bit position) and the leader
-    private final Map<Long, int[]>[] memo;
+    // tricks of all players packed in an int, 4 bits per player
+    private static final int TRICK_BITS = 4;
+    private static final int TRICK_MASK = (1 << TRICK_BITS) - 1;
 
-    @SuppressWarnings("unchecked")
+    // trick-start positions: who holds each card (2 bits per bit position) and the leader
+    private final Memo[] memo;
+
     AllPassEndgame() {
-        memo = new Map[NOP];
+        memo = new Memo[NOP];
         for (int i = 0; i < NOP; ++i) {
-            memo[i] = new HashMap<>();
+            memo[i] = new Memo();
         }
+    }
+
+    private static int tricks(int packed, int player) {
+        return (packed >> (TRICK_BITS * player)) & TRICK_MASK;
     }
 
     /**
@@ -102,6 +108,7 @@ class AllPassEndgame {
         int[] cards = bits(legal);
         long[] total = new long[candidates];
         int worlds = worldLeftHands.length;
+        int all = myHand | unseen | trickBits;
         for (int leftHand : worldLeftHands) {
             int rightHand = unseen & ~leftHand;
             int[] h = new int[NOP];
@@ -110,6 +117,9 @@ class AllPassEndgame {
             h[right] = rightHand;
             for (int c = 0; c < candidates; ++c) {
                 int bit = cards[c];
+                if (c > 0 && equivalent(cards[c - 1], bit, all)) {
+                    continue;   // the same tricks, copied below
+                }
                 h[me] ^= bit;
                 int newSuitMask = played == 0 ? suitMaskOf(bit) : suitMask;
                 int newTopBit = topBit;
@@ -118,13 +128,18 @@ class AllPassEndgame {
                     newTopBit = bit;
                     newTop = me;
                 }
-                int[] r = play(h, leader, played + 1, newSuitMask, newTopBit, newTop, trickBits | bit);
-                total[c] += r[me];
+                int r = play(h, leader, played + 1, newSuitMask, newTopBit, newTop, trickBits | bit);
+                total[c] += tricks(r, me);
                 h[me] ^= bit;
             }
         }
         if (worlds == 0) {
             return null;
+        }
+        for (int c = 1; c < candidates; ++c) {
+            if (equivalent(cards[c - 1], cards[c], all)) {
+                total[c] = total[c - 1];
+            }
         }
         int best = -1;
         for (int c = 0; c < candidates; ++c) {
@@ -183,18 +198,16 @@ class AllPassEndgame {
         return res;
     }
 
-    // tricks of every player from a position inside a trick to the end;
+    // tricks of every player from a position inside a trick to the end, packed;
     // h holds the cards not played yet
-    private int[] play(int[] h, int leader, int k, int suitMask, int topBit, int top, int trickBits) {
+    private int play(int[] h, int leader, int k, int suitMask, int topBit, int top, int trickBits) {
         if (k == NOP) {
-            int[] r = solve(h, top).clone();
-            ++r[top];
-            return r;
+            return solve(h, top) + (1 << (TRICK_BITS * top));
         }
         int p = (leader + k) % NOP;
         int legal = legal(h[p], suitMask);
         int all = h[0] | h[1] | h[2] | trickBits;
-        int[] best = null;
+        int best = -1;
         int prevBit = 0;
         for (int bit = CardSet.next(legal, 0); bit != 0; prevBit = bit, bit = CardSet.next(legal, bit)) {
             if (prevBit != 0 && equivalent(prevBit, bit, all)) {
@@ -207,26 +220,26 @@ class AllPassEndgame {
                 newTopBit = bit;
                 newTop = p;
             }
-            int[] r = play(h, leader, k + 1, suitMask, newTopBit, newTop, trickBits | bit);
+            int r = play(h, leader, k + 1, suitMask, newTopBit, newTop, trickBits | bit);
             h[p] ^= bit;
-            if (best == null || r[p] < best[p]) {
+            if (best < 0 || tricks(r, p) < tricks(best, p)) {
                 best = r;
             }
         }
         return best;
     }
 
-    // tricks of every player from the start of a trick to the end
-    private int[] solve(int[] h, int leader) {
+    // tricks of every player from the start of a trick to the end, packed
+    private int solve(int[] h, int leader) {
         if (h[leader] == 0) {
-            return new int[NOP];
+            return 0;
         }
         long key = key(h);
-        int[] res = memo[leader].get(key);
-        if (res != null) {
+        int res = memo[leader].get(key);
+        if (res >= 0) {
             return res;
         }
-        int[] best = null;
+        int best = -1;
         int all = h[0] | h[1] | h[2];
         int prevBit = 0;
         int mine = h[leader];
@@ -235,9 +248,9 @@ class AllPassEndgame {
                 continue;
             }
             h[leader] ^= bit;
-            int[] r = play(h, leader, 1, suitMaskOf(bit), bit, leader, bit);
+            int r = play(h, leader, 1, suitMaskOf(bit), bit, leader, bit);
             h[leader] ^= bit;
-            if (best == null || r[leader] < best[leader]) {
+            if (best < 0 || tricks(r, leader) < tricks(best, leader)) {
                 best = r;
             }
         }
@@ -246,7 +259,7 @@ class AllPassEndgame {
     }
 
     // two cards of the same suit with no other card left between them
-    private static boolean equivalent(int lower, int higher, int all) {
+    static boolean equivalent(int lower, int higher, int all) {
         if (suitMaskOf(lower) != suitMaskOf(higher)) {
             return false;
         }
@@ -254,12 +267,12 @@ class AllPassEndgame {
         return (all & between) == 0;
     }
 
-    private static int legal(int hand, int suitMask) {
+    static int legal(int hand, int suitMask) {
         int follow = hand & suitMask;
         return follow != 0 ? follow : hand;
     }
 
-    private static int suitMaskOf(int bit) {
+    static int suitMaskOf(int bit) {
         int suitNum = Integer.numberOfTrailingZeros(bit) / CardSet.SUIT_LIST_LENGTH;
         return CardSet.SUIT_MASK << (suitNum * CardSet.SUIT_LIST_LENGTH);
     }
@@ -273,14 +286,82 @@ class AllPassEndgame {
         return res;
     }
 
-    // owner of every card, 2 bits per card position
-    private static long key(int[] h) {
+    // owner of every card, 2 bits per card position: player p + 1
+    static long key(int[] h) {
         long key = 0;
         for (int p = 0; p < NOP; ++p) {
-            for (int bit = CardSet.next(h[p], 0); bit != 0; bit = CardSet.next(h[p], bit)) {
-                key |= (long) (p + 1) << (2 * Integer.numberOfTrailingZeros(bit));
-            }
+            key += (p + 1) * spread(h[p]);
         }
         return key;
+    }
+
+    // bit i moves to bit 2 * i
+    private static long spread(int bitmap) {
+        long x = bitmap & 0xFFFFFFFFL;
+        x = (x | x << 16) & 0x0000FFFF0000FFFFL;
+        x = (x | x << 8) & 0x00FF00FF00FF00FFL;
+        x = (x | x << 4) & 0x0F0F0F0F0F0F0F0FL;
+        x = (x | x << 2) & 0x3333333333333333L;
+        x = (x | x << 1) & 0x5555555555555555L;
+        return x;
+    }
+
+    // long -> int with open addressing, also for OpenPlay: Long.hashCode() folds these keys into few buckets,
+    // and HashMap boxes every key; 0 is a free slot, a solved position always has some card
+    static class Memo {
+        private long[] keys = new long[1 << 12];
+        private int[] values = new int[keys.length];
+        private int size;
+
+        // keeps the grown capacity
+        void clear() {
+            Arrays.fill(keys, 0);
+            size = 0;
+        }
+
+        // -1 if not found
+        int get(long key) {
+            int mask = keys.length - 1;
+            for (int i = index(key, mask); keys[i] != 0; i = (i + 1) & mask) {
+                if (keys[i] == key) {
+                    return values[i];
+                }
+            }
+            return -1;
+        }
+
+        void put(long key, int value) {
+            if (2 * (size + 1) > keys.length) {
+                grow();
+            }
+            int mask = keys.length - 1;
+            int i = index(key, mask);
+            while (keys[i] != 0 && keys[i] != key) {
+                i = (i + 1) & mask;
+            }
+            if (keys[i] == 0) {
+                ++size;
+            }
+            keys[i] = key;
+            values[i] = value;
+        }
+
+        private void grow() {
+            long[] oldKeys = keys;
+            int[] oldValues = values;
+            keys = new long[2 * oldKeys.length];
+            values = new int[keys.length];
+            size = 0;
+            for (int i = 0; i < oldKeys.length; ++i) {
+                if (oldKeys[i] != 0) {
+                    put(oldKeys[i], oldValues[i]);
+                }
+            }
+        }
+
+        // Fibonacci hashing: the high bits of the product depend on all the key bits
+        private static int index(long key, int mask) {
+            return (int) ((key * 0x9E3779B97F4A7C15L) >>> 32) & mask;
+        }
     }
 }

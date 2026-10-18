@@ -36,7 +36,8 @@ public class TestBot extends BaseTest {
 
     @Before
     public void initTest() {
-        Bot.targetBot = null;
+        ForTricksBot.getInstance().clear();
+//        MisereBot
     }
 
     private InputStream getInputStream(String testFileName) {
@@ -67,12 +68,13 @@ public class TestBot extends BaseTest {
                 Config.Bid expectedBid = Config.Bid.fromName(parts[0]);
                 Config.Bid bid = Config.Bid.BID_PASS;
                 if (expectedBid.equals(Config.Bid.BID_MISERE)) {
-                    MisereBot player = new MisereBot(cards);
+                    MisereBot player = MisereBot.getInstance(cards, new CardSet(), new CardSet());
                     if (player.evalMisere(turn)) {
                         bid = Config.Bid.BID_MISERE;
                     }
                 } else {
-                    ForTricksBot player = new ForTricksBot(cards);
+                    ForTricksBot player = (ForTricksBot)ForTricksBot.getInstance();
+                    player.setHand(cards);
                     Bidder.PlayerBid playerBid = player.getMaxPlayerBid(minBid, turn);
                     bid = playerBid.toBid();
                 }
@@ -124,12 +126,14 @@ public class TestBot extends BaseTest {
                 }
             }
 
-            Bot targetBot;
+            Bot targetBot = null;
             if (bid.equals(Config.Bid.BID_MISERE)) {
-                targetBot = new MisereBot(hands);
+                throw new RuntimeException("fix it!");
+//                targetBot = new MisereBot(hands);
             } else {
-                targetBot = new ForTricksBot(hands);
+                targetBot = ForTricksBot.getInstance();
             }
+            targetBot.init(hands);
             Card card = targetBot.play(trick);
             Card expected = Card.fromName(parts[3]);
             Assert.assertEquals("wrong card", expected, card);

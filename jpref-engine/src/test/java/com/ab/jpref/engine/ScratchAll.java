@@ -11,22 +11,29 @@ public class ScratchAll extends BaseTest {
     public void all() throws Exception {
         String only = System.getProperty("only");
         for (String line : Files.readAllLines(Paths.get("../etc/tests/allpassplay"))) {
-            if (!line.startsWith("deal:")) continue;
+            if (!line.startsWith("deal:")) {
+                continue;
+            }
             String body = line.substring(5);
             String comment = body.contains("#") ? body.substring(body.indexOf('#') + 1).trim() : "";
-            if (only != null && !comment.startsWith(only)) continue;
-            if (body.contains("#")) body = body.substring(0, body.indexOf('#'));
+            if (only != null && !comment.startsWith(only)) {
+                continue;
+            }
+            if (body.contains("#")) {
+                body = body.substring(0, body.indexOf('#'));
+            }
             String[] parts = body.split("->");
             String expected = parts[1].trim();
             List<String> tokens = new ArrayList<>(Arrays.asList(parts[0].trim().split("\\s+")));
             int turn = Integer.parseInt(tokens.remove(tokens.size() - 1));
             CardList deck = new CardList();
-            for (String t : tokens) deck.addAll(util.toCardList(t));
+            for (String t : tokens) {
+                deck.addAll(util.toCardList(t));
+            }
             GameManager gm = new GameManager();
             gm.init(host);
             GameManager.DEBUG_LOG = only != null;
             config.pauseBetweenRounds.set(0);
-            Bot.targetBot = null;
             new TrickList();
             gm.getTrick().clear(turn);
             gm.elderHand = turn;

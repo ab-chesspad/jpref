@@ -78,7 +78,7 @@ public class TestStressSearch extends BaseTest {
         for (int j = 0; j < 3; ++j) {
             hands[j] = new CardSet(p.deck.subList(j * 10, j * 10 + 10));
         }
-        Bot bot = Bid.BID_MISERE.equals(p.bid) ? new MisereBot(hands) : new ForTricksBot(hands);
+        Bot bot = Bid.BID_MISERE.equals(p.bid) ? MisereBot.getInstance(hands) : ForTricksBot.getInstance(hands);
         Trick trick = new Trick();
         trick.clear(p.leader);
         gameManager.setMinBid(p.bid);
@@ -89,7 +89,6 @@ public class TestStressSearch extends BaseTest {
         trick.trumpSuit = p.bid.getTrump();
         trick.setNumber(0);
         Bot.playerBid = new Bidder.PlayerBid();
-        Bot.targetBot = null;
         Bot.debugDrop = null;
         TrickList.getInstance().getCard(bot, trick);
         p.positions = TrickList.maxPositions;

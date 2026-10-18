@@ -57,7 +57,6 @@ public class TestAllPassAB extends BaseTest {
                 gameManager.init(host);
                 GameManager.DEBUG_LOG = false;
                 config.pauseBetweenRounds.set(0);
-                Bot.targetBot = null;
                 new TrickList();
                 gameManager.getTrick().clear(turn);
                 gameManager.elderHand = turn;

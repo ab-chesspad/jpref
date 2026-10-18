@@ -203,8 +203,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
                 } catch (Throwable t) {
                     Logger.printStackTrace(t);
                     getLogStream().flush();
-                    if (mainView.showMessage(m("Program crash"), m("Submit log") + "?",
-                            TableLayout.GUI.msgFlagOK | TableLayout.GUI.msgFlagCancel) == TableLayout.GUI.msgFlagOK) {
+                    if (mainView.showMessage("Program crash", m("Submit log") + "?", "Yes", "No") == 0) {
                         tableLayout.submitLog(null);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);

@@ -51,7 +51,7 @@ public class OfferPopup extends JDialog {
     JButton acceptButton = null;
     int result = -1;
 
-    public OfferPopup(Host host, int minTricks, int maxTricks) {
+    public OfferPopup(Host host, int minTricks, int maxTricks, boolean cardsOpen) {
         super(Main.mainFrame, true);
         pConfig = (PConfig)host.config();
         pUtil = (PUtil)host.getUtil();
@@ -151,14 +151,14 @@ public class OfferPopup extends JDialog {
 
         // 2. bottom buttons
         JPanel jPanel = new JPanel();
-        acceptButton = new JButton(m(TableLayout.ButtonCommand.accept.getName()));
+        acceptButton = new JButton(m(cardsOpen ? "Accept" : "Show Cards"));
         acceptButton.setEnabled(false);
         acceptButton.addActionListener(actionEvent -> {
             popupInstance.dispose();
             result = ROUND_SIZE - jList.getSelectedIndex();
         });
         jPanel.add(acceptButton);
-        JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        JButton cancelButton = new JButton(m("Cancel"));
         cancelButton.addActionListener(actionEvent -> {
             popupInstance.dispose();
             result = -1;
@@ -173,7 +173,6 @@ public class OfferPopup extends JDialog {
         // user to discover the scrollbar on their own.
         validate();
         jList.ensureIndexIsVisible(ROUND_SIZE - minTricks);
-
         setVisible(true);
     }
 }

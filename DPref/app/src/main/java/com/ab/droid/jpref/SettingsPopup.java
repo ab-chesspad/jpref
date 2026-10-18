@@ -413,6 +413,7 @@ public class SettingsPopup {
 
     private Button styledButton(String text) {
         Button button = new Button(host);
+        button.setAllCaps(false);     // the text as it is, no capitals
         if (buttonImage != null) {
             button.setBackground(new BitmapDrawable(host.getResources(), buttonImage));
         }

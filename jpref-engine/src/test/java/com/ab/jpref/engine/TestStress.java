@@ -51,7 +51,6 @@ public class TestStress extends BaseTest {
         gameManager.init(host);
         GameManager.DEBUG_LOG = false;
         config.pauseBetweenRounds.set(0);
-        Bot.targetBot = null;
         Bot.debugDrop = null;
         new TrickList();
         return gameManager;

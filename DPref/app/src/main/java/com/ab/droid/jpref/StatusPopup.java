@@ -176,6 +176,7 @@ public class StatusPopup {
 
     private Button styledButton(String text) {
         Button button = new Button(host);
+        button.setAllCaps(false);     // the text as it is, no capitals
         button.setText(text);
         button.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
         return button;

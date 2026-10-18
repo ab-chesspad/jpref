@@ -50,6 +50,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
@@ -256,6 +257,12 @@ public class MainView extends View implements TableLayout.GUI {
                         Logger.println(DEBUG_LOG, String.format("%s, ACTION_UP %s", Util.currMethodName(), event));
                         tableLayout().onMouseDragged(x, y, true);
                         return true;
+                    case (MotionEvent.ACTION_CANCEL) :
+                        // the system took the gesture over (edge swipe, notification shade):
+                        // no ACTION_UP follows, a dragged card must not stay selected
+                        Logger.println(DEBUG_LOG, String.format("%s, ACTION_CANCEL %s", Util.currMethodName(), event));
+                        tableLayout().onMouseDragCanceled();
+                        return true;
                 }
                 return true;
             }
@@ -357,6 +364,7 @@ public class MainView extends View implements TableLayout.GUI {
             Bitmap image = dUtil.loadBitmap(String.format("/buttons/%s.png", widget.getCommand().toString()));
             if (image == null) {
                 Button b = new Button(context);
+                b.setAllCaps(false);     // the text as it is, no capitals
                 b.setBackgroundColor(Color.WHITE);
                 b.setTransformationMethod(null);
                 b.setText(widget.getCommand().getName());
@@ -365,6 +373,7 @@ public class MainView extends View implements TableLayout.GUI {
             } else {
                 widget.setUserObject(image);
                 Button b = new Button(context);
+                b.setAllCaps(false);     // the text as it is, no capitals
                 b.setOnClickListener(v -> onButtonClick(widget));
                 view = b;
             }
@@ -379,7 +388,7 @@ public class MainView extends View implements TableLayout.GUI {
     // comments ends up in gui.getUserComments() - both block waiting for a popup's
     // result, and blocking the UI thread there would prevent that same thread from
     // ever laying out/drawing the dialog it's waiting on (deadlock: the popup never
-    // appears, the app hangs). submitLog similarly calls gui.showMessage(...,flags),
+    // appears, the app hangs). submitLog similarly calls gui.showMessage(..., buttons),
     // which blocks the same way, and its retry loop also calls Util.isConnected()
     // directly (not on a worker thread the way the actual upload is), which does
     // real network I/O - NetworkOnMainThreadException on the UI thread. Route these
@@ -642,13 +651,14 @@ public class MainView extends View implements TableLayout.GUI {
         }
     }
 
+    // translates title and text
     private MessageDialog buildMessageDialog(String title, String text) {
         Dialog dialog = new Dialog(context);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setCancelable(true);
 
         TextView titleView = new TextView(context);
-        titleView.setText(title);
+        titleView.setText(m(title));
         titleView.setTextColor(Color.BLACK);
         titleView.setGravity(Gravity.CENTER);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .2));
@@ -656,7 +666,7 @@ public class MainView extends View implements TableLayout.GUI {
         titleView.setPadding(titlePad, titlePad, titlePad, titlePad);
 
         TextView body = new TextView(context);
-        body.setText(DLabel.fromHtml(Util.toHtml(text)));
+        body.setText(DLabel.fromHtml(Util.toHtml(m(text))));
         body.setTextColor(Color.BLACK);
         body.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .16));
         int bodyPad = (int) (dMetrics.cardW * .15);
@@ -752,38 +762,16 @@ public class MainView extends View implements TableLayout.GUI {
         md.dialog.show();
     }
 
+    // returns the index of the tapped button; the last one is the default: it has
+    // the focus and Back or a tap outside returns it.
+    // The caller needs the tapped button back synchronously (the int
+    // return), so - like showOffer() - it blocks on a queue the popup's buttons
+    // fill in once tapped. Building/showing the popup itself has to happen on
+    // the UI thread, so a call on the UI thread cannot wait (the popup could
+    // never be shown to unblock it): it shows the popup and returns the default.
     @Override
-    public void showMessage(String title, String text) {
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            // submitLog's network call currently runs on the caller's own thread
-            // (see onButtonClick()), so this can land here off the UI thread -
-            // building/showing a Dialog requires the UI thread.
-            context.runOnUiThread(() -> showMessage(title, text));
-            return;
-        }
-
-        MessageDialog md = buildMessageDialog(title, text);
-        LinearLayout buttonPanel = new LinearLayout(context);
-        buttonPanel.setOrientation(LinearLayout.HORIZONTAL);
-        buttonPanel.setGravity(Gravity.CENTER);
-        buttonPanel.setBackgroundColor(0xFFCCCCCC);
-        Button continueButton = new Button(context);
-        continueButton.setText(m("Continue"));
-        continueButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
-        continueButton.setOnClickListener(v -> md.dialog.dismiss());
-        buttonPanel.addView(continueButton, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        showMessageDialog(md, buttonPanel);
-    }
-
-    @Override
-    public int showMessage(String title, String text, int flags) {
-        // The caller needs the clicked button back synchronously (the int
-        // return), so - like showOffer() - this must be called off the UI
-        // thread: it blocks here on a queue the popup's buttons fill in once
-        // tapped, and building/showing the popup itself has to happen on the
-        // UI thread, so blocking on the UI thread here would deadlock (the
-        // popup could never be shown to unblock it).
+    public int showMessage(String title, String text, String... buttons) {
+        int defaultIndex = buttons.length - 1;
         ArrayBlockingQueue<Integer> resultQueue = new ArrayBlockingQueue<>(1);
         context.runOnUiThread(() -> {
             MessageDialog md = buildMessageDialog(title, text);
@@ -791,39 +779,43 @@ public class MainView extends View implements TableLayout.GUI {
             buttonPanel.setOrientation(LinearLayout.HORIZONTAL);
             buttonPanel.setGravity(Gravity.CENTER);
             buttonPanel.setBackgroundColor(0xFFCCCCCC);
-            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagYes, "Yes");
-            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagNo, "No");
-            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagOK, TableLayout.ButtonCommand.ok.getName());
-            addMessageButton(buttonPanel, md, resultQueue, flags, msgFlagCancel, TableLayout.ButtonCommand.cancel.getName());
+            Button defaultButton = null;
+            for (int i = 0; i < buttons.length; ++i) {
+                int index = i;
+                Button button = new Button(context);
+                button.setAllCaps(false);     // the text as it is, no capitals
+                button.setText(m(buttons[i]));
+                button.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
+                button.setOnClickListener(v -> {
+                    resultQueue.offer(index);
+                    md.dialog.dismiss();
+                });
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                if (i > 0) {
+                    lp.leftMargin = (int) (dMetrics.cardW * .1);
+                }
+                buttonPanel.addView(button, lp);
+                defaultButton = button;
+            }
+            // Back or a tap outside, a button's dismiss() does not get here
+            md.dialog.setOnCancelListener(d -> resultQueue.offer(defaultIndex));
             showMessageDialog(md, buttonPanel);
+            if (defaultButton != null) {
+                defaultButton.requestFocus();
+            }
         });
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            // on the UI thread waiting would freeze the app: a menu command such as help
+            // (Description) shows its text and goes on, the dialog stays up until a tap
+            return defaultIndex;
+        }
         try {
             return resultQueue.take();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return 0;
+            return defaultIndex;
         }
-    }
-
-    // adds the button for flag if it is requested in flags; a tap returns flag
-    private void addMessageButton(LinearLayout buttonPanel, MessageDialog md,
-                                  ArrayBlockingQueue<Integer> resultQueue, int flags, int flag, String name) {
-        if ((flags & flag) == 0) {
-            return;
-        }
-        Button button = new Button(context);
-        button.setText(m(name));
-        button.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
-        button.setOnClickListener(v -> {
-            md.dialog.dismiss();
-            resultQueue.offer(flag);
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        if (buttonPanel.getChildCount() > 0) {
-            lp.leftMargin = (int) (dMetrics.cardW * .1);
-        }
-        buttonPanel.addView(button, lp);
     }
 
     @Override
@@ -887,7 +879,7 @@ public class MainView extends View implements TableLayout.GUI {
     }
 
     @Override
-    public int showOffer(int minTricks, int maxTricks) {
+    public int showOffer(int minTricks, int maxTricks, boolean cardsOpen) {
         // TableLayout.getOffer() always needs the real answer from here - unlike
         // showScores(), there's no legitimate fire-and-forget case, so this always
         // blocks on the queue rather than special-casing "already on the UI thread"
@@ -900,7 +892,7 @@ public class MainView extends View implements TableLayout.GUI {
         // would deadlock (it would never be free to lay out/draw the dialog it's
         // waiting on).
         ArrayBlockingQueue<Integer> resultQueue = new ArrayBlockingQueue<>(1);
-        context.runOnUiThread(() -> new OfferPopup(context, minTricks, maxTricks, resultQueue::offer));
+        context.runOnUiThread(() -> new OfferPopup(context, minTricks, maxTricks, cardsOpen, resultQueue::offer));
         try {
             return resultQueue.take();
         } catch (InterruptedException e) {
@@ -914,6 +906,27 @@ public class MainView extends View implements TableLayout.GUI {
         Logger.println(DEBUG_LOG, "running " + currMethodName());
         Bitmap bitmap = getCardImage(card);
         ((Canvas) canvas).drawBitmap(bitmap, x, y, null);
+    }
+
+    @Override
+    public <T> void paintBanner(T canvas, String text, int x, int y, int width, int height) {
+        // as the Game Over label in StatusPopup, a longer text gets a smaller font to fit the width
+        Canvas c = (Canvas) canvas;
+        String s = m(text);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.argb(140, 255, 200, 200));    // light red, ~0.55 alpha, on the dark green table
+        paint.setTypeface(Typeface.DEFAULT_BOLD);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextSize(width * 0.12f);
+        float textWidth = paint.measureText(s);
+        if (textWidth > width * 0.9f) {
+            paint.setTextSize(paint.getTextSize() * width * 0.9f / textWidth);
+        }
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        c.save();
+        c.rotate(-25f, x + width / 2f, y + height / 2f);
+        c.drawText(s, x + width / 2f, y + height / 2f - (fm.ascent + fm.descent) / 2, paint);
+        c.restore();
     }
 
     @Override

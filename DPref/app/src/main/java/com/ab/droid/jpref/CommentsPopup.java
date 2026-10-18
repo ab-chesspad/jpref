@@ -90,6 +90,7 @@ public class CommentsPopup {
         buttonPanel.setBackgroundColor(0xFFCCCCCC);
 
         Button okButton = new Button(host);
+        okButton.setAllCaps(false);     // the text as it is, no capitals
         okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
         okButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
         okButton.setOnClickListener(v -> finish());

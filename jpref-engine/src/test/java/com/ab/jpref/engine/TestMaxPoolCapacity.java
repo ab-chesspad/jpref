@@ -29,7 +29,6 @@ public class TestMaxPoolCapacity extends BaseTest {
         gameManager.init(host);
         GameManager.DEBUG_LOG = false;
         config.pauseBetweenRounds.set(0);
-        Bot.targetBot = null;
     }
 
     private void run(String hand0, String hand1, String hand2, String talon,

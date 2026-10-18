@@ -11,7 +11,8 @@ public class TestBidder extends BaseTest {
     public void testGetBid() {
         String[] sources = {
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
-
+            "♠8QA ♣A ♦JKA ♥89QKA  0 -> 9- : ♠8 ♠Q",
+            "♠XJK ♣8KA ♦JQA ♥9KA  1 -> 6- : ♣8 ♥9",
             "♠9KA ♣KA ♦789A ♥8QA  0 -> 7♦ : ♥8Q",
             "♠79JQKA ♣9JKA ♦A ♥A  1 -> X- : ♣9 ♣J",
             "♠79JQKA ♣9JKA ♦KA  0 -> X- : ♣9 ♣J",

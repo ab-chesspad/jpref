@@ -29,7 +29,6 @@ public class BaseTest {
     public void resetBotStatics() {
         Bot.debugDrop = null;
         Bot.playerBid = null;
-        Bot.targetBot = null;
     }
 
     public static class TestConfig extends Config {

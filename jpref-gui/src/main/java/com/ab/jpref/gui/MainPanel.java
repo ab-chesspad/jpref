@@ -253,8 +253,9 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         }
     }
 
+    // translates title and text
     private JDialog buildMessageDialog(String title, String text) {
-        JDialog dialog = new JDialog(Main.mainFrame, title, true);
+        JDialog dialog = new JDialog(Main.mainFrame, m(title), true);
         dialog.setLayout(new BorderLayout());
         JEditorPane editorPane = new JEditorPane();
         editorPane.setEditable(false);
@@ -264,7 +265,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         HTMLEditorKit kit = (HTMLEditorKit) editorPane.getEditorKit();
         kit.getStyleSheet().addRule(String.format("body { font-family: %s; font-size: %dpt; }",
             font.getFamily(), font.getSize()));
-        editorPane.setText(Util.toHtml(text));
+        editorPane.setText(Util.toHtml(m(text)));
         editorPane.setCaretPosition(0);
         dialog.add(new JScrollPane(editorPane,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -288,42 +289,37 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         dialog.setLocationRelativeTo(Main.mainFrame);
     }
 
+    // returns the index of the clicked button; the last one is the default:
+    // Enter clicks it and closing the dialog returns it
     @Override
-    public void showMessage(String title, String text) {
+    public int showMessage(String title, String text, String... buttons) {
         JDialog dialog = buildMessageDialog(title, text);
-        JButton okButton = new JButton(m("Continue"));
-        okButton.addActionListener(e -> dialog.dispose());
-        dialog.add(okButton, BorderLayout.SOUTH);
-        sizeMessageDialog(dialog);
-        dialog.setVisible(true);   // blocks until dispose() (modal)
-    }
-
-    @Override
-    public int showMessage(String title, String text, int flags) {
-        JDialog dialog = buildMessageDialog(title, text);
-        int[] result = {0};
+        int defaultIndex = buttons.length - 1;
+        int[] result = {defaultIndex};
         JPanel buttonPanel = new JPanel();
-        addMessageButton(buttonPanel, dialog, result, flags, msgFlagYes, "Yes");
-        addMessageButton(buttonPanel, dialog, result, flags, msgFlagNo, "No");
-        addMessageButton(buttonPanel, dialog, result, flags, msgFlagOK, TableLayout.ButtonCommand.ok.getName());
-        addMessageButton(buttonPanel, dialog, result, flags, msgFlagCancel, TableLayout.ButtonCommand.cancel.getName());
+        for (int i = 0; i < buttons.length; ++i) {
+            int index = i;
+            JButton button = new JButton(m(buttons[i]));
+            button.addActionListener(e -> {
+                result[0] = index;
+                dialog.dispose();
+            });
+            buttonPanel.add(button);
+            if (i == defaultIndex) {
+                dialog.getRootPane().setDefaultButton(button);
+                // focused, not the text: Enter and Space click it
+                dialog.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowOpened(WindowEvent e) {
+                        button.requestFocusInWindow();
+                    }
+                });
+            }
+        }
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         sizeMessageDialog(dialog);
         dialog.setVisible(true);   // blocks until dispose() (modal)
         return result[0];
-    }
-
-    // adds the button for flag if it is requested in flags; a click returns flag
-    private void addMessageButton(JPanel buttonPanel, JDialog dialog, int[] result, int flags, int flag, String name) {
-        if ((flags & flag) == 0) {
-            return;
-        }
-        JButton button = new JButton(m(name));
-        button.addActionListener(e -> {
-            result[0] = flag;
-            dialog.dispose();
-        });
-        buttonPanel.add(button);
     }
 
     @Override
@@ -406,8 +402,8 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     }
 
     @Override
-    public int showOffer(int minTricks, int maxTricks) {
-        OfferPopup offerPopup = new OfferPopup(host, minTricks, maxTricks);
+    public int showOffer(int minTricks, int maxTricks, boolean cardsOpen) {
+        OfferPopup offerPopup = new OfferPopup(host, minTricks, maxTricks, cardsOpen);
         return offerPopup.result;
     }
 
@@ -448,6 +444,26 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
                 tableLayout().getDraggedCardPosition().getX(),
                 tableLayout().getDraggedCardPosition().getY());
         }
+    }
+
+    @Override
+    public <T> void paintBanner(T graphics, String text, int x, int y, int width, int height) {
+        // as StatusPopup.GameOverOverlay, a longer text gets a smaller font to fit the width
+        Graphics2D g2d = (Graphics2D) ((Graphics) graphics).create();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        String s = m(text);
+        Font font = new Font("SansSerif", Font.BOLD, (int) (width * 0.12));
+        int textWidth = g2d.getFontMetrics(font).stringWidth(s);
+        if (textWidth > width * 0.9) {
+            font = font.deriveFont((float) (font.getSize() * width * 0.9 / textWidth));
+        }
+        g2d.setFont(font);
+        FontMetrics fontMetrics = g2d.getFontMetrics(font);
+        g2d.setColor(new Color(255, 200, 200, 140));   // light red, ~0.55 alpha, on the dark green table
+        g2d.translate(x + width / 2, y + height / 2);
+        g2d.rotate(Math.toRadians(-25));
+        g2d.drawString(s, -fontMetrics.stringWidth(s) / 2, fontMetrics.getAscent() / 2);
+        g2d.dispose();
     }
 
     @Override

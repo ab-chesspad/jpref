@@ -23,6 +23,7 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Bidder.PlayerBid;
@@ -36,50 +37,9 @@ public class MisereBot extends Bot {
     public static final boolean DEBUG_LOG = false;
 
     static final int MAX_EVAL = 1000;   // in ‰
-    // https://summoning.ru/games/miser.shtml
-    // probabilities to get a trick in misère:
-    private static final String[] misereTableSources = {
-        "789A 86",
-        "78XA 86",
-        "78JA 86",
-        "78Q 458",
-        "78QK 310",
-        "78QA 380",     //?
-        "78QKA 210",
-        "78K 790",
-        "78KA 582",
-        "79XA 86",
-        "79JA 86",
-        "79Q 458",
-        "79QK 310",
-        "79QA 380",     //?
-        "79QKA 210",
-        "79K 790",
-        "79KA 582",
-        "7X 460",
-        "7XJ 667",
-        "7XJQ 737",
-        "7XJQK 737",
-        "7XJQKA 474",
-        "7J 843",
-        "8 119",
-        "89 668",
-        "89Х 800",  //?
-        "9 627",
-        "X 700",
-    };
-
-    static final Map<String, Integer> misereTable = new HashMap<>();
-    static {
-        for (String source : misereTableSources) {
-            String[] parts = source.split(" ");
-            misereTable.put(parts[0], Integer.parseInt(parts[1]));
-        }
-    }
-
-    MisereBot(CardSet... hands) {
-        super(hands);
-    }
+    // https://summoning.ru/games/miser.shtml, recalculated by MisereCatch:
+    // probabilities to get a trick in misère, by the rank bitmap of a suit
+    static final int[] misereTable = MisereCatch.table();
 
     enum DeclarerDrop {
         First,
@@ -87,14 +47,47 @@ public class MisereBot extends Bot {
         Random
     }
 
-    public MisereBot(Player player) {
-        super(player);
+    private static MisereBot instance;
+
+    public static MisereBot getInstance() {
+        if (instance == null) {
+            instance = new MisereBot();
+        }
+        return instance;
+    }
+
+    public static MisereBot getInstance(Player player) {
+        MisereBot instance = getInstance();
+        instance.init(player);
+        return instance;
+    }
+
+    public static MisereBot getInstance(CardSet... hands) {
+        MisereBot instance = getInstance();
+        instance.init(hands);
+        return instance;
+    }
+
+    static final int MAX_DROP_GUESSES = 4;  // see robustCard()
+
+    private MisereBot() {
+        this.bid = Config.Bid.BID_MISERE;
+    }
+
+    // not the singleton, for tests that need a second solver
+    MisereBot(CardSet... hands) {
+        this();
+        init(hands);
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        this.bid = Config.Bid.BID_MISERE;
     }
 
     // pa|b = 1 - (1-pa)(1-pb)
-    // todo: adjust probabilities for elderhand
     int getEval4Misere(CardSet cardSet) {
-        StringBuilder sb = new StringBuilder();
         double pab = 1;    // 1 - pa|b
         int bitset = 0;
         while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
@@ -102,17 +95,7 @@ public class MisereBot extends Bot {
             if (cards.isClean4Misere()) {
                 continue;
             }
-            sb.delete(0, sb.length());
-            int bit = 0;
-            while ((bit = CardSet.next(cards.getBitmap(), bit)) != 0) {
-                Card card = Card.get(bit);
-                sb.append(card.getRank().toString());
-            }
-            Integer res = misereTable.get(sb.toString());
-            if (res == null) {
-                res = MAX_EVAL + cardSet.first().getRank().getValue() - Card.Rank.ACE.getValue();
-            }
-            pab *= 1 - (double)res / MAX_EVAL;
+            pab *= 1 - (double)misereTable[ranks(cards)] / MAX_EVAL;
         }
         return (int)((1 - pab) * MAX_EVAL);
     }
@@ -267,12 +250,26 @@ probes:
                 bestListData = listData;
             }
         }
-        if (bestListData != null) {
-            CardSet cleanSuit = bestListData.thisSuit;
-            Card.Suit s = bestListData.suit;
-            return cleanSuit.getOptimalStart(leftHand.list(s), rightHand.list(s));
+        if (bestListData == null) {
+            throw new RuntimeException("prog error");
         }
-        return null;    // should not be here
+        CardSet cleanSuit = bestListData.thisSuit;
+        Card.Suit s = bestListData.suit;
+        return cleanSuit.getOptimalStart(leftHand.list(s), rightHand.list(s));
+    }
+
+    private static int rankIndex(Card card) {
+        return card.getRank().getValue() - Card.Rank.SEVEN.getValue();
+    }
+
+    // the rank bitmap of one suit, 7 is bit 0
+    private static int ranks(CardSet suitCards) {
+        int res = 0;
+        int bit = 0;
+        while ((bit = CardSet.next(suitCards.getBitmap(), bit)) != 0) {
+            res |= 1 << rankIndex(Card.get(bit));
+        }
+        return res;
     }
 
     @Override
@@ -296,52 +293,6 @@ probes:
         // discards that catch the declarer, e.g. the 1st test in fixedplay
         int others = bitmaps[1] | bitmaps[2];
         return ((long)CardSet.bm4buildBackward(bitmaps[0], others) & 0x0ffffffffL | BACKWARD_FLAG);
-/*
-        if (USE_TRICK_LIST) {
-            int bitmap = trickNode.hands[num].list(trickNode.startingSuit).getBitmap();
-            int others = trickNode.hands[(num + 1) % NOP].getBitmap() |
-                trickNode.hands[(num + 2) % NOP].getBitmap();
-            for (int i = 0; i < trickNode.size(); ++i) {
-                Card card = trickNode.getCard(i);
-                int bit = 1 << CardSet.offset(card);
-                int n = (i + 3 - trickNode.size()) % NOP;
-                if (n == 0) {
-                    bitmap |= bit;
-                } else {
-                    others |= bit;
-                }
-            }
-            return ((long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL | BACKWARD_FLAG);
-        }
-        int num = trickNode.getTurn();
-        int n1 = (num + 1) % NOP;
-        int n2 = (num + 2) % NOP;
-        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
-        if (bitmap == 0) {
-            bitmap = trickNode.hands[num].getBitmap();
-        }
-        if (num == 0) {
-            Card card = play4Build(trickNode);
-            return card == null ? 0L : CardSet.bit(card);
-
-            int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
-            return ((long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL | BACKWARD_FLAG);
-        }
-        int bitmap = trickNode.hands[num].getBitmap() & CardSet.suitMask(trickNode.startingSuit);
-        if (bitmap == 0) {
-            bitmap = trickNode.hands[num].getBitmap();
-        }
-        int n1 = (num + 1) % NOP;
-        int n2 = (num + 2) % NOP;
-        int others = trickNode.hands[n1].getBitmap() | trickNode.hands[n2].getBitmap();
-        for (int i = 0; i < trickNode.size(); ++i) {
-            Card card = trickNode.getCard(i);
-            int bit = 1 << CardSet.offset(card);
-            others |= bit;
-        }
-        long res = (long)CardSet.bm4buildBackward(bitmap, others) & 0x0ffffffffL;
-        return res | BACKWARD_FLAG;
-*/
     }
 
     @Override
@@ -379,5 +330,258 @@ probes:
             // todo
         }
         return diff;
+    }
+
+    // Misère: the defenders do not know the drop, the list is built for one guess of it;
+    // against a bot declarer it is the bot's own drop, the defenders would guess it the same way.
+    // Each likely drop is searched with open cards, so under each of them the defenders know
+    // where to catch and their counts are only an upper bound: a card catching under fewer
+    // drops is out, but equal counts say nothing. Then, while the drop is unknown, a suit that
+    // is a hole under every drop is kept for later and the guess is tested elsewhere, then the
+    // card that catches under the list's guess, with the most tricks, then the list's card:
+    // ♠9 ♣7XJQK ♦79XQ ♥KX, ♠ ♥ or ♣ catch it - not ♣8XA, then it is a guess between ♠9 and ♥X;
+    // ♠ first, if dropped then ♥X goes, but ♣ still catches
+    @Override
+    Card robustCard(Trick trick, Card listCard) {
+        GameManager gameManager = gameManager();
+        if (trick.getTurn() == gameManager.declarerNumber) {
+            return listCard;
+        }
+        if (trick.getNumber() == 0) {
+            return listCard;    // full hands: a search per guess takes too long for the first trick
+        }
+        TrickList trickList = TrickList.getInstance();
+        List<CardSet> guesses = dropGuesses(trick);
+        if (guesses.size() < 2) {
+            return listCard;
+        }
+        CardList candidates = candidates(trick);
+        if (candidates.size() < 2) {
+            return listCard;
+        }
+        int n = candidates.size();
+        // a guess counts by the declarer's chance to stay clean with it: the declarer drops
+        // the least risk, ♠79K ♣79Q ♦789 ♥7QK: ♥QK 90%, ♠K ♥K 95%, ♣Q ♥K 98% are 10:5:2
+        int[] caught = new int[n];
+        // then the declarer's tricks by the same weights: ♠7X ♣7 ♥78J ♣KA dropped, ♠9 or ♣8 catch,
+        // ♣8 first takes another trick when the declarer kept ♣K or ♣A
+        long[] weightedTricks = new long[n];
+        int[] listGuess = null;     // declarer's tricks under the list's guess, it is the first one
+        int tricks = getTricks();
+        int complete = 0;
+        long start = System.currentTimeMillis();
+        int[] weights = new int[guesses.size()];
+        for (int g = 0; g < weights.length; ++g) {
+            CardSet dealtHand = new CardSet(guesses.get(g));
+            dealtHand.add(gameManager.declarerPlayed);
+            weights[g] = MAX_EVAL - getEval4Misere(dealtHand) + 1;    // a sure catch still counts
+        }
+        // the list's guess is what getDrop() drops, no other drop is more likely
+        for (int g = 1; g < weights.length; ++g) {
+            weights[0] = Math.max(weights[0], weights[g]);
+        }
+        // the heaviest first, the list's guess is the heaviest
+        List<Integer> order = new ArrayList<>();
+        int remaining = 0;     // weight of the guesses not searched yet
+        for (int g = 0; g < weights.length; ++g) {
+            order.add(g);
+            remaining += weights[g];
+        }
+        Collections.sort(order.subList(1, order.size()), (g1, g2) -> weights[g2] - weights[g1]);  // List.sort needs API 24
+        // within the move's deadline, set in TrickList.getCard()
+        for (int g : order) {
+            int[] res = null;
+            if (g == 0) {
+                res = trickList.builtResults(trick, guesses.get(g), candidates);    // searched by the list
+            }
+            if (res == null) {
+                res = trickList.evalCards(trick, guesses.get(g), candidates);
+            }
+            if (res == null) {
+                break;      // deadline, the less likely guesses are left out
+            }
+            if (complete++ == 0) {
+                listGuess = res;
+            }
+            for (int i = 0; i < n; ++i) {
+                if (tricks + res[i] > 0) {
+                    caught[i] += weights[g];
+                }
+                weightedTricks[i] += (long) weights[g] * (tricks + res[i]);
+            }
+            remaining -= weights[g];
+            if (decided(caught, remaining)) {
+                break;      // the rest cannot change the card
+            }
+        }
+        if (complete == 0) {
+            return listCard;
+        }
+        int maxCaught = 0;
+        for (int i = 0; i < n; ++i) {
+            maxCaught = Math.max(maxCaught, caught[i]);
+        }
+        int holes = holeSuits(guesses);
+        int listIndex = candidates.indexOf(listCard);
+        int best = -1;
+        for (int i = 0; i < n; ++i) {
+            if (caught[i] < maxCaught) {
+                continue;
+            }
+            if (best < 0) {
+                best = i;
+                continue;
+            }
+            int diff = inSuits(candidates.get(best), holes) - inSuits(candidates.get(i), holes);
+            if (diff == 0) {
+                diff = Long.compare(weightedTricks[i], weightedTricks[best]);
+            }
+            if (diff == 0) {
+                diff = (tricks + listGuess[i] > 0 ? 1 : 0) - (tricks + listGuess[best] > 0 ? 1 : 0);
+            }
+            if (diff == 0) {
+                diff = listGuess[i] - listGuess[best];
+            }
+            if (diff == 0 && i == listIndex) {
+                diff = 1;
+            }
+            if (diff > 0) {
+                best = i;
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; ++i) {
+            sb.append(String.format(" %s %d/%d", candidates.get(i), caught[i], listGuess[i]));
+        }
+        for (Card.Suit suit : Card.Suit.values()) {
+            if (inSuits(suit, holes)) {
+                sb.append(", hole ").append(suit.getCode());
+            }
+        }
+        Logger.printf("trick %d, drops guessed %d, caught ‰ weighted/tricks for the list's guess:%s -> %s, %,d msec\n",
+            trick.getNumber(), complete, sb, candidates.get(best), System.currentTimeMillis() - start);
+        return candidates.get(best);
+    }
+
+    // one card leads the caught weights by more than the guesses left can add to any other;
+    // on a tie the tie-breaks need all the guesses
+    private static boolean decided(int[] caught, int remaining) {
+        int first = -1;
+        int second = -1;
+        for (int c : caught) {
+            if (c > first) {
+                second = first;
+                first = c;
+            } else if (c > second) {
+                second = c;
+            }
+        }
+        return first - second > remaining;
+    }
+
+    // suits where the declarer has a hole under every guess, as a bitmap by suit value
+    private int holeSuits(List<CardSet> guesses) {
+        int res = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            boolean hole = true;
+            for (CardSet hand : guesses) {
+                CardSet cards = hand.list(suit);
+                if (cards.isEmpty() || cards.maxUnwantedTricks(
+                        leftHand.list(suit), rightHand.list(suit)).maxTheyStart == 0) {
+                    hole = false;
+                    break;
+                }
+            }
+            if (hole) {
+                res |= 1 << suit.getValue();
+            }
+        }
+        return res;
+    }
+
+    private static boolean inSuits(Card.Suit suit, int suits) {
+        return (suits & (1 << suit.getValue())) != 0;
+    }
+
+    private static int inSuits(Card card, int suits) {
+        return inSuits(card.getSuit(), suits) ? 1 : 0;
+    }
+
+    // the declarer's hands for the likely drops, the list's guess first, then the best ones for misère
+    private List<CardSet> dropGuesses(Trick trick) {
+        GameManager gameManager = gameManager();
+        List<CardSet> res = new ArrayList<>();
+        CardSet knownHand = new CardSet(gameManager.declarerHand);
+        int declarerSize = TrickList.getInstance().declarerSize(trick);
+        int diff = knownHand.size() - declarerSize;
+        if (diff <= 0) {
+            return res;     // all known
+        }
+        if (knownHand.contains(myHand) && myHand.size() == declarerSize) {
+            res.add(new CardSet(myHand));
+        }
+        // the dropped cards not shown yet, 1 or 2
+        List<CardSet> hands = new ArrayList<>();
+        List<Integer> evals = new ArrayList<>();
+        CardList cards = knownHand.toCardList();
+        for (int i = 0; i < cards.size(); ++i) {
+            for (int j = diff == 1 ? i : i + 1; j < cards.size(); ++j) {
+                CardSet hand = new CardSet(knownHand);
+                hand.remove(cards.get(i));
+                hand.remove(cards.get(j));
+                // evaluate the hand as it was after the drop
+                CardSet dealtHand = new CardSet(hand);
+                dealtHand.add(gameManager.declarerPlayed);
+                int eval = getEval4Misere(dealtHand);
+                int k = evals.size();
+                while (k > 0 && evals.get(k - 1) > eval) {
+                    --k;
+                }
+                evals.add(k, eval);
+                hands.add(k, hand);
+            }
+        }
+        for (CardSet hand : hands) {
+            if (res.size() >= MAX_DROP_GUESSES) {
+                break;
+            }
+            if (!res.contains(hand)) {
+                res.add(hand);
+            }
+        }
+        return res;
+    }
+
+    // legal cards of the defender to move, one of the cards with no other card between them
+    private CardList candidates(Trick trick) {
+        GameManager gameManager = gameManager();
+        CardSet hand = gameManager.getPlayers()[trick.getTurn()].myHand;
+        CardSet legal = hand.list(trick.getStartingSuit());
+        if (legal.isEmpty()) {
+            legal = hand;
+        }
+        CardSet others = CardSet.union(gameManager.declarerHand, leftHand, rightHand,
+            trick.cards2CardSet());
+        others.remove(hand);
+        CardList res = new CardList();
+        Card prev = null;
+        for (Card card : legal.toCardList()) {
+            if (prev != null && prev.getSuit().equals(card.getSuit())) {
+                CardSet between = others.list(card.getSuit());
+                boolean equivalent = true;
+                for (Card other : between.toCardList()) {
+                    if (other.compareInTrick(prev) > 0 && other.compareInTrick(card) < 0) {
+                        equivalent = false;
+                        break;
+                    }
+                }
+                if (equivalent) {
+                    continue;
+                }
+            }
+            res.add(card);
+            prev = card;
+        }
+        return res;
     }
 }

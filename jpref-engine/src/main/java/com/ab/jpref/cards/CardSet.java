@@ -768,6 +768,11 @@ mainLoop:
         return holes(myHand.bitmap, discarded.bitmap, card);
     }
 
+    // before the trick starts, meStart: I lead it, otherwise one of the others leads
+    public static int holes(CardSet myHand, CardSet discarded, boolean meStart) {
+        return holes(myHand.bitmap, discarded.bitmap, meStart);
+    }
+
     public static int holes(int _bitmap, int discarded, Card card) {
         if (card != null) {
             int mySuit = _bitmap & suitMask(card.getSuit());

@@ -42,8 +42,8 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 17L;
-    public static final String VERSION = "1.0.1";
+    public static final long projectSerialVersionUID = 18L;
+    public static final String VERSION = "1.0.2";
 
     public static final String PROJECT_NAME = "JPref";
 

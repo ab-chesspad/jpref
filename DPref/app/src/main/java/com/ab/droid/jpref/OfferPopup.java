@@ -62,7 +62,7 @@ public class OfferPopup {
     private final ResultListener onResult;
     private int selectedTricks = -1;
 
-    OfferPopup(MainActivity host, int minTricks, int maxTricks, ResultListener onResult) {
+    OfferPopup(MainActivity host, int minTricks, int maxTricks, boolean cardsOpen, ResultListener onResult) {
         this.onResult = onResult;
         DMetrics dMetrics = host.getMetrics();
 
@@ -165,13 +165,16 @@ public class OfferPopup {
         // Accept lands on the left and Cancel on the right (AlertDialog lays out
         // [NEGATIVE, NEUTRAL, POSITIVE] left to right) - the enable/disable
         // tracking below follows suit, keyed off BUTTON_NEGATIVE now.
-        builder.setNegativeButton(m(TableLayout.ButtonCommand.accept.getName()),
+        builder.setNegativeButton(m(cardsOpen ? "Accept" : "Show Cards"),
             (d, which) -> finish(selectedTricks));
         builder.setPositiveButton(m(TableLayout.ButtonCommand.cancel.getName()),
             (d, which) -> finish(-1));
 
         dialog = builder.create();
         dialog.show();
+        // the text as it is, the Material dialog buttons are in capitals by default
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false);
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false);
         // the positive/negative buttons only exist once the dialog has been shown
         Button acceptButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         if (acceptButton != null) {

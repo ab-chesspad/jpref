@@ -359,13 +359,19 @@ public class Bidder {
         c.shortfall = Math.max(0, level - tricks);
         if (suitNum == 5) {
             int cushions = getCushions(pairs, elderHand, c.shortfall);
-            if (cushions == CUSHIONS_NONE) {
+            if (cushions == CUSHIONS_NONE && trump.length >= 4) {
                 return best;
             }
-            // a trump contract cannot win more than all the tricks, nor more than the top cards:
-            // ♠9XJ ♣XJQKA ♥KA on lead, 7- and 7♣ take the same 7 tricks
-            c.weak = cushions == CUSHIONS_NOT_NEEDED && tricks < ROUND_SIZE &&
-                !allTopTricks(rest, pairs, elderHand);
+            if (cushions == CUSHIONS_NONE) {
+                // no suit of 4: the other choice is a 3-card trump, the defenders hold 5 of them,
+                // so no trump stays, as weak as that trump: ♠XJK ♣KA ♦JQA ♥KA without the lead is 6-
+                c.weak = true;
+            } else {
+                // a trump contract cannot win more than all the tricks, nor more than the top cards:
+                // ♠9XJ ♣XJQKA ♥KA on lead, 7- and 7♣ take the same 7 tricks
+                c.weak = cushions == CUSHIONS_NOT_NEEDED && tricks < ROUND_SIZE &&
+                    !allTopTricks(rest, pairs, elderHand);
+            }
         } else {
             c.weak = trump.length < 4 || notTrump;
             c.trumpMoves = trump.moves;
@@ -411,8 +417,20 @@ public class Bidder {
             }
         }
         for (SuitTricks pair : pairs) {
-            if (pair.length == 1 && (suitNum == 5 || pair.suit != trump.suit)) {
+            if (pair.length != 1) {
+                continue;
+            }
+            if (suitNum != 5 && pair.suit != trump.suit) {
                 ++c.singletons;
+            } else if (suitNum == 5 && pair.tricks[elderHand] == 0) {
+                ++c.singletons;     // no trump: a bare card that takes nothing loses the suit, a bare ace does not
+            }
+        }
+        if (suitNum == 5 && elderHand == 0) {
+            // with a trump, short side suits to ruff count more
+            CardSet dealt = new CardSet(rest.getBitmap() | drops);
+            for (SuitTricks pair : pairs) {
+                c.extraChance += extraChance(rest.list(pair.suit), dealt.list(pair.suit).size());
             }
         }
         c.dropSuitLengths = dropSuitLengths;
@@ -425,6 +443,44 @@ public class Bidder {
             }
         }
         return c.isBetterThan(best) ? c : best;
+    }
+
+    // no trump on lead, the chance of a trick more in a suit: the first card below the top ones wins
+    // when the only outside card above it falls while the top ones are played, its holder has
+    // no more cards in the suit; the 20 unseen cards split 10 - 10. Alone the declarer cannot
+    // finesse: ♦AKJ, the ♦Q falls in 2 rounds 33%; ♠AQ, the ♠K under the ace 5%
+    static double extraChance(CardSet suitCards, int dealtLength) {
+        int top = 0;
+        Card next = null;
+        for (Card card = suitCards.last(); card != null; card = suitCards.prev(card)) {
+            if (card.getRank().getValue() != Rank.ACE.getValue() - top) {
+                next = card;
+                break;
+            }
+            ++top;
+        }
+        if (next == null || top == 0 || Rank.ACE.getValue() - top - next.getRank().getValue() != 1) {
+            return 0;   // no card to promote, nothing on top to drop it, or more than one card above it
+        }
+        int outside = 8 - dealtLength;
+        int unseen = 20;
+        double res = 0;
+        for (int length = 1; length <= Math.min(top, outside); ++length) {
+            // the holder of that card has length cards of the suit, it among them
+            res += comb(outside - 1, length - 1) * comb(unseen - outside, 10 - length) / comb(unseen - 1, 9);
+        }
+        return res;
+    }
+
+    private static double comb(int n, int k) {
+        if (k < 0 || k > n) {
+            return 0;
+        }
+        double res = 1;
+        for (int i = 1; i <= k; ++i) {
+            res = res * (n - k + i) / i;
+        }
+        return res;
     }
 
     // every trick counted is a top card, from the ace down without a gap
@@ -449,7 +505,9 @@ public class Bidder {
         int tricks = 0;
         for (SuitTricks pair : pairs) {
             int turn = elderHand;
-            if (pair.suit.equals(trumpCandidate)) {
+            if (pair.suit.equals(trumpCandidate) && pair.length >= 4) {
+                // 4 trumps or more take the lead back; 3 cannot, the defenders hold 5 of them:
+                // ♠XJK without the lead is no trick
                 turn = 0;
             }
             tricks += pair.tricks[turn];
@@ -522,7 +580,8 @@ public class Bidder {
         // otherwise the weaker doubleton goes
         boolean weakPairsSplit;
         int voids;
-        int singletons;     // side suits, to ruff after the single card
+        int singletons;     // side suits, to ruff after the single card; no trump: bare cards with no trick
+        double extraChance; // no trump on lead, the chances of tricks more than counted, see extraChance()
         int dropSuitLengths;    // keep longer side suits, more chances to catch a defender's card
         int dropRanks;
 
@@ -563,6 +622,9 @@ public class Bidder {
             if (droppedAces != that.droppedAces) {
                 return droppedAces < that.droppedAces;
             }
+            if (Math.abs(extraChance - that.extraChance) > 1e-9) {
+                return extraChance > that.extraChance;
+            }
             if (unsureTricks != that.unsureTricks) {
                 return unsureTricks < that.unsureTricks;
             }
@@ -576,7 +638,9 @@ public class Bidder {
                 return voids > that.voids;
             }
             if (singletons != that.singletons) {
-                return singletons > that.singletons;
+                // a trump contract ruffs after the single card, no trump loses the suit:
+                // ♠XJK ♣8KA ♦JQA ♥9KA 6-, a bare ♠K stops nothing, ♠XJK may; a bare ace is no loss
+                return trumpMoves < 0 ? singletons < that.singletons : singletons > that.singletons;
             }
             if (dropSuitLengths != that.dropSuitLengths) {
                 return dropSuitLengths < that.dropSuitLengths;

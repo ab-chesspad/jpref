@@ -35,7 +35,6 @@ import com.ab.jpref.ui.Host;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
 import com.ab.util.Util;
-
 import static com.ab.util.Util.currMethodName;
 
 import javax.swing.*;
@@ -218,15 +217,14 @@ public class Main implements Logger.LogHolder, Host {
                     for (Player p : gameManager.getPlayers()) {
                         p.clearHistory();
                     }
-                } catch (Config.PrefExceptionRerun e) {
+                } catch (PConfig.PrefExceptionRerun e) {
                     // ignoreMain
-                } catch (Config.PrefExceptionReset e) {
+                } catch (PConfig.PrefExceptionReset e) {
                     // user reset after submitLog, the loop starts a new game
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } catch (Throwable t) {
                     Logger.printStackTrace(t);
-                    if (mainPanel.showMessage(m("Program crash"), m("Submit log") + "?",
-                            TableLayout.GUI.msgFlagYes | TableLayout.GUI.msgFlagNo) == TableLayout.GUI.msgFlagYes) {
+                    if (mainPanel.showMessage("Program crash", m("Submit log") + "?", "Yes", "No") == 0) {
                         tableLayout.submitLog(null);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
@@ -361,11 +359,11 @@ public class Main implements Logger.LogHolder, Host {
 
     @Override
     public String getDataDirectory() {
-        Config.OS os = Config.getOS();
+        PConfig.OS os = PConfig.getOS();
         File file;
-        if (os == Config.OS.windows) {
+        if (os == PConfig.OS.windows) {
             String userHome = System.getProperty("user.home");
-            file = new File(userHome, Config.PROJECT_NAME);
+            file = new File(userHome, PConfig.PROJECT_NAME);
             if (!file.exists()) {
                 file.mkdirs();
             }

@@ -209,7 +209,8 @@ public class TestPosition implements Host {
                     gameManager.prepareTest(0, bid, null);
                     Trick trick = gameManager.getTrick();
                     trick.setStartedBy(elderHand);
-                    forTricksBot = new ForTricksBot(hands);
+                    forTricksBot = ForTricksBot.getInstance();
+                    forTricksBot.init(hands);
                     forTricksBot.setBid(bid);
                     if (hands[0].size() > hands[1].size()) {
                         // todo: fix it
@@ -222,7 +223,6 @@ public class TestPosition implements Host {
                         hands[0] = forTricksBot.getMyHand();
                     }
                     trick.setNumber(ROUND_SIZE - hands[1].size());
-                    Bot.targetBot = forTricksBot;
                     forTricksBot.play(trick);
 
                     if (bid.equals(Bid.BID_MISERE)) {

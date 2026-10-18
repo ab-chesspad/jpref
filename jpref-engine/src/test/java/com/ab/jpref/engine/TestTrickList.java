@@ -29,11 +29,11 @@ public class TestTrickList extends BaseTest {
 
     static class TrickListBot extends Bot {
         TrickListBot(int number) {
-            super(number);
+            this.number = number;
         }
 
         TrickListBot(Player realPlayer) {
-            super(realPlayer);
+            init(realPlayer);
         }
 
         CardSet actualDrops = new CardSet();    // for diagnostics
@@ -59,9 +59,9 @@ public class TestTrickList extends BaseTest {
             moveIndex = 0;
             Bot targetBot;
             if (Bid.BID_MISERE.equals(minBid)) {
-                targetBot = new MisereBot(this);
+                targetBot = MisereBot.getInstance(this);
             } else {
-                targetBot = new ForTricksBot(this);
+                targetBot = ForTricksBot.getInstance(this);
             }
             Bidder.PlayerBid playerBid = targetBot.getDrop(elderHand, 2, trick);
             Bot.playerBid = playerBid;
@@ -85,24 +85,27 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
             actualDrops = new CardSet(playerBid.drops);
             drop(playerBid.drops);              // always 10 cards after this
             realBot = null;
+            this.targetBot = null;
             if (guessDrops) {
                 if (declarerSolves) {
-                    realBot = targetBot;
-                    targetBot.drop(playerBid.drops);
+                    // targetBot is a singleton, the defenders' guess will reuse it: a solver of its own
+                    realBot = Bid.BID_MISERE.equals(minBid) ?
+                        new MisereBot(myHand, leftHand, rightHand) : new ForTricksBot(myHand, leftHand, rightHand);
+                    realBot.number = this.number;
+                    realBot.bid = this.bid;
                 }
                 // like a human declarer: defenders guess the drops themselves,
                 // see Bot.play() -> getDeclarerForDefender()
-                Bot.targetBot = null;
                 Bot.playerBid = null;
                 return;
             }
-            Bot.targetBot = targetBot;
+            this.targetBot = targetBot;
             targetBot.drop(playerBid.drops);
         }
 
         @Override
         public Card play(Trick trick) {
-            // with guessDrops Bot.targetBot holds the defenders' guess, not the declarer's real hand
+            // with guessDrops the defenders' targetBot holds their guess, not the declarer's real hand
             if (!iterMoves && !guessDrops || this.number != gameManager().declarerNumber) {
                 return super.play(trick);
             }
@@ -125,20 +128,14 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
             return card;
         }
 
-        // declarer plays with its own solver, defenders keep their guess in Bot.targetBot
+        // declarer plays with its own solver, defenders keep their guess in their targetBot
         Card realPlay(Trick trick) {
             Player[] players = gameManager().getPlayers();
             realBot.myHand = new CardSet(myHand);
             realBot.leftHand = new CardSet(players[(number + 1) % NOP].myHand);
             realBot.rightHand = new CardSet(players[(number + 2) % NOP].myHand);
             realBot.tricks = this.tricks;
-            Bot defendersBot = Bot.targetBot;
-            Bot.targetBot = realBot;
-            try {
-                return realBot.play(trick);
-            } finally {
-                Bot.targetBot = defendersBot;
-            }
+            return realBot.play(trick);
         }
 
         Bot realBot;        // declarer's own solver when the defenders guess the drops
@@ -307,7 +304,9 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
                 String[] resParts0 = res.split("\\s+:\\s+|\\s+#\\s+");
                 String[] resParts = resParts0[0].split("\\s+|#");
                 boolean iter = Arrays.asList(resParts).contains("iter");
-                Config.Bid expectedBid = Config.Bid.fromName(resParts[0]);
+                // "1 8- 8": the declarer's number first, as in TestGameManager.testFreePlay()
+                int bidIndex = resParts[0].length() == 1 && Character.isDigit(resParts[0].charAt(0)) ? 1 : 0;
+                Config.Bid expectedBid = Config.Bid.fromName(resParts[bidIndex]);
                 if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
                     return;     // no declarer, no drops to iterate
                 }
@@ -416,7 +415,6 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
         Assert.assertNotNull("no declarer", gameManager.getDeclarer());
         gameManager.setMinBid(expectedBid);
         gameManager.roundStage = GameManager.RoundStage.declareRound;
-        Bot.targetBot = null;
         printf("declarer #%d: %s\n", declarerNum, gameManager.initialDeclarerHand);
         TrickListBot bot = (TrickListBot)gameManager.getPlayers()[gameManager.declarerNumber];
         bot.myHand.add(talonCards);
@@ -460,7 +458,8 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
                 int k = j * size;
                 hands[j] = new CardSet(cards.subList(k, k + size));
             }
-            ForTricksBot forTricksBot = new ForTricksBot(hands);
+            ForTricksBot forTricksBot = ForTricksBot.getInstance();
+            forTricksBot.init(hands);
             String[] parts1 = parts[1].split("\\s+");
             Bid bid = Bid.fromName(parts1[parts1.length - 1]);
             int elderhand = 0;

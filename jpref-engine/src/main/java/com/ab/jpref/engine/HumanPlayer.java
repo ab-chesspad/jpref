@@ -46,8 +46,7 @@ public class HumanPlayer extends Player implements Serializable {
     }
 
     protected HumanPlayer(Player other, GameManager.EventObserver clickable) {
-        super(other);
-        this.number = other.getNumber();
+        init(other);
         this.clickable = clickable;
     }
 

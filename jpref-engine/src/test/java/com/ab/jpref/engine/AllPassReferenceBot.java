@@ -30,11 +30,11 @@ import com.ab.jpref.cards.CardSet;
  */
 public class AllPassReferenceBot extends Bot {
     public AllPassReferenceBot(int number) {
-        super(number);
+        this.number = number;
     }
 
     public AllPassReferenceBot(Player realPlayer) {
-        super(realPlayer);
+        init(realPlayer);
     }
 
     @Override

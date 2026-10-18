@@ -37,12 +37,39 @@ import static com.ab.jpref.config.Config.ROUND_SIZE;
 public class ForTricksBot extends Bot {
     PlayerBid maxPlayerBid;
 
-    public ForTricksBot(CardSet... hands) {
-        super(hands);
+    private static ForTricksBot instance;
+
+    public static ForTricksBot getInstance() {
+        if (instance == null) {
+            instance = new ForTricksBot();
+        }
+        return instance;
     }
 
-    public ForTricksBot(Player player) {
-        super(player);
+    public static ForTricksBot getInstance(Player player) {
+        ForTricksBot instance = getInstance();
+        instance.init(player);
+        return instance;
+    }
+
+    public static ForTricksBot getInstance(CardSet... hands) {
+        ForTricksBot instance = getInstance();
+        instance.init(hands);
+        return instance;
+    }
+
+    private ForTricksBot() {}
+
+    // the singleton serves every bot and deal: init() clears the previous player's bid
+    @Override
+    public void clear() {
+        super.clear();
+        maxPlayerBid = null;
+    }
+
+    // for tests only
+    public ForTricksBot(CardSet... hands) {
+        init(hands);
     }
 
     public PlayerBid getMaxPlayerBid(Config.Bid minBid, int elderHand) {

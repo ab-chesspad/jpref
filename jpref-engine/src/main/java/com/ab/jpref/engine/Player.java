@@ -80,34 +80,40 @@ public abstract class Player implements Serializable {
         return number;
     }
 
-    public Player() {}
+    protected Player() {}
 
-    public Player(Player other) {
+    protected void init(Player other) {
+        clear();
+        number = 0;
+        gameHistory.clear();
         if (other != null) {
             bid = other.bid;
-            myHand = new CardSet(other.myHand);
-            leftHand = new CardSet(other.leftHand);
-            rightHand = new CardSet(other.rightHand);
-            gameHistory = new ArrayList<>(other.gameHistory);
+            number = other.number;
+            myHand.add(other.myHand);
+            leftHand.add(other.leftHand);
+            rightHand.add(other.rightHand);
         }
-        tricks = 0;
-
     }
 
-    public Player(CardSet cards) {
-        setHand(cards);
+    public void init(CardSet... hands) {
+        clear();
+        number = 0;
+        gameHistory.clear();
+        myHand.add(hands[0]);
+        leftHand.add(hands[1]);
+        rightHand.add(hands[2]);
     }
 
     public void setHand(CardSet cards) {
+        int number = this.number;
         clear();
+        this.number = number;
         this.myHand.add(cards);
         CardSet complement = this.myHand.complement();
         this.leftHand.set(complement);
         this.rightHand.set(complement);
-        bid = Config.Bid.BID_UNDEFINED;
         gameHistory.add(new RoundResults());
     }
-
 
     // do not check card list size
     public void setHand(Collection<Card> thisHand) {

@@ -37,31 +37,25 @@ public class Bot extends Player implements Serializable {
     // so playerBid is the same and can be shared
     static PlayerBid playerBid;
 
-    public static Bot targetBot;  // either forTricksBot or misereBot
+    public transient Bot targetBot;  // either forTricksBot or misereBot
 
     public Bot(int number) {
         this.number = number;
     }
 
     public Bot(Player realPlayer) {
-        super(realPlayer);
-        if (realPlayer != null) {
-            this.number = realPlayer.getNumber();
-        } else {
-            this.number = 0;
-        }
+        init(realPlayer);
     }
 
-    public Bot(CardSet cards) {
-        super(cards);
-        number = 0;
-    }
+    // for subclasses that init() themselves, e.g. the ForTricksBot and MisereBot singletons;
+    // without it an implicit super() picks Bot(CardSet...) with no hands
+    protected Bot() {}
 
     protected Bot(CardSet... hands) {
-        this.myHand = new CardSet(hands[0]);
+        this.myHand.set(hands[0]);
         if (hands.length > 1) {
-            this.leftHand = new CardSet(hands[1]);
-            this.rightHand = new CardSet(hands[2]);
+            this.leftHand.set(hands[1]);
+            this.rightHand.set(hands[2]);
         }
     }
 
@@ -69,6 +63,10 @@ public class Bot extends Player implements Serializable {
     public void clear() {
         super.clear();
         playerBid = null;
+        if (targetBot != null) {
+            ForTricksBot.getInstance().clear();
+            MisereBot.getInstance().clear();
+        }
         targetBot = null;
     }
 
@@ -84,10 +82,10 @@ public class Bot extends Player implements Serializable {
     @Override
     public Bid getBid(Bid minBid, int elderHand) {
         elderHand = (this.number - elderHand + NOP) % NOP;  // relative to self
-        ForTricksBot forTricksBot = new ForTricksBot(this);
-        MisereBot misereBot = new MisereBot(this);
+        ForTricksBot forTricksBot = ForTricksBot.getInstance(this);
         PlayerBid playerBid = forTricksBot.getMaxPlayerBid(minBid, elderHand);
         Bid bid = playerBid.toBid();
+        MisereBot misereBot = MisereBot.getInstance(this);
         if (bid.compareTo(Bid.BID_XS) < 0 && misereBot.evalMisere(elderHand)) {
             this.bid = Bid.BID_MISERE;
             return Bid.BID_MISERE;
@@ -130,9 +128,9 @@ public class Bot extends Player implements Serializable {
     public void declareRound(Bid minBid, int _elderHand, Trick trick) {
         int elderHand = (this.number - _elderHand + NOP) % NOP;  // relative to self
         if (Bid.BID_MISERE.equals(minBid)) {
-            targetBot = new MisereBot(this);
+            targetBot = MisereBot.getInstance(this);
         } else {
-            targetBot = new ForTricksBot(this);
+            targetBot = ForTricksBot.getInstance(this);
         }
         Bidder.PlayerBid playerBid = targetBot.getDrop(elderHand, 2, trick);
         Bot.playerBid = playerBid;
@@ -174,11 +172,24 @@ public class Bot extends Player implements Serializable {
             return playAllPass(trick);
         }
         if (targetBot == null) {
-            // when declarer is human; todo: verify declaration!
-            Player declarer = gameManager().getDeclarerForDefender();
-            declarer.declareRound(gameManager().getMinBid(), trick.getStartedBy(), trick);
+            // a defender: a bot declarer's target knows the declarer's hand
+            Player declarer = gameManager().getDeclarer();
+            if (declarer instanceof Bot && ((Bot) declarer).targetBot != null) {
+                targetBot = ((Bot) declarer).targetBot;
+            } else {
+                // when declarer is human; todo: verify declaration!
+                Bot fictitiousBot = (Bot) gameManager().getDeclarerForDefender();
+                fictitiousBot.declareRound(gameManager().getMinBid(), trick.getStartedBy(), trick);
+                targetBot = fictitiousBot.targetBot;
+            }
         }
         return targetBot.play(trick);
+    }
+
+    // the card for this trick when the list's card relies on what the player cannot know,
+    // see MisereBot.robustCard(); the list's card by default
+    Card robustCard(Trick trick, Card listCard) {
+        return listCard;
     }
 
     Card playAllPass1stHand(Trick trick) {

@@ -3,7 +3,7 @@ All-pass->распас
 After Round Timeout->Задержка после раунда
 Animation Time->Время анимации
 Back to Game->Вернуться к игре
-Cancel->Забыть
+Cancel->Отменить
 Comments->Комментарии
 Confirmation->Подтверждение
 Continue->Продолжить
@@ -39,11 +39,13 @@ Pool Size->Пуля
 Program crash->Ошибка программы
 Record Notes->Запомнить
 Greedy->Жлобский
+Rejected, your cards are open -> Отвергнуто, ваши карты открыты
 Replay->Переиграть
 Restart JPref->Перезапустить JPref
 Rostov->Ростов
 Scores->Пуля
 Settings->Настройки
+Show Cards->Открыть карты
 Single click -> Одиночный клик
 Standing->Стоя
 Submit Log->Послать лог

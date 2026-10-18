@@ -24,7 +24,6 @@ import static com.ab.jpref.cards.Card.Suit;
 import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import static com.ab.jpref.engine.Bot.targetBot;
 
 import java.io.Serializable;
 
@@ -137,6 +136,21 @@ public class Trick extends BaseTrick implements Serializable {
         super.add(card);
     }
 
+    // the target bots see the hands as the declarer does: a void of the declarer's left or right
+    private static void removeVoid(int discardingPlayer, int declarerNumber, CardSet remove) {
+        if (declarerNumber < 0) {
+            return;
+        }
+        int relative = (discardingPlayer - declarerNumber + Config.NOP) % Config.NOP;
+        if (relative == 1) {
+            ForTricksBot.getInstance().leftHand.remove(remove);
+            MisereBot.getInstance().leftHand.remove(remove);
+        } else if (relative == 2) {
+            ForTricksBot.getInstance().rightHand.remove(remove);
+            MisereBot.getInstance().rightHand.remove(remove);
+        }
+    }
+
     protected void drop(Card card) {
         GameManager gameManager = GameManager.getInstance();
         int discardingPlayer = -1;
@@ -150,14 +164,14 @@ public class Trick extends BaseTrick implements Serializable {
             players[discardingPlayer].myHand.remove(remove);
             players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
             players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);
+            removeVoid(discardingPlayer, gameManager.declarerNumber, remove);
             CardSet declarerHand = gameManager.declarerHand;
             if (declarerHand != null) {
                 if (discardingPlayer == gameManager.declarerNumber) {
                     gameManager.discarded.add(gameManager.declarerHand.intersection(remove));
                     declarerHand.remove(remove);
-                    if (targetBot != null) {
-                        targetBot.myHand.remove(remove);
-                    }
+                    ForTricksBot.getInstance().myHand.remove(remove);
+                    MisereBot.getInstance().myHand.remove(remove);
                 }
             }
             if (trumpSuit != null && !card.getSuit().equals(trumpSuit)) {
@@ -165,9 +179,12 @@ public class Trick extends BaseTrick implements Serializable {
                 players[discardingPlayer].myHand.remove(remove);
                 players[(discardingPlayer + 1) % players.length].rightHand.remove(remove);
                 players[(discardingPlayer + 2) % players.length].leftHand.remove(remove);
+                removeVoid(discardingPlayer, gameManager.declarerNumber, remove);
                 if (declarerHand != null) {
                     if (discardingPlayer == gameManager.declarerNumber) {
                         declarerHand.remove(remove);
+                        ForTricksBot.getInstance().myHand.remove(remove);
+                        MisereBot.getInstance().myHand.remove(remove);
                     }
                 }
             }
@@ -175,9 +192,8 @@ public class Trick extends BaseTrick implements Serializable {
         for (Player player : players) {
             player.drop(card);
         }
-        if (targetBot != null) {
-            targetBot.drop(card);
-        }
+        ForTricksBot.getInstance().drop(card);
+        MisereBot.getInstance().drop(card);
         if (gameManager.declarerHand != null) {
             if (getTurn() == gameManager.declarerNumber) {
                 gameManager.declarerPlayed.add(card);
