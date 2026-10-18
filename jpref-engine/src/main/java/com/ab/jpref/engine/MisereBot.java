@@ -33,7 +33,7 @@ import java.util.*;
 
 public class MisereBot extends Bot {
 //    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
-    public static DeclarerDrop declarerDrop = DeclarerDrop.Last;
+    public static DeclarerDrop declarerDrop = DeclarerDrop.Random;
     public static final boolean DEBUG_LOG = false;
 
     static final int MAX_EVAL = 1000;   // in ‰
@@ -42,10 +42,14 @@ public class MisereBot extends Bot {
     static final int[] misereTable = MisereCatch.table();
 
     enum DeclarerDrop {
-        First,
-        Last,
-        Random
+        First,      // the least risk
+        Random      // one of the least risks, the defenders cannot be sure of it, see chooseDrop()
     }
+    // risks of drops for DeclarerDrop.Random end at the first one more than 30% over the previous
+    static final double DROP_JUMP = 1.3;
+    // when even the least risk of a drop is higher, likely caught anyway: one of all drops
+    static final int HOPELESS_RISK = 500;
+    private static final Random random = new Random();
 
     private static MisereBot instance;
 
@@ -170,34 +174,65 @@ public class MisereBot extends Bot {
         }
         Logger.printf(DEBUG_LOG, "getDrop(%d), %s\n", elderHand, this.myHand.toColorString());
 
-        playerBid.value = Integer.MAX_VALUE;    // will be used as probability
+        // every pair once, value is the probability to be caught
+        List<PlayerBid> playerBids = new ArrayList<>();
         CardSet myHand = new CardSet(this.myHand);
+        int bitmap = myHand.getBitmap();
         int bit0 = 0;
-probes:
-        while ((bit0 = CardSet.next(myHand.getBitmap(), bit0)) != 0) {
+        while ((bit0 = CardSet.next(bitmap, bit0)) != 0) {
             Card card0 = Card.get(bit0);
             myHand.remove(card0);
-            int bit1 = 0;
-            while ((bit1 = CardSet.next(myHand.getBitmap(), bit1)) != 0) {
+            int bit1 = bit0;
+            while ((bit1 = CardSet.next(bitmap, bit1)) != 0) {
                 Card card1 = Card.get(bit1);
                 myHand.remove(card1);
-                int eval = getEval4Misere(myHand);
+                PlayerBid probe = new PlayerBid(Config.Bid.BID_MISERE);
+                probe.value = getEval4Misere(myHand);
+                probe.drops.add(card0);
+                probe.drops.add(card1);
                 Logger.printf(DEBUG_LOG, "%s, %s -> %s: %d\n",
-                    card0, card1, myHand.toColorString(), eval);
+                    card0, card1, myHand.toColorString(), probe.value);
+                playerBids.add(probe);
                 myHand.add(card1);
-                if (playerBid.value > eval) {
-                    playerBid.value = eval;
-                    playerBid.drops.clear();
-                    playerBid.drops.add(card0);
-                    playerBid.drops.add(card1);
-                    if (playerBid.value == 0) {
-                        break probes;
-                    }
-                }
             }
             myHand.add(card0);
         }
-        return playerBid;
+        // the sort is stable: on a tie the first pair in card order, as First always took
+        Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
+        if (declarerDrop == DeclarerDrop.Random && gameManager().getDeclarer() instanceof Bot) {
+            // a bot declarer's own drop; the defenders guessing a human's drop take the least risk
+            return chooseDrop(playerBids);
+        }
+        return playerBids.get(0);
+    }
+
+    // sorted by risk: a clean one if any, otherwise one of the least risks up to the first jump,
+    // or one of all when the least is over HOPELESS_RISK; a lower risk more likely, the weight is 1 / risk:
+    // 249 249 280 | 1000 ... -> one of the first three, 35%, 35%, 31%
+    static PlayerBid chooseDrop(List<PlayerBid> playerBids) {
+        PlayerBid best = playerBids.get(0);
+        if (best.value == 0) {
+            return best;
+        }
+        int n = 1;
+        if (best.value > HOPELESS_RISK) {
+            n = playerBids.size();
+        }
+        while (n < playerBids.size() && playerBids.get(n).value <= playerBids.get(n - 1).value * DROP_JUMP) {
+            ++n;
+        }
+        double total = 0;
+        for (int i = 0; i < n; ++i) {
+            total += 1.0 / playerBids.get(i).value;
+        }
+        double r = random.nextDouble() * total;
+        for (int i = 0; i < n - 1; ++i) {
+            r -= 1.0 / playerBids.get(i).value;
+            if (r < 0) {
+                return playerBids.get(i);
+            }
+        }
+        return playerBids.get(n - 1);
     }
 
     @Override

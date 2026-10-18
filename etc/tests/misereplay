@@ -1,7 +1,7 @@
 #misèreplay for user #0 ♠ ♣ ♦ ♥
 #all delayed drop, ловятся
 # fixedplay hands, talon, turn
-
+# параллельный пронос, I cannot enforce the declarer's move, so they run only once
 deal: ♠789 ♣89 ♦789X ♥8  ♠Q ♣XQKA ♦JK ♥9JA  ♠XJKA ♣7J ♦QA ♥7Q  ♥XK 1 -> d 1 # Скуратов 1
 deal: ♠789 ♣89X ♦7X ♥78  ♠XJ ♣7J ♦9Q ♥9XJQ   ♠QK ♣QKA ♦8JK ♥KA  ♠A ♦A 1 -> d 1 # Лесной 34, incorrect drop
 deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> d 1 # Ковалевская

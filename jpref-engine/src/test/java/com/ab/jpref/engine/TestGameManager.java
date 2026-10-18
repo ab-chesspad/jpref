@@ -284,7 +284,7 @@ public class TestGameManager extends BaseTest {
                 }
                 String[] resParts0 = res.split("\\s+:\\s+|\\s+#\\s+");
                 String[] resParts = resParts0[0].split("\\s+|#");
-                int tot = 2;    // delayed drop, drop 1st, last
+                int tot = 1;    // delayed drop, drop 1st, cannot enforce the declarer's move
                 boolean clean = false;
                 int _elderHand = Integer.parseInt(tokens.get(tokens.size() - 1));     // 0-based
                 CardList _deck = new CardList();
