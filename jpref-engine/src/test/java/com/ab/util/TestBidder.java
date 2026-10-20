@@ -11,6 +11,15 @@ public class TestBidder extends BaseTest {
     public void testGetBid() {
         String[] sources = {
             // hand (11 - 12 cards, elderhand, [min bid] -> bid : drop
+            "♠A ♣QK ♦89XJA ♥8XJK  0 -> 6♦ : ♣QK",
+            "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♦ : ♣QK",
+            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
+
+            "♠78XQKA ♣8X ♦9XJK  2 -> 8♠ : ♣X ♣8",
+            "♠78XQKA ♣8X ♦9XJK  1 -> 7♠ : ♣X ♣8",
+            "♠78XQKA ♣8X ♦9XJK  0 -> 8♠ : ♣X ♣8",
+
+
             "♠8QA ♣A ♦JKA ♥89QKA  0 -> 9- : ♠8 ♠Q",
             "♠XJK ♣8KA ♦JQA ♥9KA  1 -> 6- : ♣8 ♥9",
             "♠9KA ♣KA ♦789A ♥8QA  0 -> 7♦ : ♥8Q",
@@ -37,8 +46,6 @@ public class TestBidder extends BaseTest {
 
             "♠78XJQK ♣JA ♦7K ♥Q  1 -> 6♠",
             "♠78QK ♣QKA ♦QA ♥JQA  2 -> 7♠ : ♦Q ♥J",
-            "♠A ♣QK ♦89XJA ♥8XJK  1 -> 6♥ : ♣QK",   // ♥KJXx as a side suit: 1 trick at elderhand 1
-            "♠A ♣QK ♦89XJA ♥8XJK  2 -> 6♦ : ♣QK",
             "♠QK ♣KA ♦8QK ♥78JQA  0 -> 7♥ : ♠QK",
             "♠78JQA ♣8QK ♦QK ♥KA  0 -> 7♠ : ♦QK",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♠ -> 6♠ : ♦X ♥8",
@@ -54,11 +61,11 @@ public class TestBidder extends BaseTest {
             "♠XJQ ♣89JQKA ♦7X ♥A  1  7♠ -> 7♣ : ♦7X",
 
             "♠7JQ ♣QA ♦XQKA ♥89X  0  7- -> 8♦ : ♥89",
+            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♥89",
             "♠8KA ♣78KA ♦7 ♥7JQK  0  8♦ -> 8♥ : ♠8 ♦7", // overbidding
             "♠XJQ ♣89JQKA ♦7X ♥A  1  7♦ -> 8♣ : ♦7X",
             "♠XJQ ♣89JQKA ♦7X ♥A  1  8♠ -> 8♣ : ♦7X",
             "♠79XJQA ♣8JA ♦XK ♥8  2  6♥ -> 7♠ : ♦X ♥8",
-            "♠7JQ ♣QA ♦XQKA ♥89X  1 -> 6♦ : ♥89",
             "♣A ♦79XQA ♥79XQKA  0 -> 8♥ : ♦79",
             "♦789XQA ♥79XQKA  0 -> 9♦ : ♥79",
             "♠KA ♣9XJ ♦KA ♥78JQA  1 -> 8♥ : ♣9X",
@@ -67,12 +74,6 @@ public class TestBidder extends BaseTest {
             "♣8 ♦89XKA ♥79XQKA  0 -> 9♥ : ♣8 ♦8",
             "♣8 ♦89XKA ♥79XQKA  1 -> 9♦ : ♣8 ♥7",
             "♠JQA ♣89JA ♦Q ♥89KA  1 -> 6♣ : ♠J ♦Q",
-
-            // from etc/tests/declare-round (TestBot.testDeclareRound), elderhand made relative
-            // to the declarer, min bid 6 of the expected trump when it was not given
-            "♠78XQKA ♣8X ♦9XJK  2 -> 8♠ : ♣X ♣8",
-            "♠78XQKA ♣8X ♦9XJK  1 -> 8♦ : ♣X ♣8",
-            "♠78XQKA ♣8X ♦9XJK  0 -> 8♠ : ♣X ♣8",
 
             // by Utyatsky
             // 41.Тхххх  ТКВ  ТК  хх	1  2, 3	 	2 червы	8 пик  7 пик

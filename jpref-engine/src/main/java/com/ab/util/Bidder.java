@@ -505,7 +505,7 @@ public class Bidder {
         int tricks = 0;
         for (SuitTricks pair : pairs) {
             int turn = elderHand;
-            if (pair.suit.equals(trumpCandidate) && pair.length >= 4) {
+            if (pair.suit.equals(trumpCandidate) && pair.length >= 4 && !forced(pairs, pair, elderHand)) {
                 // 4 trumps or more take the lead back; 3 cannot, the defenders hold 5 of them:
                 // ♠XJK without the lead is no trick
                 turn = 0;
@@ -513,6 +513,30 @@ public class Bidder {
             tricks += pair.tricks[turn];
         }
         return tricks;
+    }
+
+    // without the lead the defenders lead a suit the declarer has to ruff, a void or a singleton
+    // without the ace, every ruff shortens the trumps; with 4 of them and no ace, as many as
+    // the defenders hold with the ace, the declarer cannot draw trumps then:
+    // ♠JA ♣XJQK ♦8JQA, ♣ trump, ♥ led, ♣K ruffs, ♣A takes and ♥ again - 6 tricks, not 7
+    private static boolean forced(List<SuitTricks> pairs, SuitTricks trump, int elderHand) {
+        if (elderHand == 0 || trump.length != 4 || hasAce(trump)) {
+            return false;
+        }
+        if (pairs.size() < TOTAL_SUITS) {
+            return true;    // a void
+        }
+        for (SuitTricks pair : pairs) {
+            if (pair != trump && pair.length == 1 && !hasAce(pair)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // the chunk is the length and the honors, E for the ace
+    private static boolean hasAce(SuitTricks pair) {
+        return pair.chunk.length() > 1 && pair.chunk.charAt(1) == 'E';
     }
 
     private int toBidValue(List<SuitTricks> pairs, int value) {
@@ -625,17 +649,19 @@ public class Bidder {
             if (Math.abs(extraChance - that.extraChance) > 1e-9) {
                 return extraChance > that.extraChance;
             }
-            if (unsureTricks != that.unsureTricks) {
-                return unsureTricks < that.unsureTricks;
-            }
+            // the same tricks: keep the long side suit, drop a short one whole, ♠A ♣QK ♦89XJA ♥8XJK
+            // 6♦ at elderhand 1: ♣QK, not ♥8X - ♥8XJK takes 2 tricks when the ♥ split 2 - 2, ♣ is ruffed
             if (longSide != that.longSide) {
                 return longSide > that.longSide;
             }
-            if (weakPairsSplit != that.weakPairsSplit) {
-                return weakPairsSplit;
-            }
             if (voids != that.voids) {
                 return voids > that.voids;
+            }
+            if (unsureTricks != that.unsureTricks) {
+                return unsureTricks < that.unsureTricks;
+            }
+            if (weakPairsSplit != that.weakPairsSplit) {
+                return weakPairsSplit;
             }
             if (singletons != that.singletons) {
                 // a trump contract ruffs after the single card, no trump loses the suit:

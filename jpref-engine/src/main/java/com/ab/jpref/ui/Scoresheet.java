@@ -255,8 +255,8 @@ public class Scoresheet {
             if (!instance.fullHistory) {
                 --historySize;
             }
-            if (historySize == 0) {
-                widget.change = 0;
+            if (historySize <= 0) {
+                widget.change = 0;     // -1: the first round is not over yet
                 return;
             }
             if (labelIndex == statusPoints) {

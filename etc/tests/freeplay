@@ -1,6 +1,7 @@
 freeplay: hands, talon, elderhand -> bid, tricks
 
 #*** exit ***
+deal: ♠89QK ♣89 ♦7QK ♥Q  ♠7J ♣7XA ♦JA ♥79J  ♠XA ♣JQK ♦9 ♥8XKA  ♦X8  2 -> 2 6♥ 6
 deal: ♠789QA ♣9 ♦9K ♥7Q  ♠XJK ♣8KA ♦JA ♥9A  ♣7XJQ ♦78X ♥8XJ  ♥K ♦Q  2 -> 1 7- 7 # 7- is a surprise
 deal: ♠XQ ♣9K ♦8Q ♥9JQK  ♠8JKA ♣X ♦XJKA ♥7  ♠79 ♣7JQA ♦9 ♥8XA  ♦7 ♣8  0 -> 1 7♦ 9
 deal: ♠QA ♣9XK ♦JQ ♥9XA  ♠8 ♣7A ♦78XK ♥78J  ♠79XJ ♣8Q ♦9A ♥QK  ♣J ♠K  2 -> Misère 1 # 20
@@ -11,7 +12,7 @@ deal: ♠89 ♣789JA ♦7J ♥J  ♠K ♣XQ ♦9Q ♥789QK  ♠7XJQA ♦8XA ♥X
 deal: ♠79K ♣89X ♦7X ♥8J  ♠Q ♣J ♦QKA ♥79QKA  ♠8XJA ♣7QK ♦9J ♥X  ♦8 ♣A  0 -> X♥ 10
 deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> 8- 8
 deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
-deal: ♠8XJK ♣J ♦Q ♥XQKA  ♠A ♣789X ♦XJA ♥7J  ♠79Q ♣QA ♦789K ♥9  ♣K ♥8  2 -> 7♠ 7 # 6♥?
+deal: ♠8XJK ♣J ♦Q ♥XQKA  ♠A ♣789X ♦XJA ♥7J  ♠79Q ♣QA ♦789K ♥9  ♣K ♥8  2 -> 6♥ 7
 
 deal: ♠9A ♣KA ♦789A ♥8Q  ♠XJ ♣9JQ ♦J ♥7XJK  ♠78Q ♣78X ♦XQK ♥9  ♥A ♠K  1 -> 7♦ 7
 deal: ♣78Q ♦89JQ ♥78X  ♠8X ♣X ♦7X ♥9JQKA  ♠79JA ♣9JKA ♦KA  ♠QK  1 -> 9♠ 10
@@ -22,7 +23,6 @@ deal: ♠A ♣QKA ♦89 ♥8XQA  ♠7JQK ♦7XJK ♥7J  ♠89X ♣789XJ ♦Q ♥
 ############
 deal: ♠8JK ♣79 ♦JQ ♥QKA  ♠79X ♣8X ♦789XK  ♠QA ♣QA ♦A ♥789XJ  ♣KJ  1 -> Misère 1 # 19
 
-deal: ♠8J ♣89A ♦89KA ♥X  ♠7A ♣7JQK ♦7J ♥JQ  ♠9QK ♣X ♦Q ♥789KA  ♠X ♦X  1 -> 6♠ 7
 deal: ♠7XA ♣8XQ ♦7JA ♥7  ♠JK ♣9KA ♥8XJQA  ♠89Q ♣7J ♦8XK ♥9K  ♦9Q  2 -> 6♥ 7
 deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
