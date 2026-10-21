@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration name="play" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.ab.jpref.gui.Main" />
+    <module name="jpref-gui" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
