@@ -333,11 +333,20 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
         JTextArea textArea = new JTextArea(10, 30);
         textArea.setFont(new Font("Serif", Font.PLAIN, (int)metrics.fontSize / 2));
         dialog.add(new JScrollPane(textArea), BorderLayout.CENTER);
-        JButton okButton = new JButton(m("OK"));
-        okButton.addActionListener(e -> dialog.dispose());
-        dialog.add(okButton, BorderLayout.SOUTH);
-        dialog.setVisible(true);
-        return textArea.getText();
+        String[] result = new String[1];    // null on Cancel or close
+        JPanel buttonPanel = new JPanel();
+        JButton submitButton = new JButton(m("Submit"));
+        submitButton.addActionListener(e -> {
+            result[0] = textArea.getText();
+            dialog.dispose();
+        });
+        buttonPanel.add(submitButton);
+        JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(cancelButton);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);   // blocks until dispose() (modal)
+        return result[0];
     }
 
     @Override
@@ -447,13 +456,13 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     }
 
     @Override
-    public <T> void paintBanner(T graphics, String text, int x, int y, int width, int height) {
-        // as StatusPopup.GameOverOverlay, a longer text gets a smaller font to fit the width
+    public <T> void paintBanner(T graphics, String text, String fitText, int x, int y, int width, int height) {
+        // as StatusPopup.GameOverOverlay, a longer fitText gets a smaller font to fit the width
         Graphics2D g2d = (Graphics2D) ((Graphics) graphics).create();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         String s = m(text);
         Font font = new Font("SansSerif", Font.BOLD, (int) (width * 0.12));
-        int textWidth = g2d.getFontMetrics(font).stringWidth(s);
+        int textWidth = g2d.getFontMetrics(font).stringWidth(m(fitText));
         if (textWidth > width * 0.9) {
             font = font.deriveFont((float) (font.getSize() * width * 0.9 / textWidth));
         }

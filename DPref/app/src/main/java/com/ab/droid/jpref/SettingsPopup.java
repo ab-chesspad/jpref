@@ -62,7 +62,6 @@ public class SettingsPopup {
     private final MainActivity host;
     private final DConfig dConfig;
     private final DMetrics dMetrics;
-    private final Bitmap buttonImage;
     private final Bitmap radioImage;
     private final Bitmap radioSelectedImage;
     private final Bitmap checkBoxImage;
@@ -88,7 +87,6 @@ public class SettingsPopup {
         this.dConfig.serialize();
         this.dMetrics = host.getMetrics();
         DUtil dUtil = (DUtil) host.getUtil();
-        this.buttonImage = dUtil.loadBitmap("/buttons/button.jpg");
         this.radioImage = dUtil.loadBitmap("/buttons/radio.png");
         this.radioSelectedImage = dUtil.loadBitmap("/buttons/radio-sel.png");
         this.checkBoxImage = dUtil.loadBitmap("/buttons/checkbox.png");
@@ -412,13 +410,7 @@ public class SettingsPopup {
     }
 
     private Button styledButton(String text) {
-        Button button = new Button(host);
-        button.setAllCaps(false);     // the text as it is, no capitals
-        if (buttonImage != null) {
-            button.setBackground(new BitmapDrawable(host.getResources(), buttonImage));
-        }
-        button.setTransformationMethod(null);
-        button.setTextColor(Color.BLACK);
+        Button button = new DButton(host);
         button.setTextSize(fontSize / 2f);
         button.setText(text);
         return button;

@@ -36,9 +36,9 @@ public class Metrics {
 
     public final double
         xVisible = .3,      // cards overlap visually
-        yVisible = .25,     // cards overlap visually
+        yVisible = .25,     // cards overlap visually, the rank and the suit take .22 of the card
         xSuitVisible = .6,  // between suits
-        ySuitVisible = .5,  // between suits
+        ySuitVisible = .35, // between suits, more only makes the side hands and the cards smaller
         xHandGap = 1,       // between hands & talon
         wButton = .5,
         hButton = wButton,
@@ -46,8 +46,10 @@ public class Metrics {
         hLabel = .5,
         wElderHand = .5,
 
-        wHand = 4 * xSuitVisible + 8 * xVisible,    // + wButton,  // for 12 cards
-        hHand = 4 * ySuitVisible + 6 * yVisible,            // for 10 cards
+        // for 10 open cards, as actualWidth() counts them, the last card is visible all of it;
+        // 12 cards before the drop overlap more, see TableLayout.paintHand()
+        wHand = 4 * xSuitVisible + 6 * xVisible + (1 - xSuitVisible),
+        hHand = 4 * ySuitVisible + 6 * yVisible + (1 - ySuitVisible),   // for 10 cards, as actualHeight()
 
         ySideHandMargin = (double) 4 / 7,     // for vertical layout
         xSelected = .15,     // selected cards
@@ -97,7 +99,7 @@ public class Metrics {
         // horizontally: partially covered cards
         w = ((double) panelWidth - 2 * MIN_X_MARGIN) / wHand;
         // vertically: partially covered cards + yLabel + horizontal line;
-        h = ((double) panelHeight - 4 * MIN_Y_MARGIN) / (hHand + cardAspectRatio + hButton);
+        h = ((double) panelHeight - 4 * MIN_Y_MARGIN) / (hHand + cardAspectRatio);
         if (h < w * cardAspectRatio) {
             vMetrics.first = h / cardAspectRatio;
             vMetrics.second = h;
@@ -110,8 +112,8 @@ public class Metrics {
         Couple<Double> hMetrics = new Couple<>();
         // horizontally: bottom hand + 2 vertical columns
         w = ((double) panelWidth - 4 * MIN_X_MARGIN) / (wHand + 2);
-        // vertically: partially covered cards + button;
-        h = ((double) panelHeight - 3 * MIN_Y_MARGIN) / (hHand + hButton);
+        // vertically: the side hands, the buttons between the talon and the bottom hand get the rest
+        h = ((double) panelHeight - 3 * MIN_Y_MARGIN) / hHand;
         if (h < w * cardAspectRatio) {
             hMetrics.first = h / cardAspectRatio;
             hMetrics.second = h;

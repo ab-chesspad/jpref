@@ -218,7 +218,7 @@ public class Bidder {
             playerBid = new PlayerBid(value);
             if (minBid.compareTo(playerBid.toBid()) <= 0) {
                 for (int i = 0; i < oneBid.drops.length; ++i) {
-                    Suit suit = pairs.get(oneBid.drops[i]).suit;
+                    Suit suit = pairs.get(weakestSame(pairs, oneBid.drops[i])).suit;
                     Card drop = handCopy.list(suit).first();
                     playerBid.drops.add(drop);
                     handCopy.remove(drop);
@@ -239,6 +239,21 @@ public class Bidder {
 
         // not found or overbidding or invalid drops
         return searchBid(hand, minBid, elderHand);
+    }
+
+    // the table does not tell suits of the same chunk, they are sorted the strongest first:
+    // the same place counted from the weakest one, ♠XQ ♣JQ ♦789QKA ♥8K - ♠XQ, not ♥8K
+    private static int weakestSame(List<SuitTricks> pairs, int index) {
+        String chunk = pairs.get(index).chunk;
+        int first = index;
+        while (first > 0 && pairs.get(first - 1).chunk.equals(chunk)) {
+            --first;
+        }
+        int last = index;
+        while (last < pairs.size() - 1 && pairs.get(last + 1).chunk.equals(chunk)) {
+            ++last;
+        }
+        return last - (index - first);
     }
 
     // try every drop and every denomination, the max bid in suit order wins:
@@ -273,6 +288,38 @@ public class Bidder {
             playerBid.value = best.contract;
         }
         return playerBid;
+    }
+
+    // the drops as good as the chosen one, they differ in the ranks dropped only, the chosen one among them:
+    // ♠7A ♣9A ♦JA ♥7XJQKA, any 2 of ♠7 ♣9 ♦J
+    public List<CardSet> equalDrops(CardSet hand, Bid minBid, int elderHand, CardSet chosen) {
+        List<CardSet> res = new ArrayList<>();
+        Suit notTrump = getNotTrump(toSuitChunks(hand), elderHand);
+        Candidate target = evalDrops(hand, chosen.getBitmap(), minBid, elderHand, notTrump, null);
+        if (target == null || chosen.size() != hand.size() - ROUND_SIZE) {
+            res.add(new CardSet(chosen));
+            return res;
+        }
+        int bitmap = hand.getBitmap();
+        int bit0 = 0;
+        while ((bit0 = CardSet.next(bitmap, bit0)) != 0) {
+            List<Integer> drops = new ArrayList<>();
+            if (hand.size() - ROUND_SIZE == 1) {
+                drops.add(bit0);
+            } else {
+                int bit1 = bit0;
+                while ((bit1 = CardSet.next(bitmap, bit1)) != 0) {
+                    drops.add(bit0 | bit1);
+                }
+            }
+            for (int d : drops) {
+                Candidate c = evalDrops(hand, d, minBid, elderHand, notTrump, null);
+                if (c != null && c.compareSubstance(target) == 0) {
+                    res.add(new CardSet(d));
+                }
+            }
+        }
+        return res;
     }
 
     private Candidate evalDrops(CardSet hand, int drops, Bid minBid, int elderHand, Suit notTrump, Candidate best) {
@@ -430,7 +477,7 @@ public class Bidder {
             // with a trump, short side suits to ruff count more
             CardSet dealt = new CardSet(rest.getBitmap() | drops);
             for (SuitTricks pair : pairs) {
-                c.extraChance += extraChance(rest.list(pair.suit), dealt.list(pair.suit).size());
+                c.extraChance += extraChance(rest.list(pair.suit), dealt.list(pair.suit));
             }
         }
         c.dropSuitLengths = dropSuitLengths;
@@ -438,6 +485,7 @@ public class Bidder {
         while ((bit = CardSet.next(drops, bit)) != 0) {
             Rank rank = Card.get(bit).getRank();
             c.dropRanks += rank.getValue();
+            c.dropTop = Math.max(c.dropTop, rank.getValue());
             if (rank.equals(Rank.ACE)) {
                 ++c.droppedAces;
             }
@@ -448,26 +496,52 @@ public class Bidder {
     // no trump on lead, the chance of a trick more in a suit: the first card below the top ones wins
     // when the only outside card above it falls while the top ones are played, its holder has
     // no more cards in the suit; the 20 unseen cards split 10 - 10. Alone the declarer cannot
-    // finesse: ♦AKJ, the ♦Q falls in 2 rounds 33%; ♠AQ, the ♠K under the ace 5%
-    static double extraChance(CardSet suitCards, int dealtLength) {
+    // finesse: ♦AKJ, the ♦Q falls in 2 rounds 33%; ♠AQ, the ♠K under the ace 5%. The top ones
+    // need not start from the ace, the outside cards above them take fewer rounds than they last:
+    // ♥XQK, the ♥A takes one, the ♥J falls in 2 rounds; ♦XQ never, the ♦AK take both.
+    // dealtCards are the suit's cards before the drop, the dropped ones are not outside
+    static double extraChance(CardSet suitCards, CardSet dealtCards) {
+        int above = 0;      // outside cards above the top one
         int top = 0;
         Card next = null;
+        int upper = Rank.ACE.getValue() + 1;
         for (Card card = suitCards.last(); card != null; card = suitCards.prev(card)) {
-            if (card.getRank().getValue() != Rank.ACE.getValue() - top) {
+            int outside = outsideBetween(dealtCards, card, upper);
+            if (top == 0) {
+                above = outside;
+            } else if (outside > 0) {
+                if (outside != 1) {
+                    return 0;   // more than one card above it
+                }
                 next = card;
                 break;
             }
             ++top;
+            upper = card.getRank().getValue();
         }
-        if (next == null || top == 0 || Rank.ACE.getValue() - top - next.getRank().getValue() != 1) {
-            return 0;   // no card to promote, nothing on top to drop it, or more than one card above it
+        if (next == null || above >= top) {
+            return 0;   // no card to promote, or the outside cards on top take all the top ones
         }
-        int outside = 8 - dealtLength;
+        int outside = 8 - dealtCards.size();
         int unseen = 20;
         double res = 0;
         for (int length = 1; length <= Math.min(top, outside); ++length) {
             // the holder of that card has length cards of the suit, it among them
             res += comb(outside - 1, length - 1) * comb(unseen - outside, 10 - length) / comb(unseen - 1, 9);
+        }
+        return res;
+    }
+
+    // the cards of the suit ranked between card and upper not dealt to the declarer
+    private static int outsideBetween(CardSet dealtCards, Card card, int upper) {
+        int res = 0;
+        for (Rank rank : Rank.values()) {
+            if (rank == Rank.SIX || rank.getValue() <= card.getRank().getValue() || rank.getValue() >= upper) {
+                continue;
+            }
+            if (!dealtCards.contains(Card.fromValues(card.getSuit(), rank))) {
+                ++res;
+            }
         }
         return res;
     }
@@ -499,6 +573,18 @@ public class Bidder {
             }
         }
         return true;
+    }
+
+    // the tricks of the hand after the drop, on lead, with the chances of a trick more,
+    // see extraChance(); the declarer drops for the most of them. dealt is the hand before the drop
+    public double estimateTricks(CardSet hand, CardSet dealt, Suit trump) {
+        double res = calcTricks(toSuitChunks(hand), 0, trump);
+        for (Suit suit : Suit.values()) {
+            if (!hand.list(suit).isEmpty()) {
+                res += extraChance(hand.list(suit), dealt.list(suit));
+            }
+        }
+        return res;
     }
 
     private int calcTricks(List<SuitTricks> pairs, int elderHand, Suit trumpCandidate) {
@@ -608,70 +694,90 @@ public class Bidder {
         double extraChance; // no trump on lead, the chances of tricks more than counted, see extraChance()
         int dropSuitLengths;    // keep longer side suits, more chances to catch a defender's card
         int dropRanks;
+        int dropTop;        // the highest dropped card, a king stays rather than a queen: ♠XQ goes, not ♥8K
 
         // max bid first, then the least valuable drops
         boolean isBetterThan(Candidate that) {
             if (that == null) {
                 return true;
             }
+            int diff = compareSubstance(that);
+            if (diff != 0) {
+                return diff > 0;
+            }
+            if (dropTop != that.dropTop) {
+                return dropTop < that.dropTop;
+            }
+            return dropRanks < that.dropRanks;
+        }
+
+        // all but the ranks dropped: a positive one is better, 0 for the drops a declarer can
+        // choose at random, ♠7A ♣9A ♦JA ♥7XJQKA - any 2 of ♠7 ♣9 ♦J, see equalDrops()
+        int compareSubstance(Candidate that) {
             if (shortfall != that.shortfall) {
-                return shortfall < that.shortfall;
+                return (shortfall < that.shortfall) ? 1 : -1;
             }
             if (weak != that.weak) {
-                return !weak;
+                return (!weak) ? 1 : -1;
             }
             // the same tricks in two trumps: the longest one, the moves below
             // decide only between two trumps of the same length
             if (trumpMoves >= 0 && that.trumpMoves >= 0 && value / 10 == that.value / 10
                 && trumpLength != that.trumpLength) {
-                return trumpLength > that.trumpLength;
+                return (trumpLength > that.trumpLength) ? 1 : -1;
             }
             // the same tricks in two trumps: never one that needs more moves than it takes
             if (trumpMoves >= 0 && that.trumpMoves >= 0 && value / 10 == that.value / 10
                 && trumpWorthy != that.trumpWorthy) {
-                return trumpWorthy;
+                return (trumpWorthy) ? 1 : -1;
             }
             // the same tricks in two trumps worth playing: on lead the trump ready
             // to play, otherwise the one needing more moves, trumps protect it meanwhile
             if (trumpMoves >= 0 && that.trumpMoves >= 0 && value / 10 == that.value / 10
                 && trumpWorthy && that.trumpWorthy && trumpMoves != that.trumpMoves) {
-                return onLead == trumpMoves < that.trumpMoves;
+                return (onLead == trumpMoves < that.trumpMoves) ? 1 : -1;
             }
             if (value != that.value) {
-                return value > that.value;
+                return (value > that.value) ? 1 : -1;
             }
             if (droppedTrumps != that.droppedTrumps) {
-                return droppedTrumps < that.droppedTrumps;
+                return (droppedTrumps < that.droppedTrumps) ? 1 : -1;
             }
             if (droppedAces != that.droppedAces) {
-                return droppedAces < that.droppedAces;
+                return (droppedAces < that.droppedAces) ? 1 : -1;
             }
             if (Math.abs(extraChance - that.extraChance) > 1e-9) {
-                return extraChance > that.extraChance;
+                return (extraChance > that.extraChance) ? 1 : -1;
             }
             // the same tricks: keep the long side suit, drop a short one whole, ♠A ♣QK ♦89XJA ♥8XJK
             // 6♦ at elderhand 1: ♣QK, not ♥8X - ♥8XJK takes 2 tricks when the ♥ split 2 - 2, ♣ is ruffed
             if (longSide != that.longSide) {
-                return longSide > that.longSide;
+                return (longSide > that.longSide) ? 1 : -1;
             }
             if (voids != that.voids) {
-                return voids > that.voids;
+                return (voids > that.voids) ? 1 : -1;
             }
             if (unsureTricks != that.unsureTricks) {
-                return unsureTricks < that.unsureTricks;
+                return (unsureTricks < that.unsureTricks) ? 1 : -1;
             }
             if (weakPairsSplit != that.weakPairsSplit) {
-                return weakPairsSplit;
+                return (weakPairsSplit) ? 1 : -1;
             }
             if (singletons != that.singletons) {
                 // a trump contract ruffs after the single card, no trump loses the suit:
                 // ♠XJK ♣8KA ♦JQA ♥9KA 6-, a bare ♠K stops nothing, ♠XJK may; a bare ace is no loss
-                return trumpMoves < 0 ? singletons < that.singletons : singletons > that.singletons;
+                return (trumpMoves < 0 ? singletons < that.singletons : singletons > that.singletons) ? 1 : -1;
             }
             if (dropSuitLengths != that.dropSuitLengths) {
-                return dropSuitLengths < that.dropSuitLengths;
+                return (dropSuitLengths < that.dropSuitLengths) ? 1 : -1;
             }
-            return dropRanks < that.dropRanks;
+            // a king may take a trick, ♥8K stays, ♠XQ goes; the lower ranks dropped are the same,
+            // the aces are counted above
+            boolean kingDropped = dropTop >= Rank.KING.getValue();
+            if (kingDropped != that.dropTop >= Rank.KING.getValue()) {
+                return (!kingDropped) ? 1 : -1;
+            }
+            return 0;
         }
     }
 

@@ -28,6 +28,8 @@ import com.ab.util.Bidder;
 import com.ab.util.Bidder.PlayerBid;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Bot extends Player implements Serializable {
@@ -177,6 +179,15 @@ public class Bot extends Player implements Serializable {
             if (declarer instanceof Bot && ((Bot) declarer).targetBot != null) {
                 targetBot = ((Bot) declarer).targetBot;
             } else {
+                // the other defender has guessed the drop already, a new guess would replace
+                // the shared target's hand, and its list would not match it any more
+                for (Player player : gameManager().getPlayers()) {
+                    if (player != this && player instanceof Bot && ((Bot) player).targetBot != null) {
+                        targetBot = ((Bot) player).targetBot;
+                    }
+                }
+            }
+            if (targetBot == null) {
                 // when declarer is human; todo: verify declaration!
                 Bot fictitiousBot = (Bot) gameManager().getDeclarerForDefender();
                 fictitiousBot.declareRound(gameManager().getMinBid(), trick.getStartedBy(), trick);
@@ -712,4 +723,168 @@ public class Bot extends Player implements Serializable {
         int totalTricks = 0;    // the best
         int expect = Integer.MAX_VALUE;
     }
+
+    static final int MIN_DROP_GUESSES = 4;  // see dropGuesses()
+    static final int MAX_DROP_GUESSES = 8;
+    // in the first tricks ForTricksBot.robustCard() searches only the list card's run, see sameRun():
+    // with 9 or 10 tricks left a search per guess takes too long for every card; MisereBot does
+    // it in the first trick only, its guesses count the same, the list card can miss the catch
+    static final int SAME_RUN_TRICKS = 2;
+
+    // the risk of the declarer's hand after a drop, the lower ones are the likelier drops,
+    // a tie-break in dropGuesses()
+    int dropRisk(CardSet dealtHand) {
+        return 0;
+    }
+
+    // the declarer can drop the card, see dropGuesses()
+    boolean droppable(Card card) {
+        return true;
+    }
+
+    // one card leads the counts of guesses by more than the guesses left can add to any other;
+    // on a tie the tie-breaks need all the guesses
+    static boolean decided(int[] caught, int remaining) {
+        int first = -1;
+        int second = -1;
+        for (int c : caught) {
+            if (c > first) {
+                second = first;
+                first = c;
+            } else if (c > second) {
+                second = c;
+            }
+        }
+        return first - second > remaining;
+    }
+
+    // the declarer's hands for various drops, the list's guess first
+    List<CardSet> dropGuesses(Trick trick) {
+        GameManager gameManager = gameManager();
+        List<CardSet> res = new ArrayList<>();
+        CardSet knownHand = new CardSet(gameManager.declarerHand);
+        int declarerSize = TrickList.getInstance().declarerSize(trick);
+        int diff = knownHand.size() - declarerSize;
+        if (diff <= 0) {
+            return res;     // all known
+        }
+        if (knownHand.contains(myHand) && myHand.size() == declarerSize) {
+            res.add(new CardSet(myHand));
+        }
+        // the dropped cards not shown yet, 1 or 2
+        List<CardSet> hands = new ArrayList<>();
+        List<Integer> evals = new ArrayList<>();
+        CardList cards = knownHand.toCardList();
+        for (int i = 0; i < cards.size(); ++i) {
+            if (!droppable(cards.get(i))) {
+                continue;
+            }
+            for (int j = diff == 1 ? i : i + 1; j < cards.size(); ++j) {
+                if (!droppable(cards.get(j))) {
+                    continue;
+                }
+                CardSet hand = new CardSet(knownHand);
+                hand.remove(cards.get(i));
+                hand.remove(cards.get(j));
+                // evaluate the hand as it was after the drop
+                CardSet dealtHand = new CardSet(hand);
+                dealtHand.add(gameManager.declarerPlayed);
+                int eval = dropRisk(dealtHand);
+                int k = evals.size();
+                while (k > 0 && evals.get(k - 1) > eval) {
+                    --k;
+                }
+                evals.add(k, eval);
+                hands.add(k, hand);
+            }
+        }
+        // not the likely drops, the various ones, even illogical: every card the declarer can hold
+        // is dropped under some guess and kept under some other, the least risks can all drop the
+        // same card: ♣QK, ♣K ♠7, ♣K ♦J... and miss the declarer that kept ♣K, dropped ♣Q ♦X;
+        // each next guess covers the most cards not covered yet, on a tie the least risk
+        CardSet notDropped = new CardSet(knownHand);
+        CardSet notKept = new CardSet(knownHand);
+        for (CardSet hand : res) {
+            notDropped.remove(knownHand.diff(hand));
+            notKept.remove(hand);
+        }
+        while (res.size() < MAX_DROP_GUESSES) {
+            CardSet next = null;
+            int maxCovered = 0;
+            for (CardSet hand : hands) {
+                if (res.contains(hand)) {
+                    continue;
+                }
+                int covered = knownHand.diff(hand).intersection(notDropped).size() +
+                    hand.intersection(notKept).size();
+                if (covered > maxCovered || next == null && res.size() < MIN_DROP_GUESSES) {
+                    next = hand;
+                    maxCovered = covered;
+                }
+            }
+            if (next == null) {
+                break;      // all covered, at least MIN_DROP_GUESSES, or no more hands
+            }
+            res.add(next);
+            notDropped.remove(knownHand.diff(next));
+            notKept.remove(next);
+        }
+        return res;
+    }
+
+    // legal cards of the defender to move, one of the cards with no other card between them
+    CardList candidates(Trick trick) {
+        GameManager gameManager = gameManager();
+        CardSet hand = gameManager.getPlayers()[trick.getTurn()].myHand;
+        CardSet legal = hand.list(trick.getStartingSuit());
+        if (legal.isEmpty() && trick.getStartingSuit() != null) {
+            legal = hand.list(trick.getTrumpSuit());    // void: a trump has to be played
+        }
+        if (legal.isEmpty()) {
+            legal = hand;
+        }
+        CardSet others = CardSet.union(gameManager.declarerHand, leftHand, rightHand,
+            trick.cards2CardSet());
+        others.remove(hand);
+        CardList res = new CardList();
+        Card prev = null;
+        for (Card card : legal.toCardList()) {
+            if (prev != null && prev.getSuit().equals(card.getSuit()) && !anyBetween(others, prev, card)) {
+                continue;
+            }
+            res.add(card);
+            prev = card;
+        }
+        return res;
+    }
+
+    // the candidates equivalent to card under the guess, the declarer's hand
+    CardList sameRun(Trick trick, CardList candidates, Card card, CardSet guess) {
+        CardSet hand = gameManager().getPlayers()[trick.getTurn()].myHand;
+        CardSet others = CardSet.union(guess, leftHand, rightHand, trick.cards2CardSet());
+        others.remove(hand);
+        CardList res = new CardList();
+        for (Card candidate : candidates) {
+            if (candidate.getSuit().equals(card.getSuit()) && !anyBetween(others, candidate, card)) {
+                res.add(candidate);
+            }
+        }
+        return res;
+    }
+
+    // a card of others between two cards of the same suit
+    static boolean anyBetween(CardSet others, Card card0, Card card1) {
+        if (card0.compareInTrick(card1) > 0) {
+            Card card = card0;
+            card0 = card1;
+            card1 = card;
+        }
+        for (Card other : others.list(card0.getSuit()).toCardList()) {
+            if (other.compareInTrick(card0) > 0 && other.compareInTrick(card1) < 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

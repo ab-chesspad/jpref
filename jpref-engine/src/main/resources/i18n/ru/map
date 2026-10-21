@@ -19,7 +19,7 @@ has been uploaded->файл послан
 Language->Язык
 Last Trick->Последняя взятка
 Laying->Лежа
-Maximum move delay, sec -> Максимальное время на ход, сек
+Maximum move time, sec -> Максимальное время на ход, сек
 Miami->Сочи
 Misère -> мизер
 Move Method -> Способ хода
@@ -39,7 +39,8 @@ Pool Size->Пуля
 Program crash->Ошибка программы
 Record Notes->Запомнить
 Greedy->Жлобский
-Rejected, your cards are open -> Отвергнуто, ваши карты открыты
+Rejected -> Отклонено
+Rejected, your cards are open -> Отклонено, ваши карты открыты
 Replay->Переиграть
 Restart JPref->Перезапустить JPref
 Rostov->Ростов
@@ -48,6 +49,7 @@ Settings->Настройки
 Show Cards->Открыть карты
 Single click -> Одиночный клик
 Standing->Стоя
+Submit->Послать
 Submit Log->Послать лог
 Table Color->Цвет стола
 Trick Confirmation -> Подтверждение взятки

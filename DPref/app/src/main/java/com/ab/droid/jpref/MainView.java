@@ -28,9 +28,7 @@ import static com.ab.jpref.cards.Card.TOTAL_SUITS;
 
 import static com.ab.jpref.config.I18n.m;
 import com.ab.jpref.cards.CardList;
-import com.ab.jpref.config.Config;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.engine.HumanPlayer;
 import com.ab.jpref.engine.Player;
 import com.ab.jpref.ui.TableLayout;
 import com.ab.jpref.ui.Widget;
@@ -66,7 +64,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.WindowInsets;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -102,7 +99,6 @@ public class MainView extends View implements TableLayout.GUI {
 
     Bitmap sourceElderHandImage;
     Bitmap elderHandImage;
-    Bitmap buttonImage;
 
     final DUtil dUtil;
 
@@ -130,17 +126,7 @@ public class MainView extends View implements TableLayout.GUI {
     }
     private final Map<View, ButtonVisual> buttonVisuals = new IdentityHashMap<>();
 
-    GameManager gameManager;
     GameManager.RoundStage roundStage;
-    HumanPlayer currentPlayer;
-    Config.Bid currentBid;
-    final CardList selectedCards = new CardList();
-    boolean reportReady;
-
-    TextView textView;
-    private ImageButton btnBottom;
-    private Bitmap bitmap;
-
     // mainLayout draws MainView (this: the table/cards) and every Widget's own
     // View (buttons, labels) as siblings, in add order - so a card dragged
     // under one of those widgets would otherwise paint behind it, the same way
@@ -170,52 +156,6 @@ public class MainView extends View implements TableLayout.GUI {
         addWaitBar(context);
         dMetrics.recalculateSizes();
         this.setBackgroundColor(context.config().bgColor.getColor());
-/*
-        mDetector = new GestureDetectorCompat(context, new GestureDetector.OnGestureListener() {
-            @Override
-            public boolean onDown(@NonNull MotionEvent motionEvent) {
-                return false;
-            }
-
-            @Override
-            public boolean onFling(MotionEvent event1, MotionEvent event2,
-                                   float velocityX, float velocityY) {
-//                Log.d(DEBUG_TAG, "onFling: " + event1.toString() + event2.toString());
-                Logger.println(String.format("%s, %s, %s", Util.currMethodName(), event1, event2));
-                int x = (int)event1.getX();
-                int y = (int)event2.getY();
-                TableLayout<?> tableLayout = TableLayout.getInstance();
-                return true;
-            }
-
-            @Override
-            public void onLongPress(@NonNull MotionEvent motionEvent) {
-
-            }
-
-            @Override
-            public boolean onScroll(@Nullable MotionEvent event, @NonNull MotionEvent event1, float v, float v1) {
-                return false;
-            }
-
-            @Override
-            public void onShowPress(@NonNull MotionEvent event) {
-                Logger.println(String.format("%s, %s", Util.currMethodName(), event));
-                int x = (int)event.getX();
-                int y = (int)event.getY();
-                TableLayout<?> tableLayout = TableLayout.getInstance();
-            }
-
-            @Override
-            public boolean onSingleTapUp(@NonNull MotionEvent event) {
-                Logger.println(String.format("%s, %s", Util.currMethodName(), event));
-                int x = (int)event.getX();
-                int y = (int)event.getY();
-                TableLayout<?> tableLayout = TableLayout.getInstance();
-                return false;
-            }
-        });
-*/
 
         this.setOnTouchListener(new OnTouchListener() {
             // Real touchscreens keep delivering ACTION_MOVE samples - with a
@@ -317,7 +257,6 @@ public class MainView extends View implements TableLayout.GUI {
         dMetrics.setCardAspectRatio((double) cardHeight * 8 / suitWidth);
         sourceBackImage = dUtil.loadBitmap(CARD_BACK_FILENAME);
         sourceElderHandImage = dUtil.loadBitmap("/buttons/hand.png");
-        buttonImage = dUtil.loadBitmap("/buttons/button.jpg");
     }
 
     private Bitmap getCardImage(Card card) {
@@ -363,17 +302,13 @@ public class MainView extends View implements TableLayout.GUI {
         } else {
             Bitmap image = dUtil.loadBitmap(String.format("/buttons/%s.png", widget.getCommand().toString()));
             if (image == null) {
-                Button b = new Button(context);
-                b.setAllCaps(false);     // the text as it is, no capitals
-                b.setBackgroundColor(Color.WHITE);
-                b.setTransformationMethod(null);
+                DButton b = new DButton(context);
                 b.setText(widget.getCommand().getName());
                 b.setOnClickListener(v -> onButtonClick(widget));
                 view = b;
             } else {
                 widget.setUserObject(image);
-                Button b = new Button(context);
-                b.setAllCaps(false);     // the text as it is, no capitals
+                DButton b = new DButton(context);
                 b.setOnClickListener(v -> onButtonClick(widget));
                 view = b;
             }
@@ -385,10 +320,10 @@ public class MainView extends View implements TableLayout.GUI {
     // Button clicks land on the UI thread by construction. That's fine for the
     // vast majority of commands (execCommand() just mutates widgets directly),
     // but yourOffer ends up in TableLayout.getOffer() -> gui.showOffer(), and
-    // comments ends up in gui.getUserComments() - both block waiting for a popup's
+    // submitLog ends up in gui.getUserComments() - both block waiting for a popup's
     // result, and blocking the UI thread there would prevent that same thread from
     // ever laying out/drawing the dialog it's waiting on (deadlock: the popup never
-    // appears, the app hangs). submitLog similarly calls gui.showMessage(..., buttons),
+    // appears, the app hangs). submitLog then calls gui.showMessage(..., buttons),
     // which blocks the same way, and its retry loop also calls Util.isConnected()
     // directly (not on a worker thread the way the actual upload is), which does
     // real network I/O - NetworkOnMainThreadException on the UI thread. Route these
@@ -396,7 +331,6 @@ public class MainView extends View implements TableLayout.GUI {
     // other command keeps running synchronously on the UI thread as before.
     private void onButtonClick(Widget widget) {
         if (widget.getCommand() == TableLayout.ButtonCommand.yourOffer
-                || widget.getCommand() == TableLayout.ButtonCommand.comments
                 || widget.getCommand() == TableLayout.ButtonCommand.submitLog) {
             new Thread(widget::onClick).start();
         } else {
@@ -448,7 +382,7 @@ public class MainView extends View implements TableLayout.GUI {
             int textColor = widget.getColor() == Widget.RED_COLOR ? Color.RED : Color.BLACK;
             if (jComponent instanceof Button) {
                 Bitmap image = (Bitmap)widget.getUserObject();
-                Bitmap sourceImage = image != null ? image : buttonImage;
+                Bitmap sourceImage = image != null ? image : DButton.getButtonImage(context);
                 boolean enabled = widget.isEnabled();
                 ButtonVisual last = buttonVisuals.get(jComponent);
                 if (last == null || last.w != w || last.h != h
@@ -483,7 +417,7 @@ public class MainView extends View implements TableLayout.GUI {
                     ((Button)jComponent).setTextColor(textColor);
                 }
                 jComponent.setEnabled(widget.isEnabled());
-                ((Button)jComponent).setTextColor(widget.isEnabled() ? textColor : 0xFFCCCCCC);
+                ((Button)jComponent).setTextColor(widget.isEnabled() ? textColor : DButton.DISABLED_TEXT_COLOR);
             } else if (jComponent instanceof TextView) {
                 ((TextView)jComponent).setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
                 ((TextView)jComponent).setText(DLabel.suitGlyphs(context, text));
@@ -782,8 +716,7 @@ public class MainView extends View implements TableLayout.GUI {
             Button defaultButton = null;
             for (int i = 0; i < buttons.length; ++i) {
                 int index = i;
-                Button button = new Button(context);
-                button.setAllCaps(false);     // the text as it is, no capitals
+                DButton button = new DButton(context);
                 button.setText(m(buttons[i]));
                 button.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
                 button.setOnClickListener(v -> {
@@ -821,15 +754,16 @@ public class MainView extends View implements TableLayout.GUI {
     @Override
     public String getUserComments() {
         // see onButtonClick()/showOffer() for why this must always block off the UI
-        // thread - the "comments" button click is routed through a background thread
+        // thread - the "submitLog" button click is routed through a background thread
         // specifically so this can safely wait here.
-        ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
-        context.runOnUiThread(() -> new CommentsPopup(context, resultQueue::offer));
+        // wrapped: the queue does not take null, which is the result on Cancel
+        ArrayBlockingQueue<String[]> resultQueue = new ArrayBlockingQueue<>(1);
+        context.runOnUiThread(() -> new CommentsPopup(context, comments -> resultQueue.offer(new String[]{comments})));
         try {
-            return resultQueue.take();
+            return resultQueue.take()[0];
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return "";
+            return null;
         }
     }
 
@@ -909,8 +843,8 @@ public class MainView extends View implements TableLayout.GUI {
     }
 
     @Override
-    public <T> void paintBanner(T canvas, String text, int x, int y, int width, int height) {
-        // as the Game Over label in StatusPopup, a longer text gets a smaller font to fit the width
+    public <T> void paintBanner(T canvas, String text, String fitText, int x, int y, int width, int height) {
+        // as the Game Over label in StatusPopup, a longer fitText gets a smaller font to fit the width
         Canvas c = (Canvas) canvas;
         String s = m(text);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -918,7 +852,7 @@ public class MainView extends View implements TableLayout.GUI {
         paint.setTypeface(Typeface.DEFAULT_BOLD);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(width * 0.12f);
-        float textWidth = paint.measureText(s);
+        float textWidth = paint.measureText(m(fitText));
         if (textWidth > width * 0.9f) {
             paint.setTextSize(paint.getTextSize() * width * 0.9f / textWidth);
         }

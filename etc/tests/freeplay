@@ -1,6 +1,11 @@
 freeplay: hands, talon, elderhand -> bid, tricks
 
 #*** exit ***
+deal: ♠A ♣8JKA ♦9XQK ♥J  ♠JK ♣79XQ ♦7 ♥8KA  ♠8XQ ♦8JA ♥79XQ  ♠79  0 -> 6♣ 5
+deal: ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♠789X ♣8 ♦789 ♥89  ♣KA 0 -> 2 Misère 1 # 70 d 1 # Ковалевская
+deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> Misère 1 # 70 d 1 # Ковалевская
+deal: ♠XJ ♣9XJQ ♦8J ♥79  ♠9QA ♣78A ♦7K ♥8K  ♠8K ♣K ♦9XQA ♥XJA  ♠7 ♥Q  1 -> All-pass 2
+deal: ♠JQKA ♣JQ ♦XK ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♣KA  1 -> 2 Misère 0 # 4 https://preferans.de/004
 deal: ♠89QK ♣89 ♦7QK ♥Q  ♠7J ♣7XA ♦JA ♥79J  ♠XA ♣JQK ♦9 ♥8XKA  ♦X8  2 -> 2 6♥ 6
 deal: ♠789QA ♣9 ♦9K ♥7Q  ♠XJK ♣8KA ♦JA ♥9A  ♣7XJQ ♦78X ♥8XJ  ♥K ♦Q  2 -> 1 7- 7 # 7- is a surprise
 deal: ♠XQ ♣9K ♦8Q ♥9JQK  ♠8JKA ♣X ♦XJKA ♥7  ♠79 ♣7JQA ♦9 ♥8XA  ♦7 ♣8  0 -> 1 7♦ 9
@@ -33,7 +38,6 @@ deal: ♠7 ♣JA ♦8QKA ♥XJK  ♠9JKA ♣89Q ♦J ♥9A  ♠8XQ ♣7K ♦7X �
 deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  0 -> 6♦ 6
 deal: ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q ♥JQA  ♠9A ♣9 ♦89J ♥789K  ♦A ♠Q  0 -> 7♠ 8
 deal: ♠7 ♣9QK ♦78XJQK  ♠89XA ♣8XA ♥7JA  ♠JQK ♣7J ♦9A ♥9QK  ♥8X  1 -> 6♦ 6
-deal: ♣9XJQKA ♦XQ ♥XQ  ♠79XJK ♣8 ♦7J ♥8A  ♠8QA ♦89KA ♥79J  ♥K ♣7  0 -> 8♣ 8
 deal: ♠7XKA ♣9QA ♦JA ♥A  ♠89JQ ♣78J ♦9XQ  ♣XK ♦78K ♥9XJQK  ♥78  2 -> 6♠ 7
 deal: ♠8QA ♦JKA ♥89QK  ♠79J ♣9JQK ♦7Q ♥7  ♠XK ♣78X ♦89X ♥XJ  ♣A ♥A  0 -> 9- 10
 

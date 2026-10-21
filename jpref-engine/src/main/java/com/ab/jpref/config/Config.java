@@ -42,8 +42,8 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 18L;
-    public static final String VERSION = "1.0.2";
+    public static final long projectSerialVersionUID = 19L;
+    public static final String VERSION = "1.0.3";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -113,7 +113,7 @@ public abstract class Config implements Serializable {
 
     public final Property<Boolean> trickConfirmation = new Property<>("Trick Confirmation", false);
 
-    public final Property<Integer> maxMoveTime = new Property<>("Maximum move delay, sec", 7);
+    public final Property<Integer> maxMoveTime = new Property<>("Maximum move time, sec", 7);
 
     public final Property<Integer> pauseBetweenTricks = new Property<>("Pause between tricks, msec", 1500);
     public final Property<Integer> pauseBetweenMoves = new Property<>("Pause between moves, msec", 500);

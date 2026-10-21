@@ -50,7 +50,7 @@ public abstract class Player implements Serializable {
     protected CardSet leftHand = new CardSet();
     protected CardSet rightHand = new CardSet();
 
-    private List<RoundResults> gameHistory = new ArrayList<>();
+    protected List<RoundResults> gameHistory = new ArrayList<>();
     protected int tricks;
 
     public abstract Config.Bid getBid(Config.Bid minBid, int elderHand);
@@ -243,6 +243,10 @@ public abstract class Player implements Serializable {
         public final int[] points = new int[PlayerPoints.values().length];
 
         public RoundResults() {
+        }
+
+        public RoundResults(RoundResults that) {
+            System.arraycopy(that.points, 0, this.points, 0, that.points.length);
         }
 
         public int getPoints(PlayerPoints location) {

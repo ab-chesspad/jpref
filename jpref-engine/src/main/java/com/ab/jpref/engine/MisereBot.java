@@ -72,9 +72,6 @@ public class MisereBot extends Bot {
         return instance;
     }
 
-    static final int MIN_DROP_GUESSES = 4;  // see dropGuesses()
-    static final int MAX_DROP_GUESSES = 8;
-
     private MisereBot() {
         this.bid = Config.Bid.BID_MISERE;
     }
@@ -89,6 +86,25 @@ public class MisereBot extends Bot {
     public void clear() {
         super.clear();
         this.bid = Config.Bid.BID_MISERE;
+    }
+
+    @Override
+    int dropRisk(CardSet dealtHand) {
+        return getEval4Misere(dealtHand);
+    }
+
+    // pa + pb, see getDrop()
+    int getRiskSum4Misere(CardSet cardSet) {
+        int res = 0;
+        int bitset = 0;
+        while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
+            CardSet cards = new CardSet(bitset);
+            if (cards.isClean4Misere()) {
+                continue;
+            }
+            res += misereTable[ranks(cards)];
+        }
+        return res;
     }
 
     // pa|b = 1 - (1-pa)(1-pb)
@@ -200,26 +216,38 @@ public class MisereBot extends Bot {
         }
         // the sort is stable: on a tie the first pair in card order, as First always took
         Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
+        boolean hopeless = playerBids.get(0).value > HOPELESS_RISK;
+        if (hopeless) {
+            // the risk to be caught in any suit is close to MAX_EVAL for most drops and tells them
+            // apart no more: the sum of the suits' risks, how many suits can catch, ♠78 ♣78KA ♦79J ♥7XJ:
+            // ♥XJ 582, ♣KA 667, ♠7 ♥X 50 + 582 + 649 - not 582, 667, 860
+            for (PlayerBid probe : playerBids) {
+                CardSet rest = new CardSet(this.myHand);
+                rest.remove(probe.drops);
+                probe.value = getRiskSum4Misere(rest);
+            }
+            Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
+        }
         if (declarerDrop == DeclarerDrop.Random && gameManager().getDeclarer() instanceof Bot) {
             // a bot declarer's own drop; the defenders guessing a human's drop take the least risk
-            return chooseDrop(playerBids);
+            return chooseDrop(playerBids, hopeless);
         }
         return playerBids.get(0);
     }
 
-    // sorted by risk: a clean one if any, otherwise one of the least risks up to the first jump,
-    // or one of all when the least is over HOPELESS_RISK; a lower risk more likely, the weight is 1 / risk:
+    // sorted by risk: a clean one if any, otherwise one of the least risks up to the first jump;
+    // hopeless, sorted by the sums of the suits' risks, see getDrop(): one within DROP_JUMP of the least,
+    // the sums grow slowly and the jumps between neighbours would take them all;
+    // a lower risk more likely, the weight is 1 / risk:
     // 249 249 280 | 1000 ... -> one of the first three, 35%, 35%, 31%
-    static PlayerBid chooseDrop(List<PlayerBid> playerBids) {
+    static PlayerBid chooseDrop(List<PlayerBid> playerBids, boolean hopeless) {
         PlayerBid best = playerBids.get(0);
         if (best.value == 0) {
             return best;
         }
         int n = 1;
-        if (best.value > HOPELESS_RISK) {
-            n = playerBids.size();
-        }
-        while (n < playerBids.size() && playerBids.get(n).value <= playerBids.get(n - 1).value * DROP_JUMP) {
+        while (n < playerBids.size() && playerBids.get(n).value <=
+                (hopeless ? best.value : playerBids.get(n - 1).value) * DROP_JUMP) {
             ++n;
         }
         double total = 0;
@@ -540,22 +568,6 @@ public class MisereBot extends Bot {
         return declarer;
     }
 
-    // one card leads the caught guesses by more than the guesses left can add to any other;
-    // on a tie the tie-breaks need all the guesses
-    private static boolean decided(int[] caught, int remaining) {
-        int first = -1;
-        int second = -1;
-        for (int c : caught) {
-            if (c > first) {
-                second = first;
-                first = c;
-            } else if (c > second) {
-                second = c;
-            }
-        }
-        return first - second > remaining;
-    }
-
     // suits where the declarer has a hole under every guess, or under some guess, as a bitmap by suit value
     private int holeSuits(List<CardSet> guesses, boolean every) {
         int res = 0;
@@ -610,124 +622,4 @@ public class MisereBot extends Bot {
     private static int inSuits(Card card, int suits) {
         return inSuits(card.getSuit(), suits) ? 1 : 0;
     }
-
-    // the declarer's hands for various drops, the list's guess first
-    private List<CardSet> dropGuesses(Trick trick) {
-        GameManager gameManager = gameManager();
-        List<CardSet> res = new ArrayList<>();
-        CardSet knownHand = new CardSet(gameManager.declarerHand);
-        int declarerSize = TrickList.getInstance().declarerSize(trick);
-        int diff = knownHand.size() - declarerSize;
-        if (diff <= 0) {
-            return res;     // all known
-        }
-        if (knownHand.contains(myHand) && myHand.size() == declarerSize) {
-            res.add(new CardSet(myHand));
-        }
-        // the dropped cards not shown yet, 1 or 2
-        List<CardSet> hands = new ArrayList<>();
-        List<Integer> evals = new ArrayList<>();
-        CardList cards = knownHand.toCardList();
-        for (int i = 0; i < cards.size(); ++i) {
-            for (int j = diff == 1 ? i : i + 1; j < cards.size(); ++j) {
-                CardSet hand = new CardSet(knownHand);
-                hand.remove(cards.get(i));
-                hand.remove(cards.get(j));
-                // evaluate the hand as it was after the drop
-                CardSet dealtHand = new CardSet(hand);
-                dealtHand.add(gameManager.declarerPlayed);
-                int eval = getEval4Misere(dealtHand);
-                int k = evals.size();
-                while (k > 0 && evals.get(k - 1) > eval) {
-                    --k;
-                }
-                evals.add(k, eval);
-                hands.add(k, hand);
-            }
-        }
-        // not the likely drops, the various ones, even illogical: every card the declarer can hold
-        // is dropped under some guess and kept under some other, the least risks can all drop the
-        // same card: ♣QK, ♣K ♠7, ♣K ♦J... and miss the declarer that kept ♣K, dropped ♣Q ♦X;
-        // each next guess covers the most cards not covered yet, on a tie the least risk
-        CardSet notDropped = new CardSet(knownHand);
-        CardSet notKept = new CardSet(knownHand);
-        for (CardSet hand : res) {
-            notDropped.remove(knownHand.diff(hand));
-            notKept.remove(hand);
-        }
-        while (res.size() < MAX_DROP_GUESSES) {
-            CardSet next = null;
-            int maxCovered = 0;
-            for (CardSet hand : hands) {
-                if (res.contains(hand)) {
-                    continue;
-                }
-                int covered = knownHand.diff(hand).intersection(notDropped).size() +
-                    hand.intersection(notKept).size();
-                if (covered > maxCovered || next == null && res.size() < MIN_DROP_GUESSES) {
-                    next = hand;
-                    maxCovered = covered;
-                }
-            }
-            if (next == null) {
-                break;      // all covered, at least MIN_DROP_GUESSES, or no more hands
-            }
-            res.add(next);
-            notDropped.remove(knownHand.diff(next));
-            notKept.remove(next);
-        }
-        return res;
-    }
-
-    // legal cards of the defender to move, one of the cards with no other card between them
-    private CardList candidates(Trick trick) {
-        GameManager gameManager = gameManager();
-        CardSet hand = gameManager.getPlayers()[trick.getTurn()].myHand;
-        CardSet legal = hand.list(trick.getStartingSuit());
-        if (legal.isEmpty()) {
-            legal = hand;
-        }
-        CardSet others = CardSet.union(gameManager.declarerHand, leftHand, rightHand,
-            trick.cards2CardSet());
-        others.remove(hand);
-        CardList res = new CardList();
-        Card prev = null;
-        for (Card card : legal.toCardList()) {
-            if (prev != null && prev.getSuit().equals(card.getSuit()) && !anyBetween(others, prev, card)) {
-                continue;
-            }
-            res.add(card);
-            prev = card;
-        }
-        return res;
-    }
-
-    // the candidates equivalent to card under the guess, the declarer's hand
-    private CardList sameRun(Trick trick, CardList candidates, Card card, CardSet guess) {
-        CardSet hand = gameManager().getPlayers()[trick.getTurn()].myHand;
-        CardSet others = CardSet.union(guess, leftHand, rightHand, trick.cards2CardSet());
-        others.remove(hand);
-        CardList res = new CardList();
-        for (Card candidate : candidates) {
-            if (candidate.getSuit().equals(card.getSuit()) && !anyBetween(others, candidate, card)) {
-                res.add(candidate);
-            }
-        }
-        return res;
-    }
-
-    // a card of others between two cards of the same suit
-    private static boolean anyBetween(CardSet others, Card card0, Card card1) {
-        if (card0.compareInTrick(card1) > 0) {
-            Card card = card0;
-            card0 = card1;
-            card1 = card;
-        }
-        for (Card other : others.list(card0.getSuit()).toCardList()) {
-            if (other.compareInTrick(card0) > 0 && other.compareInTrick(card1) < 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
+ }

@@ -172,9 +172,9 @@ public class OfferPopup {
 
         dialog = builder.create();
         dialog.show();
-        // the text as it is, the Material dialog buttons are in capitals by default
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false);
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false);
+        // the Material dialog buttons are in capitals by default, with no buttonImage
+        DButton.style(host, dialog.getButton(AlertDialog.BUTTON_NEGATIVE));
+        DButton.style(host, dialog.getButton(AlertDialog.BUTTON_POSITIVE));
         // the positive/negative buttons only exist once the dialog has been shown
         Button acceptButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         if (acceptButton != null) {
@@ -194,6 +194,13 @@ public class OfferPopup {
                 if (lp instanceof LinearLayout.LayoutParams) {
                     ((LinearLayout.LayoutParams) lp).weight = 0;
                 }
+            }
+            // with buttonImage the buttons touch, keep the same gap as in the other popups
+            Button cancelButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (cancelButton != null && cancelButton.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) cancelButton.getLayoutParams();
+                lp.leftMargin = (int) (dMetrics.cardW * .1);
+                cancelButton.setLayoutParams(lp);
             }
         }
         Window window = dialog.getWindow();

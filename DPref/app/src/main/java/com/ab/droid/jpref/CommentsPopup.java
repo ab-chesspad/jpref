@@ -37,11 +37,12 @@ import android.widget.TextView;
 
 /**
  *  Android counterpart of the Swing MainPanel.getUserComments() - lets the
- *  player type free-form notes, delivered once they dismiss the dialog.
+ *  player type free-form notes before the log is submitted, delivered on Submit,
+ *  null on Cancel.
  */
 public class CommentsPopup {
     interface ResultListener {
-        void onResult(String comments);
+        void onResult(String comments);     // null on Cancel
     }
 
     private final MainActivity host;
@@ -55,8 +56,8 @@ public class CommentsPopup {
         DMetrics dMetrics = host.getMetrics();
         DConfig dConfig = host.config();
 
-        int popupWidth = dConfig.mainSize.first / 2;
-        int popupHeight = dConfig.mainSize.second / 2;
+        int popupWidth = dConfig.mainSize.first * 2 / 3;
+        int popupHeight = dConfig.mainSize.second * 2 / 3;
 
         dialog = new Dialog(host);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -67,7 +68,7 @@ public class CommentsPopup {
         root.setBackgroundColor(Color.WHITE);
 
         TextView title = new TextView(host);
-        title.setText(m(TableLayout.ButtonCommand.comments.getName()));
+        title.setText(m("Comments"));
         title.setTextColor(Color.BLACK);
         title.setGravity(Gravity.CENTER);
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .2));
@@ -89,12 +90,20 @@ public class CommentsPopup {
         buttonPanel.setGravity(Gravity.CENTER);
         buttonPanel.setBackgroundColor(0xFFCCCCCC);
 
-        Button okButton = new Button(host);
-        okButton.setAllCaps(false);     // the text as it is, no capitals
-        okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
-        okButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
-        okButton.setOnClickListener(v -> finish());
-        buttonPanel.addView(okButton, new LinearLayout.LayoutParams(
+        Button submitButton = new DButton(host);
+        submitButton.setText(m("Submit"));
+        submitButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
+        submitButton.setOnClickListener(v -> finish(textArea.getText().toString()));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = (int) (dMetrics.cardW * .1);
+        buttonPanel.addView(submitButton, lp);
+
+        Button cancelButton = new DButton(host);
+        cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
+        cancelButton.setOnClickListener(v -> finish(null));
+        buttonPanel.addView(cancelButton, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         root.addView(buttonPanel, new LinearLayout.LayoutParams(
@@ -112,8 +121,7 @@ public class CommentsPopup {
         dialog.show();
     }
 
-    private void finish() {
-        String text = textArea.getText().toString();
+    private void finish(String text) {
         dialog.dismiss();
         onResult.onResult(text);
     }

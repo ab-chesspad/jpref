@@ -432,6 +432,7 @@ public class GameManager implements Serializable {
     }
 
     public RestartCommand playRound(CardList deck) {
+        println("*******************************");
         printDeck(false);
         if (replayMode) {
             avatars4Round();

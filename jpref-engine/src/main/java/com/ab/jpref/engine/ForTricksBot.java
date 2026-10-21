@@ -21,20 +21,24 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
+import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Bidder;
 import com.ab.util.Bidder.PlayerBid;
+import com.ab.util.Logger;
 import com.ab.util.Pair;
+import static com.ab.jpref.cards.Card.Suit;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
+
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static com.ab.jpref.cards.Card.Suit;
-import static com.ab.jpref.config.Config.ROUND_SIZE;
-
 public class ForTricksBot extends Bot {
+    // MisereBot.DeclarerDrop.Random: one of the drops as good as the Bidder's, see Bidder.equalDrops()
+    public static MisereBot.DeclarerDrop declarerDrop = MisereBot.DeclarerDrop.Random;
     PlayerBid maxPlayerBid;
 
     private static ForTricksBot instance;
@@ -115,6 +119,12 @@ public class ForTricksBot extends Bot {
             myHand.add(playedCard);
         }
         playerBid = Bidder.getInstance().getBid(myHand, bid, elderHand, nDrops);
+        if (declarerDrop == MisereBot.DeclarerDrop.Random && playedCard == null &&
+                gameManager().getDeclarer() instanceof Bot) {
+            // a bot declarer's own drop, one of the equal ones; the defenders guessing a human's drop take the Bidder's
+            List<CardSet> drops = Bidder.getInstance().equalDrops(myHand, bid, elderHand, playerBid.drops);
+            playerBid.drops = drops.get(myRand.nextInt(drops.size()));
+        }
         myHand.remove(playedCard);
         this.bid = playerBid.toBid();
         return playerBid;
@@ -133,6 +143,138 @@ public class ForTricksBot extends Bot {
             }
             return this.anyCard(trick, true);
         }
+    }
+
+    // the declarer does not drop trumps, as TrickList.rebuild() guesses
+    @Override
+    boolean droppable(Card card) {
+        return !card.getSuit().equals(bid.getTrump());
+    }
+
+    // the declarer drops for the most tricks, the chances of tricks more break ties:
+    // ♣79XJQKA ♦XQ ♥XQK drops ♦XQ, ♥X takes a trick when ♥J falls, ♦X or ♦Q never
+    @Override
+    int dropRisk(CardSet dealtHand) {
+        CardSet dealt = CardSet.union(gameManager().declarerHand, gameManager().declarerPlayed);
+        return (int)Math.round(-1000 * Bidder.getInstance().estimateTricks(dealtHand, dealt, bid.getTrump()));
+    }
+
+    // The defenders do not know the drop, the list is built for one guess of it, see Bidder;
+    // the card it plays can be the worst one under the real drop: ♠XQ ♣JQ ♦789KA ♥K + ♥8 ♦Q, 6♦,
+    // the guess ♥8K dropped lets the defenders discard ♥ on the ♦ leads, the declarer with ♥8K
+    // takes 8 tricks, not 6. Each of various drops, see dropGuesses(), is searched with open cards;
+    // a card is safe under a guess when no other card gives the declarer fewer tricks. The card
+    // safe under the most likely guesses, the least dropRisk(), then under the most guesses,
+    // then the fewest tricks under the list's guess, then under all the guesses, then the list's
+    // card. The various guesses alone outvote the likely one: ♠89QA vs 7 no trump ♠XJK ♦J,
+    // ♣8 ♥9 dropped, ♠A is safe under ♠XJ or ♠XK dropped, ♠8 gives the declarer a trick less
+    @Override
+    Card robustCard(Trick trick, Card listCard) {
+        if (trick.getTurn() == gameManager().declarerNumber) {
+            return listCard;
+        }
+        List<CardSet> guesses = dropGuesses(trick);
+        if (guesses.size() < 2) {
+            return listCard;
+        }
+        CardList candidates = candidates(trick);
+        if (trick.getNumber() < SAME_RUN_TRICKS) {
+            candidates = sameRun(trick, candidates, listCard, guesses.get(0));
+        }
+        if (candidates.size() < 2) {
+            return listCard;
+        }
+        TrickList trickList = TrickList.getInstance();
+        int n = candidates.size();
+        int[] safe = new int[n];
+        int[] likelySafe = new int[n];
+        int[] totalTricks = new int[n];
+        int[] listGuess = null;
+        boolean[] likely = new boolean[guesses.size()];
+        int minRisk = Integer.MAX_VALUE;
+        int[] risks = new int[guesses.size()];
+        for (int g = 0; g < guesses.size(); ++g) {
+            CardSet dealtHand = new CardSet(guesses.get(g));
+            dealtHand.add(gameManager().declarerPlayed);
+            risks[g] = dropRisk(dealtHand);
+            minRisk = Math.min(minRisk, risks[g]);
+        }
+        int remainingLikely = 0;
+        for (int g = 0; g < guesses.size(); ++g) {
+            likely[g] = risks[g] == minRisk;
+            if (likely[g]) {
+                ++remainingLikely;
+            }
+        }
+        int complete = 0;
+        long start = System.currentTimeMillis();
+        int remaining = guesses.size();
+        // in the order of dropGuesses(), within the move's deadline, set in TrickList.getCard()
+        for (int g = 0; g < guesses.size(); ++g) {
+            int[] res = null;
+            if (g == 0) {
+                res = trickList.builtResults(trick, guesses.get(g), candidates);    // searched by the list
+            }
+            if (res == null) {
+                res = trickList.evalCards(trick, guesses.get(g), candidates);
+            }
+            if (res == null) {
+                break;      // deadline, the last guesses are left out
+            }
+            if (complete++ == 0) {
+                listGuess = res;
+            }
+            int min = Integer.MAX_VALUE;
+            for (int i = 0; i < n; ++i) {
+                min = Math.min(min, res[i]);
+            }
+            for (int i = 0; i < n; ++i) {
+                if (res[i] == min) {
+                    ++safe[i];
+                    if (likely[g]) {
+                        ++likelySafe[i];
+                    }
+                }
+                totalTricks[i] += res[i];
+            }
+            --remaining;
+            if (likely[g]) {
+                --remainingLikely;
+            }
+            if (decided(likelySafe, remainingLikely)) {
+                break;      // the rest cannot change the card
+            }
+        }
+        if (complete == 0) {
+            return listCard;
+        }
+        int listIndex = candidates.indexOf(listCard);
+        int best = 0;
+        for (int i = 1; i < n; ++i) {
+            int diff = likelySafe[i] - likelySafe[best];
+            if (diff == 0) {
+                diff = safe[i] - safe[best];
+            }
+            if (diff == 0) {
+                diff = listGuess[best] - listGuess[i];
+            }
+            if (diff == 0) {
+                diff = totalTricks[best] - totalTricks[i];
+            }
+            if (diff == 0 && i == listIndex) {
+                diff = 1;
+            }
+            if (diff > 0) {
+                best = i;
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; ++i) {
+            sb.append(String.format(" %s %d/%d/%d", candidates.get(i), likelySafe[i], safe[i], listGuess[i]));
+        }
+        Logger.printf("trick %d, drops guessed %d, safe likely/all guesses, tricks for the list's guess:%s -> %s, %,d msec\n",
+            trick.getNumber(), complete, sb, candidates.get(best), System.currentTimeMillis() - start);
+        return candidates.get(best);
     }
 
     static final int suitFlagTrump = 0x8;
