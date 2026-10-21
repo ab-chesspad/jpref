@@ -48,9 +48,6 @@ public class HumanPlayer extends Player implements Serializable {
     protected HumanPlayer(Player other, GameManager.EventObserver clickable) {
         init(other);
         this.clickable = clickable;
-        for (RoundResults rr : other.gameHistory) {
-            this.gameHistory.add(new RoundResults(rr));
-        }
     }
 
     @Override

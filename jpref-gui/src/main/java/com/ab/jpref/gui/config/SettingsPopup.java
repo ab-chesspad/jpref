@@ -24,7 +24,6 @@ import com.ab.jpref.config.Metrics;
 import com.ab.jpref.config.I18n;
 import com.ab.jpref.engine.GameManager;
 import static com.ab.jpref.config.I18n.m;
-import com.ab.jpref.ui.TableLayout;
 import com.ab.jpref.ui.Host;
 import com.ab.jpref.gui.Main;
 import com.ab.jpref.gui.PUtil;
@@ -59,7 +58,9 @@ public class SettingsPopup extends JDialog {
     final BufferedImage checkBoxImage;
     final BufferedImage selectedCheckBoxImage;
     final JButton okButton;
+    private final String SAVE = "Save";
     final JButton cancelButton;
+    private final String CANCEl = "Cancel";
     // text set once at construction, re-localized on language change;
     // titled borders and list cells call m() on every repaint and need no refresh
     final List<Runnable> labelRefreshers = new ArrayList<>();
@@ -114,10 +115,10 @@ public class SettingsPopup extends JDialog {
 
         // 2. bottom buttons
         JPanel jPanel = new JPanel();
-        okButton = new JButton(m(TableLayout.ButtonCommand.ok.getName()));
+        okButton = new JButton(m(SAVE));
         okButton.addActionListener(actionEvent -> save());
         jPanel.add(okButton);
-        cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton = new JButton(m(CANCEl));
         cancelButton.addActionListener(actionEvent -> cancel());
         jPanel.add(cancelButton);
         add(jPanel, BorderLayout.SOUTH);
@@ -259,8 +260,8 @@ public class SettingsPopup extends JDialog {
                     // in case of changing the language
                     I18n.getInstance().refresh();
                     popupInstance.setTitle(m(popupTitle));
-                    okButton.setText(m(TableLayout.ButtonCommand.ok.getName()));
-                    cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
+                    okButton.setText(m(SAVE));
+                    cancelButton.setText(m(CANCEl));
                     for (Runnable refresher : labelRefreshers) {
                         refresher.run();
                     }

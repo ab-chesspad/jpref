@@ -36,6 +36,8 @@ import static com.ab.jpref.config.Config.NOP;
 class AllPassEndgame {
     // in my hand; from 6 cards on, solving with open cards gains nothing and from 7 it plays worse
     static final int MAX_CARDS = 5;
+    // drop the worlds where a card already played to the trick is a mistake with open cards
+    static boolean filterPlayed = true;
 
     // tricks of all players packed in an int, 4 bits per player
     private static final int TRICK_BITS = 4;
@@ -69,7 +71,7 @@ class AllPassEndgame {
         // the players who already played to the trick hold a card less
         int myCount = CardSet.size(myHand);
         int leftCount = trick.size() == 2 ? myCount - 1 : myCount;
-        int rightCount = trick.size() >= 1 ? myCount - 1 : myCount;
+        int rightCount = !trick.isEmpty() ? myCount - 1 : myCount;
         int unseen = leftPossible | rightPossible;
         if (CardSet.size(unseen) != leftCount + rightCount) {
             return null;    // the counts do not match, the hands would come out uneven
@@ -107,8 +109,28 @@ class AllPassEndgame {
         int candidates = CardSet.size(legal);
         int[] cards = bits(legal);
         long[] total = new long[candidates];
-        int worlds = worldLeftHands.length;
         int all = myHand | unseen | trickBits;
+        int[] trickCards = new int[played];
+        for (int i = 0; i < played; ++i) {
+            trickCards[i] = CardSet.bit(trick.getCard(i));
+        }
+        if (filterPlayed && played > 0) {
+            int[] consistent = new int[worldLeftHands.length];
+            int count = 0;
+            for (int leftHand : worldLeftHands) {
+                int[] h = new int[NOP];
+                h[me] = myHand;
+                h[left] = leftHand;
+                h[right] = unseen & ~leftHand;
+                if (playedRight(h, leader, trickCards)) {
+                    consistent[count++] = leftHand;
+                }
+            }
+            if (count > 0) {
+                worldLeftHands = Arrays.copyOf(consistent, count);
+            }
+        }
+        int worlds = worldLeftHands.length;
         for (int leftHand : worldLeftHands) {
             int rightHand = unseen & ~leftHand;
             int[] h = new int[NOP];
@@ -158,6 +180,60 @@ class AllPassEndgame {
             return Card.get(CardSet.msb(tied));
         }
         return null;    // a tie between suits, leave it to the heuristics
+    }
+
+    // every card played to the trick takes no more tricks for its player than another legal card would,
+    // h holds the cards not played yet
+    private boolean playedRight(int[] h, int leader, int[] trickCards) {
+        int played = trickCards.length;
+        for (int i = 0; i < played; ++i) {
+            int[] hh = h.clone();
+            for (int j = i; j < played; ++j) {
+                hh[(leader + j) % NOP] |= trickCards[j];
+            }
+            int p = (leader + i) % NOP;
+            int suitMask = i == 0 ? 0 : suitMaskOf(trickCards[0]);
+            int topBit = 0;
+            int top = -1;
+            int trickBits = 0;
+            for (int j = 0; j < i; ++j) {
+                trickBits |= trickCards[j];
+                if ((trickCards[j] & suitMask) != 0 && Integer.compareUnsigned(trickCards[j], topBit) > 0) {
+                    topBit = trickCards[j];
+                    top = (leader + j) % NOP;
+                }
+            }
+            int all = hh[0] | hh[1] | hh[2] | trickBits;
+            int legal = legal(hh[p], suitMask);
+            int actual = -1;
+            int min = -1;
+            int prevBit = 0;
+            for (int bit = CardSet.next(legal, 0); bit != 0; prevBit = bit, bit = CardSet.next(legal, bit)) {
+                if (prevBit != 0 && equivalent(prevBit, bit, all) && bit != trickCards[i]) {
+                    continue;
+                }
+                int newSuitMask = i == 0 ? suitMaskOf(bit) : suitMask;
+                int newTopBit = topBit;
+                int newTop = top;
+                if (i == 0 || (bit & suitMask) != 0 && Integer.compareUnsigned(bit, topBit) > 0) {
+                    newTopBit = bit;
+                    newTop = p;
+                }
+                hh[p] ^= bit;
+                int t = tricks(play(hh, leader, i + 1, newSuitMask, newTopBit, newTop, trickBits | bit), p);
+                hh[p] ^= bit;
+                if (bit == trickCards[i]) {
+                    actual = t;
+                }
+                if (min < 0 || t < min) {
+                    min = t;
+                }
+            }
+            if (actual > min) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // all the possible hands of the left player

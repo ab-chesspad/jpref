@@ -57,7 +57,7 @@ public class CommentsPopup {
         DConfig dConfig = host.config();
 
         int popupWidth = dConfig.mainSize.first * 2 / 3;
-        int popupHeight = dConfig.mainSize.second * 2 / 3;
+        int popupHeight = dConfig.mainSize.second * 2/ 3;
 
         dialog = new Dialog(host);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -100,7 +100,7 @@ public class CommentsPopup {
         buttonPanel.addView(submitButton, lp);
 
         Button cancelButton = new DButton(host);
-        cancelButton.setText(m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton.setText(m("Cancel"));
         cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) (dMetrics.cardW * .18));
         cancelButton.setOnClickListener(v -> finish(null));
         buttonPanel.addView(cancelButton, new LinearLayout.LayoutParams(

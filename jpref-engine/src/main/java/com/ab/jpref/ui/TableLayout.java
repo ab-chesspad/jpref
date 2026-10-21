@@ -86,10 +86,6 @@ public class TableLayout implements GameManager.EventObserver {
         submitLog("Submit Log"),
         yourOffer("Your Offer"),
         backToGame("Back to Game"),
-
-        ok("OK"),
-        accept("Accept"),
-        cancel("Cancel"),
         ;
         final String name;
 
@@ -1201,7 +1197,7 @@ public class TableLayout implements GameManager.EventObserver {
     public synchronized void submitLog(GUI gui) {
         while (!host.getUtil().isConnected()) {
             if (this.gui.showMessage("No Internet Connection", "Please correct",
-                    ButtonCommand.ok.getName(), ButtonCommand.cancel.getName()) != 0) {
+                    "Retry", "Cancel") != 0) {
                 return;
             }
         }
@@ -1273,7 +1269,6 @@ public class TableLayout implements GameManager.EventObserver {
     private void setDeclareRoundPanel(ButtonCommand buttonCommand) {
         if (buttonCommand == null) {
             currentBid = gameManager.getMinBid();
-            buttonCommand = ButtonCommand.ok;
         }
         int minRound = currentPlayer.getBid().goal();
         int minSuit = currentPlayer.getBid().getValue() % 10;
@@ -1281,19 +1276,21 @@ public class TableLayout implements GameManager.EventObserver {
         int suitNum = currentBid.getValue() % 10;
         Logger.printf(DEBUG_LOG, "setDeclareRoundPanel curr %s, %d, %d\n", currentBid, roundValue, suitNum);
 
-        switch (buttonCommand) {
-            case prevSuit:
-                --suitNum;
-                break;
-            case nextSuit:
-                ++suitNum;
-                break;
-            case lesserGame:
-                --roundValue;
-                break;
-            case greaterGame:
-                ++roundValue;
-                break;
+        if (buttonCommand != null) {
+            switch (buttonCommand) {
+                case prevSuit:
+                    --suitNum;
+                    break;
+                case nextSuit:
+                    ++suitNum;
+                    break;
+                case lesserGame:
+                    --roundValue;
+                    break;
+                case greaterGame:
+                    ++roundValue;
+                    break;
+            }
         }
 
         currentBid = Bid.fromValue(roundValue * 10 + suitNum);  // new current bid

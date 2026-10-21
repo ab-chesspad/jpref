@@ -45,7 +45,7 @@ public abstract class ScoreCalculator {
             case Miami:   // Сочи
                 instance = new MiamiScoreCalculator(config);
                 break;
-//            case Peter:   // Ленинград
+//            case Peter:   // Питер
 //                instance = null;    // to do
 //                break;
 //            case Rostov:

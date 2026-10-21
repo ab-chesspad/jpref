@@ -22,3 +22,20 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# build output; target/jpref.jar and the DPref debug apk are tracked and stay tracked.
+# not a plain build/: DPref/app/.gitignore re-includes the apk under DPref/app/build,
+# which is impossible once the directory itself is ignored
+target/
+/jpref-engine/build/
+dependency-reduced-pom.xml
+/log
+
+# IDE and tool settings
+.idea/
+*.iml
+.claude/
+
+# local material
+/etc/info/
+/etc/x10/

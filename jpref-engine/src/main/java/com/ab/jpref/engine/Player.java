@@ -92,6 +92,9 @@ public abstract class Player implements Serializable {
             myHand.add(other.myHand);
             leftHand.add(other.leftHand);
             rightHand.add(other.rightHand);
+            for (RoundResults rr : other.gameHistory) {
+                this.gameHistory.add(new RoundResults(rr));
+            }
         }
     }
 

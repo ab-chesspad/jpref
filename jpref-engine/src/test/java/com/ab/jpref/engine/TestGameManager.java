@@ -358,6 +358,9 @@ public class TestGameManager extends BaseTest {
                 if (i > 0) {
                     res = res.substring(0, i);
                 }
+                if (res.startsWith(Config.Bid.BID_ALL_PASS.getName())) {
+                    res = res.substring(Config.Bid.BID_ALL_PASS.getName().length());
+                }
                 res = res.trim();
                 String actualRes = String.format("%d, %d, %d"
                     , gameManager.getPlayers()[0].getTricks()

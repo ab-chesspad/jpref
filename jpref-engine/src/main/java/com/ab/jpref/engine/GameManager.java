@@ -834,7 +834,7 @@ loop:
                 if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
                         defender0 instanceof HumanPlayer && defender0.getBid().equals(Bid.BID_WHIST_LAYING) ||
                         defender1 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
-                    defender1 instanceof HumanPlayer && defender1.getBid().equals(Bid.BID_WHIST_LAYING)) {
+                        defender1 instanceof HumanPlayer && defender1.getBid().equals(Bid.BID_WHIST_LAYING)) {
                     avatars[defender0.getNumber()] =
                             new HumanPlayer(defender0, clickable);
                     avatars[defender1.getNumber()] =

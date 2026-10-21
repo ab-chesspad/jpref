@@ -23,7 +23,6 @@ import com.ab.droid.jpref.util.DUtil;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.I18n;
 import com.ab.jpref.engine.GameManager;
-import com.ab.jpref.ui.TableLayout;
 import com.ab.util.Logger;
 
 import android.app.Dialog;
@@ -72,7 +71,9 @@ public class SettingsPopup {
 
     private final Dialog dialog;
     private final Button okButton;
+    private final String SAVE = "Save";
     private final Button cancelButton;
+    private final String CANCEl = "Cancel";
     private final List<Runnable> commitActions = new ArrayList<>();
     // re-run whenever the active language changes (onVisualPropertyChanged())
     // to re-localize text that was only set once at construction - section
@@ -112,14 +113,14 @@ public class SettingsPopup {
         LinearLayout buttonsPanel = new LinearLayout(host);
         buttonsPanel.setOrientation(LinearLayout.HORIZONTAL);
         buttonsPanel.setGravity(Gravity.CENTER);
-        okButton = styledButton(I18n.m(TableLayout.ButtonCommand.ok.getName()));
+        okButton = styledButton(I18n.m(SAVE));
         okButton.setOnClickListener(v -> save());
         okButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
         LinearLayout.LayoutParams okParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         okParams.rightMargin = fontSize / 3;
         buttonsPanel.addView(okButton, okParams);
-        cancelButton = styledButton(I18n.m(TableLayout.ButtonCommand.cancel.getName()));
+        cancelButton = styledButton(I18n.m(CANCEl));
         cancelButton.setOnClickListener(v -> cancel());
         cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
         buttonsPanel.addView(cancelButton, new LinearLayout.LayoutParams(
@@ -389,8 +390,8 @@ public class SettingsPopup {
 
     private void onVisualPropertyChanged() {
         I18n.getInstance().refresh();
-        okButton.setText(I18n.m(TableLayout.ButtonCommand.ok.getName()));
-        cancelButton.setText(I18n.m(TableLayout.ButtonCommand.cancel.getName()));
+        okButton.setText(I18n.m(SAVE));
+        cancelButton.setText(I18n.m(CANCEl));
         for (Runnable refresher : labelRefreshers) {
             refresher.run();
         }

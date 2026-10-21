@@ -341,7 +341,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             dialog.dispose();
         });
         buttonPanel.add(submitButton);
-        JButton cancelButton = new JButton(m(TableLayout.ButtonCommand.cancel.getName()));
+        JButton cancelButton = new JButton(m("Cancel"));
         cancelButton.addActionListener(e -> dialog.dispose());
         buttonPanel.add(cancelButton);
         dialog.add(buttonPanel, BorderLayout.SOUTH);

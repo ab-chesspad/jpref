@@ -1,0 +1,30 @@
+#!/bin/bash
+# set release = true in Main (Swing) and MainActivity (Android), build target/jpref.jar with maven
+# (tests included, output in log) and the debug apk with gradle;
+# extra arguments go to mvn, e.g. ./release -o
+set -e
+cd "$(dirname "$0")"
+
+MAIN=jpref-gui/src/main/java/com/ab/jpref/gui/Main.java
+ACTIVITY=DPref/app/src/main/java/com/ab/droid/jpref/MainActivity.java
+
+for f in "$MAIN" "$ACTIVITY"; do
+    if ! grep -q 'static final boolean release = \(true\|false\);' "$f"; then
+        echo "release flag not found in $f" >&2
+        exit 1
+    fi
+    sed -i 's/static final boolean release = false;/static final boolean release = true;/' "$f"
+    grep -H 'static final boolean release' "$f"
+done
+
+LOG=log
+echo "mvn package, output in $LOG"
+if ! mvn package "$@" > "$LOG" 2>&1; then
+    grep -a "Tests run:.*Fail\|FAIL\|ERROR" "$LOG" | head -20
+    echo "mvn failed, see $LOG" >&2
+    exit 1
+fi
+ls -l target/jpref.jar
+
+(cd DPref && ./gradlew -q assembleDebug)
+ls -l DPref/app/build/outputs/apk/debug/app-debug.apk

@@ -24,7 +24,6 @@ package com.ab.jpref.gui;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.gui.config.PConfig;
 import com.ab.jpref.ui.Host;
-import com.ab.jpref.ui.TableLayout;
 
 import javax.swing.*;
 import java.awt.*;
@@ -65,7 +64,7 @@ public class OfferPopup extends JDialog {
         popupRectangle = pConfig.offerPopupRectangle.get();
         if (popupRectangle.width == 0) {
             popupRectangle.width = pConfig.mainSize.first / 2;
-            popupRectangle.height = pConfig.mainSize.second / 2;
+            popupRectangle.height = pConfig.mainSize.second * 2 / 3;
         }
         setSize(popupRectangle.width, popupRectangle.height);
         this.setLocation(popupRectangle.x, popupRectangle.y);

@@ -167,7 +167,7 @@ public class OfferPopup {
         // tracking below follows suit, keyed off BUTTON_NEGATIVE now.
         builder.setNegativeButton(m(cardsOpen ? "Accept" : "Show Cards"),
             (d, which) -> finish(selectedTricks));
-        builder.setPositiveButton(m(TableLayout.ButtonCommand.cancel.getName()),
+        builder.setPositiveButton(m("Cancel"),
             (d, which) -> finish(-1));
 
         dialog = builder.create();
