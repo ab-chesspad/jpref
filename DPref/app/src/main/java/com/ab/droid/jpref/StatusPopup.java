@@ -29,6 +29,8 @@ import com.ab.util.Couple;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 import com.ab.util.Point;
+import com.ab.util.ScoreCalculator;
+
 import static com.ab.jpref.config.I18n.m;
 import static com.ab.util.Util.currMethodName;
 
@@ -120,7 +122,7 @@ public class StatusPopup {
         frame.addView(root, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
-        if (scoresheet.isGameOver()) {
+        if (ScoreCalculator.isGameOver()) {
             TextView gameOverLabel = new TextView(host);
             gameOverLabel.setText(m("Game Over"));
             gameOverLabel.setTextColor(Color.RED);
@@ -206,7 +208,7 @@ public class StatusPopup {
 
         public void recalc(int width, int height) {
             Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %dx%d\n", currMethodName(), width, height);
-            scoresheet.recalc(width, height, dConfig.poolSize.get(), withButtons);
+            scoresheet.recalc(width, height, withButtons);
             StringBuilder sb = new StringBuilder();
 
             for (Pair<DLabel, Scoresheet.Widget> pair : labels) {
@@ -232,20 +234,17 @@ public class StatusPopup {
                     final String front = "…";
                     sb.append(front);
                     String sep = "";
-                    if (text.endsWith(Scoresheet.POOL_COMPLETE)) {
-                        sep = Scoresheet.POOL_COMPLETE;
-                        text = text.substring(0, text.length() - sep.length());
-                    }
                     String[] parts = text.split("\\.");
                     for (int i = parts.length - 1; i >= 0; --i) {
                         String chunk = parts[i];
-                        textWidth = (int)lbl.measureTextWidth(sb + chunk + sep);
+                        textWidth = (int)lbl.measureTextWidth(sb + chunk + sep + widget.getAppendix());
                         if (textWidth > labelW) {
                             break;
                         }
                         sb.insert(front.length(), sep).insert(front.length(), chunk);
                         sep = ".";
                     }
+                    sb.append(widget.getAppendix());
                     text = new String(sb);
                 }
                 if (widget.getChange() != 0) {

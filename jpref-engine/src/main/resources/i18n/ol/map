@@ -6,6 +6,8 @@ Cancel->забить
 Comments->каммент
 Confirmation->падтвирждени
 Continue->прадолжыз
+Declined->аблом
+Declined, your cards are open->аблом, карты засвечены
 Delete logs after, days -> Удалячь логи старшэ, дней
 Double click -> Двайной шчолчок
 Description->паясненья
@@ -33,8 +35,6 @@ Player's Names->имена плеерав
 Pool Size->пуля
 Record Notes->сахранить
 Redneck->жлопскей
-Rejected->аблом
-Rejected, your cards are open->аблом, карты засвечены
 Replay->переигрунть
 Rostov->Растов
 Scores->щот

@@ -47,6 +47,10 @@ public class Bot extends Player implements Serializable {
 
     public Bot(Player realPlayer) {
         init(realPlayer);
+        if (realPlayer instanceof Bot) {
+            // the declarer's avatar keeps its own drop, the defenders must not guess it
+            targetBot = ((Bot) realPlayer).targetBot;
+        }
     }
 
     // for subclasses that init() themselves, e.g. the ForTricksBot and MisereBot singletons;
@@ -163,6 +167,7 @@ public class Bot extends Player implements Serializable {
             }
         }
         this.bid = bid;
+        halfWhist = bid.equals(Bid.BID_HALF_WHIST);
     }
 
     @Override
@@ -180,7 +185,7 @@ public class Bot extends Player implements Serializable {
                 targetBot = ((Bot) declarer).targetBot;
             } else {
                 // the other defender has guessed the drop already, a new guess would replace
-                // the shared target's hand, and its list would not match it any more
+                // the shared target's hand, and its list would not match it anymore
                 for (Player player : gameManager().getPlayers()) {
                     if (player != this && player instanceof Bot && ((Bot) player).targetBot != null) {
                         targetBot = ((Bot) player).targetBot;
@@ -581,7 +586,7 @@ public class Bot extends Player implements Serializable {
         if (endgame != null) {
             return endgame;
         }
-        Card res = null;
+        Card res;
         if (trick.startingSuit == null) {
             return playAllPass1stHand(trick);
         }

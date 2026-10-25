@@ -130,7 +130,7 @@ public class StatusPopup extends JDialog {
         scoresPanel = new ScoresPanel();
         add(scoresPanel, BorderLayout.NORTH);
 
-        if (scoresheet.isGameOver()) {
+        if (ScoreCalculator.isGameOver()) {
             gameOverOverlay = new GameOverOverlay();
             getLayeredPane().add(gameOverOverlay, JLayeredPane.PALETTE_LAYER);
             gameOverOverlay.setBounds(0, 0, popupRectangle.width, popupRectangle.height);
@@ -172,7 +172,7 @@ public class StatusPopup extends JDialog {
         public void recalc() {
             Rectangle scoresRectangle = getScoresRectangle();
             Logger.printf(DEBUG_LOG, "ScoresPanel.%s -> %s\n", currMethodName(), scoresRectangle);
-            scoresheet.recalc(scoresRectangle.width, scoresRectangle.height, pConfig.poolSize.get(), withButtons);
+            scoresheet.recalc(scoresRectangle.width, scoresRectangle.height, withButtons);
             StringBuilder sb = new StringBuilder();
             for (Pair<PLabel, Widget> pair : labels) {
                 PLabel pLabel = pair.first;
@@ -194,20 +194,17 @@ public class StatusPopup extends JDialog {
                     final String front = "…";
                     sb.append(front);
                     String sep = "";
-                    if (text.endsWith(Scoresheet.POOL_COMPLETE)) {
-                        sep = Scoresheet.POOL_COMPLETE;
-                        text = text.substring(0, text.length() - sep.length());
-                    }
                     String[] parts = text.split("\\.");
                     for (int i = parts.length - 1; i >= 0; --i) {
                         String chunk = parts[i];
-                        textWidth = fontMetrics.stringWidth(sb + chunk + sep);
+                        textWidth = fontMetrics.stringWidth(sb + chunk + sep + widget.getAppendix());
                         if (textWidth > labelW) {
                             break;
                         }
                         sb.insert(front.length(), sep).insert(front.length(), chunk);
                         sep = ".";
                     }
+                    sb.append(widget.getAppendix());
                     text = new String(sb);
                 }
                 if (widget.getChange() != 0) {

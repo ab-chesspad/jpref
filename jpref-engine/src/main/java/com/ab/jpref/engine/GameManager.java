@@ -106,7 +106,7 @@ public class GameManager implements Serializable {
     private final CardList lastTrickCards = new CardList();
     private int lastTrickStartedBy;
 
-    private Player declarer;
+    Player declarer;
     public int declarerNumber;
     CardSet declarerHand;           // with talon, as defenders know it
     CardSet initialDeclarerHand;    // with talon
@@ -146,6 +146,17 @@ public class GameManager implements Serializable {
                         ((HumanPlayer)p).initTransient(eventObserver);
                     }
                 }
+            }
+            // a bot declarer's targetBot is transient: rebuild it from the declarer's own hand,
+            // otherwise the defenders guess the drop and the declarer plays from their guess
+            if (declarer instanceof Bot && roundStage.compareTo(RoundStage.whistSelection) >= 0) {
+                Bot bot = (Bot) declarer;
+                if (Bid.BID_MISERE.equals(declarer.getBid())) {
+                    bot.targetBot = MisereBot.getInstance(bot);
+                } else {
+                    bot.targetBot = ForTricksBot.getInstance(bot);
+                }
+                bot.targetBot.setTricks(bot.getTricks());
             }
         }
         printf(DEBUG_LOG, "GameManager initialized\n");
@@ -254,15 +265,16 @@ public class GameManager implements Serializable {
             newGame = true;
         }
         if (DEBUG_END_OF_GAME) {
-            int poolPoints = config().poolSize.get();
             for (Player player : players) {
-                Player.RoundResults roundResults = new Player.RoundResults();
+                int poolPoints = config().poolSize.get();
                 if (player.number == 0) {
-                    roundResults.setPoints(Player.PlayerPoints.poolPoints, poolPoints - 1);
-                } else {
-                    roundResults.setPoints(Player.PlayerPoints.poolPoints, poolPoints);
+                    --poolPoints;
                 }
-                player.getGameHistory().add(roundResults);
+                for (int i = 0; i < poolPoints; ++i) {
+                    Player.RoundResults roundResults = new Player.RoundResults();
+                    roundResults.setPoints(Player.PlayerPoints.poolPoints, 1);
+                    player.getGameHistory().add(roundResults);
+                }
             }
         }
         if (testInputStream == null) {
@@ -296,13 +308,7 @@ public class GameManager implements Serializable {
                             roundStage = RoundStage.dealing;
                             biddingPassCount = 0;
                         } while (RestartCommand.replay.equals(next) || RestartCommand.verify.equals(next));
-                        int totalPool = 0;
-                        for (Player player: players) {
-                            for (Player.RoundResults roundResults : player.getGameHistory()) {
-                                totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
-                            }
-                        }
-                        if (totalPool >= config().poolSize.get() * NOP) {
+                        if (ScoreCalculator.isGameOver()) {
                             for (Player player: players) {
                                 player.clearHistory();
                             }
@@ -316,7 +322,6 @@ public class GameManager implements Serializable {
 
     // run random rounds
     protected void runGame() {
-        int totalPool;
         if (roundStage == RoundStage.dealing) {
             elderHand = new Random().nextInt(NOP);
             nextBidder = elderHand;
@@ -341,14 +346,10 @@ public class GameManager implements Serializable {
             }
             elderHand = ++elderHand % NOP;
             nextBidder = elderHand;
-            totalPool = 0;
             for (Player player: players) {
-                for (Player.RoundResults roundResults : player.getGameHistory()) {
-                    totalPool += roundResults.getPoints(Player.PlayerPoints.poolPoints);
-                }
                 player.myHand.clear();
             }
-        } while (totalPool < config().poolSize.get() * NOP);
+        } while (!ScoreCalculator.isGameOver());
         printf("game ended\n");
         for (Player player: players) {
             player.clearHistory();
@@ -488,7 +489,7 @@ public class GameManager implements Serializable {
 
                 default:
                     if (declarer == null) {
-                        printf("playing all-pass*%d\n", allPassFactor);
+                        printf("playing all-pass*%d\n", allPassFactor * ScoreCalculator.gameFactor());
                         playRoundAllPass();
                     } else {
                         if (Bid.BID_MISERE.equals(minBid)) {
@@ -520,7 +521,7 @@ public class GameManager implements Serializable {
             } else if (declarer.getBid().equals(Bid.BID_WITHOUT_THREE)) {
                 param = minBid.goal();
             }
-            ScoreCalculator.getInstance(config()).calculate(players, param);
+            ScoreCalculator.calculate(param);
             ++lineCount;
         }
         if (eventObserver == null) {

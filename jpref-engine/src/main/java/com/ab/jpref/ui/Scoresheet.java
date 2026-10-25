@@ -25,26 +25,33 @@ import com.ab.jpref.engine.Player;
 import com.ab.util.Couple;
 import com.ab.util.Logger;
 import com.ab.util.Point;
+import com.ab.util.ScoreCalculator;
+
 import static com.ab.jpref.config.Config.NOP;
 import static com.ab.util.Util.currMethodName;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Scoresheet {
     static final boolean DEBUG_LOG = false;
 
-    static final int X_MARGIN = 2;
-    static final int Y_MARGIN = 2;
-    public static final double centerYOffset = .4;          // relative to scoreRectangle height
-    public static final double centerCircleRadius = .5;     // relative to paneH
-    public static final String POOL_COMPLETE = ">>";
+    private static final int X_MARGIN = 2;
+    private static final int Y_MARGIN = 2;
+    private static final double centerYOffset = .4;          // relative to scoreRectangle height
+    private static final double centerCircleRadius = .5;     // relative to paneH
+    private static final String POOL_COMPLETE = ">>";
 
-    static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
-    static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
-    static final int poolPoints = Player.PlayerPoints.poolPoints.ordinal();
-    static final int dumpPoints = Player.PlayerPoints.dumpPoints.ordinal();
-    static final int statusPoints = Player.PlayerPoints.status.ordinal();
+    private static final int leftPoints = Player.PlayerPoints.leftPoints.ordinal();
+    private static final int rightPoints = Player.PlayerPoints.rightPoints.ordinal();
+    private static final int poolPoints = Player.PlayerPoints.poolPoints.ordinal();
+    private static final int dumpPoints = Player.PlayerPoints.dumpPoints.ordinal();
+    private static final int statusPoints = Player.PlayerPoints.status.ordinal();
+
+    //  for description look at etc/doc/scores.jpg
+    private final Point p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11;
+    private final Point topLeft, topRight, bottomLeft, bottomRight;
 
     private static final Line[] lines = new Line[3 + 3 * NOP];
     private static final PlayerArea[] allAreas = new PlayerArea[NOP];
@@ -53,9 +60,7 @@ public class Scoresheet {
         for (int i = 0; i < NOP; ++ i) {
             Scoresheet.PlayerArea playerArea = new PlayerArea(i);
             allAreas[i] = playerArea;
-            for (Widget label : playerArea.labels) {
-                widgets.add(label);
-            }
+            widgets.addAll(Arrays.asList(playerArea.labels));
         }
         for (int i = 0; i < lines.length; ++i) {
             lines[i] = new Line();
@@ -64,16 +69,10 @@ public class Scoresheet {
 
     public static Scoresheet instance;
 
-    //  for description look at etc/doc/scores.jpg
-    private final Point p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11;
-    private final Point topLeft, topRight, bottomLeft, bottomRight;
-
     private int width, height;
     private int circleRadius;
     private int fontSize;
-    private int poolSize;
     private boolean fullHistory;
-    private boolean gameOver;
 
     public Scoresheet() {
         instance = this;
@@ -95,12 +94,11 @@ public class Scoresheet {
         p11 = new Point();
     }
 
-    public void recalc(int width, int height, int poolSize, boolean fullHistory) {
+    public void recalc(int width, int height, boolean fullHistory) {
         Logger.printf(DEBUG_LOG, "Scoresheet.%s -> %dx%d\n", currMethodName(), width, height);
 
         this.width = width;
         this.height = height;
-        this.poolSize = poolSize;
         this.fullHistory = fullHistory;
         topLeft.set(0, 0);
         topRight.set(width, 0);
@@ -132,12 +130,6 @@ public class Scoresheet {
         this.p11.set(width - 4 * paneX, height - 4 * paneH);
 
         updateLines();
-        List<Player.RoundResults> history = GameManager.getInstance().getPlayers()[0].getGameHistory();
-        int historySize = history.size();
-        if (!instance.fullHistory) {
-            --historySize;
-        }
-        this.gameOver = historySize > 0;
         allAreas[0].setPBounds(leftPoints, p1, new Point(p0.getX(), height));
         allAreas[0].setPBounds(rightPoints, p4, new Point(p0.getX(), height));
         allAreas[0].setPBounds(poolPoints, p2, new Point(p3.getX(), p1.getY()));
@@ -194,10 +186,6 @@ public class Scoresheet {
 
     public Line[] getLines() {
         return lines;
-    }
-
-    public boolean isGameOver() {
-        return gameOver;
     }
 
     public static class Line {
@@ -285,14 +273,12 @@ public class Scoresheet {
                 sb.append(sep).append(total);
                 sep = ".";
             }
+            widget.setText(new String(sb));
             if (labelIndex == poolPoints) {
-                if (total >= Scoresheet.instance.poolSize) {
-                    sb.append(POOL_COMPLETE);
-                } else {
-                    Scoresheet.instance.gameOver = false;
+                if (ScoreCalculator.isPoolComplete(playerNum) || ScoreCalculator.isGameOver()) {
+                    widget.appendix = POOL_COMPLETE;
                 }
             }
-            widget.setText(new String(sb));
         }
     }
 
@@ -300,6 +286,7 @@ public class Scoresheet {
         double rotation;
         int change;
         Player.PlayerPoints label;
+        String appendix = "";
 
         public int getChange() {
             return change;
@@ -311,6 +298,10 @@ public class Scoresheet {
 
         public Player.PlayerPoints getLabel() {
             return label;
+        }
+
+        public String getAppendix() {
+            return appendix;
         }
     }
 }

@@ -42,8 +42,8 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 19L;
-    public static final String VERSION = "1.0.3";
+    public static final long projectSerialVersionUID = 21L;
+    public static final String VERSION = "1.1";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -71,7 +71,7 @@ public abstract class Config implements Serializable {
 
     public enum GameType implements Selectable<GameType> {
         Miami,
-//        Peter,    // todo
+        Peter,
         ;
         @Override
         public GameType[] getAll() {
@@ -86,8 +86,10 @@ public abstract class Config implements Serializable {
 
     public enum WhistType implements Selectable<WhistType> {
         Gentleman,
+        GentlemanHalf,
         Greedy,
         ;
+
         @Override
         public WhistType[] getAll() {
             return values();
@@ -224,6 +226,16 @@ public abstract class Config implements Serializable {
         public T getSelectedValue() {
             return values[selected];
         }
+
+        public void setSelectedValue(T value) {
+            for (int i = 0; i < values.length; ++i) {
+                if (values[i].equals(value)) {
+                    this.selected = i;
+                    break;
+                }
+            }
+        }
+
     }
 
     public interface Selectable<T> {

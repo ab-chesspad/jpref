@@ -44,7 +44,6 @@ public class Bidder {
     public static int TOTAL_BIDS = 6;
     private final Map<String, OneBid[]> allBidData = loadBidData("utyatsky-12");
     public final List<SuitTricks> tricks = loadTricks("tricks");
-    final OneBid[] allBids = new OneBid[TOTAL_BIDS];
 
     private static class Holder {
         static final Bidder instance = new Bidder();
@@ -782,7 +781,7 @@ public class Bidder {
     }
 
     public static class SuitTricks {
-        public String chunk = "";
+        public String chunk;
         public int length;
         public int moves;
         public int[] tricks = new int[3];

@@ -41,10 +41,8 @@ import com.ab.jpref.engine.*;
 
 import static com.ab.jpref.engine.GameManager.RoundStage;
 import com.ab.jpref.config.Metrics;
-import com.ab.util.Couple;
-import com.ab.util.Logger;
-import com.ab.util.Point;
-import com.ab.util.Util;
+import com.ab.util.*;
+
 import static com.ab.util.Util.sleep;
 
 import java.io.File;
@@ -111,9 +109,9 @@ public class TableLayout implements GameManager.EventObserver {
     // a half-transparent stamp across the table until the round ends, null for none
     private volatile String banner;
     static final String
-        BANNER_REJECTED = "Rejected",
-        BANNER_REJECTED_OPEN = "Rejected, your cards are open",
-        BANNER_FIT = BANNER_REJECTED_OPEN;  // the longest, all banners get the font that fits it
+        BANNER_DECLINED = "Declined",
+        BANNER_DECLINED_OPEN = "Declined, your cards are open",
+        BANNER_FIT = BANNER_DECLINED_OPEN;  // the longest, all banners get the font that fits it
     final List<Point> cardPositions = new ArrayList<>();
     final CardSet selectedCards = new CardSet();
     final Point draggingStart = new Point(-1, -1);
@@ -298,7 +296,7 @@ public class TableLayout implements GameManager.EventObserver {
 
                 // labels:
                 x = y = 0;
-                w = (int) (metrics.cardW * metrics.wLabel);
+                w = (int) (metrics.cardW * metrics.wLabel * 0.95);
                 h = (int) (metrics.cardW * metrics.hLabel);
                 for (int i = 0; i < gameManager.getPlayers().length; ++i) {
                     Widget label = labels[i];
@@ -430,7 +428,7 @@ public class TableLayout implements GameManager.EventObserver {
                     break;
                 case yourOffer:
                     boolean enabled = roundStage.equals(RoundStage.trickTaken) ||
-                        roundStage.equals(RoundStage.play) && !(gameManager.declarerNumber == 0 && gameManager.getTrick().getNumber() == 0);
+                        roundStage.equals(RoundStage.play);
                     if (BID_ALL_PASS.equals(gameManager.getMinBid()) && !gameManager.getTalonCards().isEmpty()) {
                         enabled = false;    // all-pass tricks with the talon: a talon card is removed after its trick
                     }
@@ -543,7 +541,7 @@ public class TableLayout implements GameManager.EventObserver {
                     }
                 }
                 if (pass) {
-                    text += " *" + (gameManager.getAllPassFactor() + 1);
+                    text += " *" + (gameManager.getAllPassFactor() + 1) * ScoreCalculator.gameFactor();
                 }
                 widget.setText(text);
                 break;
@@ -979,8 +977,8 @@ public class TableLayout implements GameManager.EventObserver {
     }
 
     // Cleared before accept(): after it the game thread may already ask the human again,
-    // e.g. the next hand is the human's too (misère defence), and clearing it afterwards
-    // would wipe the new currentPlayer, no card click would work any more
+    // e.g. the next hand is the human's too (misère defense), and clearing it afterwards
+    // would wipe the new currentPlayer, no card click would work anymore
     private void unblock(Config.Queueable q) {
         HumanPlayer player = currentPlayer;
         if (player == null) {
@@ -1372,11 +1370,11 @@ public class TableLayout implements GameManager.EventObserver {
         }
         Logger.printf("offer: forMaxTricks:%b min: %d, max: %d\n", forMaxTricks, minTricks, maxTricks);
         // players[0] cards are open already: a defender's laid out for the round (cardsRevealed opens
-        // the defenders' cards only), or after a rejected offer, banner; nothing more to show
+        // the defenders' cards only), or after a declined offer, banner; nothing more to show
         boolean cardsOpen = gameManager.cardsRevealed && gameManager.declarerNumber != 0 || banner != null;
         int acceptedTricks = gui.showOffer(minTricks, maxTricks, cardsOpen);
         if (acceptedTricks < 0) {
-            return;     // rejected
+            return;     // declined
         }
         // the rest of the round played with open cards: players[1] and players[2] tricks
         int[] dryRun = dryRun();
@@ -1392,9 +1390,9 @@ public class TableLayout implements GameManager.EventObserver {
                 // the declarer's or all-pass cards are open by the offer, even the second time;
                 // a defender's laid out for the round were open anyway
                 if (gameManager.declarerNumber > 0 && gameManager.cardsRevealed) {
-                    banner = BANNER_REJECTED;
+                    banner = BANNER_DECLINED;
                 } else {
-                    banner = BANNER_REJECTED_OPEN;
+                    banner = BANNER_DECLINED_OPEN;
                 }
                 update(null);
                 return;     // the game goes on, players[0] cards are known

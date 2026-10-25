@@ -7,8 +7,6 @@ import com.ab.util.Util;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import java.io.PrintStream;
-
 public class BaseTest {
     protected static TestHost host;
     protected static TestConfig config;
@@ -49,11 +47,6 @@ public class BaseTest {
 
     public static class TestHost implements Logger.LogHolder, Host {
         private Logger logger;
-
-        @Override
-        public PrintStream getLogStream() {
-            return System.out;
-        }
 
         @Override
         public Logger logger() {

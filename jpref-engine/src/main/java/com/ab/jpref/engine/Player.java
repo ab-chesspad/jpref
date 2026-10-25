@@ -46,6 +46,7 @@ public abstract class Player implements Serializable {
 
     protected int number;
     protected Config.Bid bid;
+    public boolean halfWhist;
     protected CardSet myHand = new CardSet();
     protected CardSet leftHand = new CardSet();
     protected CardSet rightHand = new CardSet();
@@ -133,6 +134,7 @@ public abstract class Player implements Serializable {
         rightHand.clear();
         tricks = 0;
         bid = Config.Bid.BID_UNDEFINED;
+        halfWhist = false;
     }
 
     public String getName() {
@@ -266,6 +268,10 @@ public abstract class Player implements Serializable {
 
         public void setPoints(int index, int points) {
             this.points[index] = points;
+        }
+
+        public void addPoints(int index, int points) {
+            this.points[index] += points;
         }
     }
 

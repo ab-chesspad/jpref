@@ -134,6 +134,7 @@ public class HumanPlayer extends Player implements Serializable {
         clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();        // block
         this.bid = (Config.Bid)q;
+        halfWhist = bid.equals(Config.Bid.BID_HALF_WHIST);
     }
 
     @Override

@@ -7,6 +7,8 @@ Cancel->Отменить
 Comments->Комментарии
 Confirmation->Подтверждение
 Continue->Продолжить
+Declined -> Отклонено
+Declined, your cards are open -> Отклонено, ваши карты открыты
 Delete logs after, days -> Удалять логи старше, дней
 Description->Описание
 Double click -> Двойной клик
@@ -15,6 +17,7 @@ Drop->снос
 Game Over->Игра закончена
 Game Type->Вид игры
 Gentleman->Джентльменский
+Gentleman Half->Джент. полуответственный
 has been uploaded->файл послан
 Language->Язык
 Last Trick->Последняя взятка
@@ -39,8 +42,6 @@ Pool Size->Пуля
 Program crash->Ошибка программы
 Record Notes->Запомнить
 Greedy->Жлобский
-Rejected -> Отклонено
-Rejected, your cards are open -> Отклонено, ваши карты открыты
 Replay->Переиграть
 Restart JPref->Перезапустить JPref
 Retry->Еще раз
