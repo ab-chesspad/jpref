@@ -139,7 +139,7 @@ public class StatusPopup extends JDialog {
         }
 
         setVisible(true);   // blocks until dialog ends
-        Logger.println(DEBUG_LOG, "StatusPopup done");
+        Logger.printf(DEBUG_LOG, "StatusPopup done with %s\n", result);
     }
 
     Rectangle getScoresRectangle() {
@@ -180,7 +180,7 @@ public class StatusPopup extends JDialog {
                 pLabel.setBounds(widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight());
                 pLabel.setFontSize(scoresheet.getFontSize());
 
-                String text = widget.getText();
+                String text = widget.getText() + widget.getAppendix();
                 Font f = pLabel.getFont();
                 Canvas c = new Canvas();
                 FontMetrics fontMetrics = c.getFontMetrics(f);
@@ -204,7 +204,6 @@ public class StatusPopup extends JDialog {
                         sb.insert(front.length(), sep).insert(front.length(), chunk);
                         sep = ".";
                     }
-                    sb.append(widget.getAppendix());
                     text = new String(sb);
                 }
                 if (widget.getChange() != 0) {

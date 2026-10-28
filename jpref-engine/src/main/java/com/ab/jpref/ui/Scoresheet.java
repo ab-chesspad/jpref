@@ -245,6 +245,7 @@ public class Scoresheet {
             }
             if (historySize <= 0) {
                 widget.change = 0;     // -1: the first round is not over yet
+                widget.appendix = "";
                 return;
             }
             if (labelIndex == statusPoints) {
@@ -263,6 +264,7 @@ public class Scoresheet {
             StringBuilder sb = new StringBuilder();
             int total = 0;
             widget.change = 0;
+            widget.appendix = "";
             for (int j = 0; j < historySize; ++j) {
                 Player.RoundResults roundResults = history.get(j);
                 widget.change = roundResults.getPoints(labelIndex);

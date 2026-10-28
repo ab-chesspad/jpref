@@ -82,6 +82,8 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
             GameManager.BOTS[0] = false;
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
+            GameManager.DEBUG_END_OF_GAME = false;
+            GameManager.DEBUG_ALL_PASS = false;
             SHOW_ALL = false;
             Logger.DEBUG_LOG = false;
             TrickList.DEBUG_IGNORE_DEADLINE = false;
@@ -148,12 +150,6 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         new I18n(this);
         DConfig.setNonColoredLog();
         setTitle("");
-        String version = DConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
-        Logger.printf("%s %s, options 0x%x\n", DConfig.PROJECT_NAME, version, specialOption());
-        Logger.println(String.format("running on Android SDK %d, %d cores\n",
-        Build.VERSION.SDK_INT,
-        Runtime.getRuntime().availableProcessors()));
-
         config.mainSize.first = 0;
         config.mainSize.second = 0;
 
@@ -274,6 +270,10 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
             String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
             try {
                 logStream = getNewOutput(date);
+                String version = DConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
+                logStream.printf("%s %s, options 0x%x\n", DConfig.PROJECT_NAME, version, specialOption());
+                logStream.println(String.format("running on Android SDK %d, %d cores\n", Build.VERSION.SDK_INT,
+                        Runtime.getRuntime().availableProcessors()));
                 logStartDate = today;
             } catch (IOException e) {
                 throw new RuntimeException(e);

@@ -45,8 +45,8 @@
                     <excludes>
                         <exclude>**/jprefdoc/**</exclude>
                     </excludes>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>21</source>
+                    <target>21</target>
                     <compilerArgument>-Xlint:unchecked,-options</compilerArgument>
                 </configuration>
             </plugin>

@@ -39,8 +39,8 @@ import java.util.*;
 
 public class GameManager implements Serializable {
     public static boolean DEBUG_LOG = false;
-    public static final boolean DEBUG_END_OF_GAME = false;
-    public static final boolean DEBUG_ALL_PASS = false;
+    public static boolean DEBUG_END_OF_GAME = false;
+    public static boolean DEBUG_ALL_PASS = false;
 
     public static final boolean[] BOTS = new boolean[NOP];
     static {
@@ -266,6 +266,9 @@ public class GameManager implements Serializable {
         }
         if (DEBUG_END_OF_GAME) {
             for (Player player : players) {
+                if (!player.getGameHistory().isEmpty()) {
+                    continue;   // restored game, keep its history
+                }
                 int poolPoints = config().poolSize.get();
                 if (player.number == 0) {
                     --poolPoints;
@@ -530,8 +533,8 @@ public class GameManager implements Serializable {
             next = eventObserver.showScores();
             sleep(config().pauseBetweenRounds.get());
         }
-        replayMode = (RestartCommand.verify.equals(next) || RestartCommand.replay.equals(next))
-            && trick.getNumber() == 9;
+        replayMode = RestartCommand.verify.equals(next) ||
+            RestartCommand.replay.equals(next) && trick.getNumber() == 9;
         if (!replayMode) {
             if (minBid.equals(Bid.BID_ALL_PASS)) {
                 playedAllPass = true;

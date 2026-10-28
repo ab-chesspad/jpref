@@ -223,7 +223,7 @@ public class StatusPopup {
                 } else {
                     lbl.setTextSizePx(widget.getWidth() / 2);
                 }
-                String text = widget.getText();
+                String text = widget.getText() + widget.getAppendix();
                 int textWidth = (int)lbl.measureTextWidth(text);
                 int labelW = widget.getWidth();
                 if (widget.getRotation() != 0) {
@@ -244,7 +244,6 @@ public class StatusPopup {
                         sb.insert(front.length(), sep).insert(front.length(), chunk);
                         sep = ".";
                     }
-                    sb.append(widget.getAppendix());
                     text = new String(sb);
                 }
                 if (widget.getChange() != 0) {

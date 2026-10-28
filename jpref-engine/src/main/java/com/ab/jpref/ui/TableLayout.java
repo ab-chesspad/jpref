@@ -889,7 +889,7 @@ public class TableLayout implements GameManager.EventObserver {
     // centered vertically at the screen border on the bot's side
     private void placeDeclarerHand(int panelWidth, int panelHeight, int w, int h) {
         int declarerNumber = gameManager.declarerNumber;
-        boolean visible = declarerNumber != 0 &&
+        boolean visible = !gameManager.replayMode && declarerNumber != 0 &&
             BID_MISERE.equals(gameManager.getMinBid()) &&
             (isStage(RoundStage.play) || isStage(RoundStage.trickTaken) || isStage(RoundStage.confirmMove));
         for (Widget line : declarerHandLines) {

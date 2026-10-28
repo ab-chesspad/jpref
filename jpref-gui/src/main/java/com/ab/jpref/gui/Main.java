@@ -62,6 +62,8 @@ public class Main implements Logger.LogHolder, Host {
             GameManager.BOTS[0] = false;
             GameManager.BOTS[1] = true;
             GameManager.BOTS[2] = true;
+            GameManager.DEBUG_END_OF_GAME = false;
+            GameManager.DEBUG_ALL_PASS = false;
             SHOW_ALL = false;
             Logger.DEBUG_LOG = false;
             TrickList.DEBUG_IGNORE_DEADLINE = false;
@@ -112,12 +114,6 @@ public class Main implements Logger.LogHolder, Host {
         config.release.set(release);
         metrics = new Metrics(this);
         new I18n(this);
-
-        String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
-        Logger.printf("%s %s, options 0x%x\n", PConfig.PROJECT_NAME, version, specialOption());
-        Logger.println(String.format("running on %s, %d cores\n", PConfig.getOS(),
-            Runtime.getRuntime().availableProcessors()));
-
         if (args.length > 0) {
             String testFileName = args[0];
             File f = new File(testFileName);
@@ -136,6 +132,23 @@ public class Main implements Logger.LogHolder, Host {
             @Override
             public void windowClosing(WindowEvent e) {
                 saveConfig();
+            }
+        });
+        // while a modal popup is open, its event filter drops WINDOW_CLOSING for mainFrame,
+        // catch it before the filter: x on mainFrame always closes the popups and the program
+        Toolkit.getDefaultToolkit().getSystemEventQueue().push(new EventQueue() {
+            @Override
+            public AWTEvent getNextEvent() throws InterruptedException {
+                AWTEvent event = super.getNextEvent();
+                if (event.getID() == WindowEvent.WINDOW_CLOSING && event.getSource() == mainFrame) {
+                    for (Window window : Window.getWindows()) {
+                        if (window instanceof Dialog && ((Dialog)window).isModal() && window.isVisible()) {
+                            saveConfig();
+                            System.exit(0);
+                        }
+                    }
+                }
+                return event;
             }
         });
 
@@ -304,6 +317,10 @@ public class Main implements Logger.LogHolder, Host {
             String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
             try {
                 logStream = getNewOutput(date);
+                String version = PConfig.VERSION + " built " + new SimpleDateFormat("yyyy-MM-dd").format(this.buildDate());
+                logStream.printf("%s %s, options 0x%x\n", PConfig.PROJECT_NAME, version, specialOption());
+                logStream.println(String.format("running on %s, %d cores\n", PConfig.getOS(),
+                    Runtime.getRuntime().availableProcessors()));
                 logStartDate = today;
             } catch (IOException e) {
                 throw new RuntimeException(e);

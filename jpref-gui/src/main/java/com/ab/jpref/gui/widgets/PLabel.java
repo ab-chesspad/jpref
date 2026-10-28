@@ -75,7 +75,12 @@ public class PLabel extends JLabel {
         g2d.drawRect(0, 0,  bounds.width,  bounds.height);  // without rotation
 //*/
         if (BasicHTML.isHTMLString(text)) {
-            View view = BasicHTML.createHTMLView(this, text);
+            // JLabel keeps the view for its html text; a new view on each paint asks for a repaint
+            // when laid out, painting endlessly
+            View view = (View)getClientProperty(BasicHTML.propertyKey);
+            if (view == null) {
+                view = BasicHTML.createHTMLView(this, text);
+            }
 
             float viewWidth = view.getPreferredSpan(View.X_AXIS);
             float viewHeight = view.getPreferredSpan(View.Y_AXIS);
