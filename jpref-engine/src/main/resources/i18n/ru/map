@@ -1,6 +1,5 @@
 Accept->Принять
 All-pass->распас
-After Round Timeout->Задержка после раунда
 Animation Time->Время анимации
 Back to Game->Вернуться к игре
 Cancel->Отменить
@@ -14,10 +13,11 @@ Description->Описание
 Double click -> Двойной клик
 Dragging -> Перетаскивание
 Drop->снос
-Game Over->Игра закончена
+Game Over->Игра окончена
 Game Type->Вид игры
 Gentleman->Джентльменский
 Gentleman Half->Джент. полуответственный
+Greedy->Жлобский
 has been uploaded->файл послан
 Language->Язык
 Last Trick->Последняя взятка
@@ -41,7 +41,6 @@ Player's Names->Имена игроков
 Pool Size->Пуля
 Program crash->Ошибка программы
 Record Notes->Запомнить
-Greedy->Жлобский
 Replay->Переиграть
 Restart JPref->Перезапустить JPref
 Retry->Еще раз

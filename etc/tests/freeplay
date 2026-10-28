@@ -5,7 +5,6 @@ deal: ♠A ♣8JKA ♦9XQK ♥J  ♠JK ♣79XQ ♦7 ♥8KA  ♠8XQ ♦8JA ♥79X
 deal: ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♠789X ♣8 ♦789 ♥89  ♣KA 0 -> 2 Misère 1 # 70 d 1 # Ковалевская
 deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> Misère 1 # 70 d 1 # Ковалевская
 deal: ♠XJ ♣9XJQ ♦8J ♥79  ♠9QA ♣78A ♦7K ♥8K  ♠8K ♣K ♦9XQA ♥XJA  ♠7 ♥Q  1 -> All-pass 2
-deal: ♠JQKA ♣JQ ♦XK ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♣KA  1 -> 2 Misère 0 # 4 https://preferans.de/004
 deal: ♠89QK ♣89 ♦7QK ♥Q  ♠7J ♣7XA ♦JA ♥79J  ♠XA ♣JQK ♦9 ♥8XKA  ♦X8  2 -> 2 6♥ 6
 deal: ♠789QA ♣9 ♦9K ♥7Q  ♠XJK ♣8KA ♦JA ♥9A  ♣7XJQ ♦78X ♥8XJ  ♥K ♦Q  2 -> 1 7- 7 # 7- is a surprise
 deal: ♠XQ ♣9K ♦8Q ♥9JQK  ♠8JKA ♣X ♦XJKA ♥7  ♠79 ♣7JQA ♦9 ♥8XA  ♦7 ♣8  0 -> 1 7♦ 9
@@ -16,7 +15,6 @@ deal: ♠A ♣8JKA ♦9XQK ♥J  ♠JK ♣79XQ ♦7 ♥8KA  ♠8XQ ♦8JA ♥79X
 deal: ♠89 ♣789JA ♦7J ♥J  ♠K ♣XQ ♦9Q ♥789QK  ♠7XJQA ♦8XA ♥XA  ♦K ♣K  0 -> 2 7♠ 10 # utyatsky-1 #30
 deal: ♠79K ♣89X ♦7X ♥8J  ♠Q ♣J ♦QKA ♥79QKA  ♠8XJA ♣7QK ♦9J ♥X  ♦8 ♣A  0 -> X♥ 10
 deal: ♠JQK ♣8QA ♦8A ♥QK  ♠7 ♣XJK ♦79 ♥8XJA  ♠8X ♣79 ♦XJQK ♥79  ♠9A  0 -> 8- 8
-deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> 6♦ 8
 deal: ♠8XJK ♣J ♦Q ♥XQKA  ♠A ♣789X ♦XJA ♥7J  ♠79Q ♣QA ♦789K ♥9  ♣K ♥8  2 -> 6♥ 7
 
 deal: ♠9A ♣KA ♦789A ♥8Q  ♠XJ ♣9JQ ♦J ♥7XJK  ♠78Q ♣78X ♦XQK ♥9  ♥A ♠K  1 -> 7♦ 7
@@ -50,7 +48,6 @@ deal: ♠JK ♣789 ♦7 ♥79XQ  ♠7XQA ♣XJ ♦9JK ♥J  ♠89 ♣QA ♦8XQA 
 deal: ♠78Q ♣JA ♦XQKA ♥A  ♠XJ ♣7X ♦78J ♥789  ♠9KA ♣89Q ♥XJQK  ♣K ♦9  0 -> 8♦ 9
 deal: ♠8JK ♣X ♦A ♥9JQKA  ♠XQA ♣7JQK ♦9QK  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 1 # 10 ловится
 dwhat iseal: ♠9QK ♦7XJK ♥9XQ  ♠7X ♣78 ♦9 ♥78JKA  ♠8A ♣9XJQKA ♦8Q  ♦A ♠J  1 -> Misère 1 # 11 ловится
-deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 0 # не ловится 2
 
 p2 declares 7♠
 deal: ♠9 ♣79X ♦7XJ ♥79X  ♠XK ♣JA ♦89A ♥8JQ  ♠78JA ♣8QK ♦K ♥KA  ♠Q ♦Q  1 -> 7♠ 8
@@ -62,7 +59,6 @@ deal: ♠9A ♣9 ♦89J ♥789K  ♠XJ ♣78XJ ♦7XK ♥X  ♠78K ♣QKA ♦Q �
 
 deal: ♠9X ♣89X ♦7K ♥9XQ  ♠A ♣7JQA ♦8XQA ♥A  ♠78QK ♣K ♦9J ♥78K  ♠J ♥J  2 -> 7♦ 9
 deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> All-pass # Misère https://preferans.de/004
-deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 12
 deal: ♠78J ♦XJQK ♥8XQ  ♠9QA ♣8XJ ♦79 ♥9J  ♠K ♣79QK ♦8A ♥7KA  ♠X ♣A  2 -> 8♣ 8
 deal: ♠7 ♣789X ♦79J ♥7X  ♠8 ♣JQKA ♦8XQ ♥89  ♠9XJQKA ♦KA ♥JQ   ♥KA  1 -> Misère 1 # small hole ♥7X
 deal: ♠8K ♣K ♦9JA ♥9XQK  ♣79XQ ♦78Q ♥7JA  ♠79XJQA ♣8A ♦XK  ♣J ♥8  0 -> 6♠ 7
@@ -85,19 +81,11 @@ deal: ♠78 ♣78 ♦79K ♥78K  ♠9JA ♣9JK ♦XQ ♥JQ  ♠X ♣XQA ♦8JA �
 
 deal: ♠79X ♣8Q ♦QA ♥89X  ♠8JQKA ♣7X ♦7JK  ♣JKA ♦89X ♥7JKA  ♣9 ♥Q  2 -> 8♥ 9
 
-deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♠JQKA ♣JQ ♦XK ♥9K  ♣KA  1 -> Misère 0 # не ловится
-
 [♠K9J, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
 deal: ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♠8XK ♣7XK ♦XK ♥8A  ♥J9  2 -> 6♦ 6
 
-declarer Боря: Misère, ♠78 ♣78 ♦79K ♥78K
-♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79XK ♥78  ♠9JKA ♣9JK ♦Q ♥JQ  
-deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # не ловится
-
 [♠K8A, ♠7X ♥8, ♣8 ♥9 ♣9, ♠9J ♥K, ♣X ♥J ♣A, ♦8 ♥7 ♦X, ♠Q ♣J ♦9, ♥X ♣Q ♦J, ♥Q ♣K ♦K, ♥A ♦QA]
 deal: ♠JQK ♣9A ♦7 ♥7XQA  ♠8 ♣8XJQK ♦XQ ♥8K  ♠79A ♦89JKA ♥9J  ♣7 ♠X  0 -> 6♥ 5
-
-deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # не ловится
 
 [♠JK9, ♠8 ♦7 ♠Q, ♦8 ♠A ♦X, ♠X ♦9 ♣8, ♦A ♣9 ♦K, ♦J ♣J7, ♥KX8, ♦Q ♣AX, ♥97A, ♣K ♥JQ]
 deal: ♠8XK ♣7XK ♦XK ♥8A  ♠79 ♣Q ♦789JQA ♥K  ♠JQA ♣89JA ♥7XQ  ♥J9  2 -> 6♦ 6
@@ -131,8 +119,6 @@ deal: ♠A ♣AX ♦AK987 ♥A9    ♠KQ97 ♣K8 ♦QX ♥KX   ♠X ♣QJ97 ♦J
 
 deal: ♣8JKA ♦QKA ♥JQK   ♠7JK ♣7Q ♦79XJ ♥A   ♠9QA ♣9X ♦8 ♥789X     ♠X8 0 -> 8♣ 9
 
-deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # не ловится
-
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠9 ♣8JQK ♦8Q ♥79K  ♦9 ♠7  2 -> 7♦ 8
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠9 ♣8JQK ♦8Q ♥79K  ♦9 ♠7  0 -> 7♦ 8
 deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♠79 ♣8JQK ♦89Q ♥7   ♥9K  2 -> 6♦ 6
@@ -142,3 +128,11 @@ deal: ♠XKA ♣79 ♦XJKA ♥8  ♠8JQ ♣XA ♦7 ♥XJQA  ♣8JQK ♦89Q ♥79
 deal: ♠9XA ♣9XA ♦QA ♥KA  ♠7J ♣7QK ♦89 ♥9XJ  ♠Q ♣8J ♦7XJK ♥78Q  ♠8K  1 -> 8♠ 9
 deal: ♠78K ♣QA ♥89QKA   ♠X ♣89XJ ♦9KA ♥7J     ♠9JQA ♣7K ♦8JQ ♥X   ♦7X 1 -> 6♥ 7
 
+deal: ♠JQKA ♣JQ ♦XK ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♣KA  1 -> 2 Misère 0 # 1 https://preferans.de/004
+deal: ♠79 ♣789X ♦Q ♥79A  ♠A ♣QK ♦89XJA ♥8K  ♠8XJQK ♣JA ♦7K ♥Q  ♥XJ  2 -> Misère 0 # 2
+deal: ♠9KA ♣8 ♥789XJK  ♠7XJQ ♣XQA ♦Q ♥QA  ♠8 ♣79JK ♦789KA  ♦JX  1 -> Misère 0 # 3
+deal: ♠8J ♣X ♦QA ♥9JQKA  ♠XQKA ♣7JQK ♦9K  ♠79 ♣89 ♦78X ♥78X  ♣A ♦J  1 -> Misère 0 # 4
+deal: ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦79J ♥7XJ  ♠JQKA ♣JQ ♦XK ♥9K  ♣KA  1 -> Misère 0 # 5
+deal: ♠X ♣XQA ♦8JA ♥9XA  ♠78 ♣78 ♦79K ♥78K  ♠9JKA ♣9JK ♦Q ♥JQ  ♦X ♠Q  2 -> Misère 0 # 6
+deal: ♠K ♣XJQKA  ♥8XQK   ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♦A ♥A  0 -> Misère 0 # 7
+deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 8

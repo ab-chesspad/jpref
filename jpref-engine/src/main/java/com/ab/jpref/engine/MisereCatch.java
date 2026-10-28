@@ -41,6 +41,8 @@ public class MisereCatch {
     static final int HAND_SIZE = 10, UNKNOWN = 20;
 
     private final Map<Integer, Boolean> memo = new HashMap<>();
+    private final Map<Integer, Integer> defendMemo = new HashMap<>();
+    private final Map<Integer, Integer> declarerLeadMemo = new HashMap<>();
     private final boolean strict;
 
     MisereCatch(boolean strict) {
@@ -54,6 +56,17 @@ public class MisereCatch {
         int[] res = new int[1 << RANKS.length()];
         for (int d = 1; d < res.length; ++d) {
             res[d] = (int) Math.round(misereCatch.prob(d, 1)[1] * MisereBot.MAX_EVAL);
+        }
+        return res;
+    }
+
+    // ‰ of the declarer's expected tricks for every holding, the same model as table(),
+    // the defenders take as many tricks as they can, the declarer may lead the suit after winning a trick
+    static int[] trickTable() {
+        MisereCatch misereCatch = new MisereCatch(false);
+        int[] res = new int[1 << RANKS.length()];
+        for (int d = 1; d < res.length; ++d) {
+            res[d] = (int) Math.round(misereCatch.expectedTricks(d) * MisereBot.MAX_EVAL);
         }
         return res;
     }
@@ -197,6 +210,86 @@ public class MisereCatch {
             res = res * (n - k + i) / i;
         }
         return res;
+    }
+
+    // the declarer's tricks over all the splits, with one carry
+    double expectedTricks(int d) {
+        double res = 0;
+        for (int[] split : splits(d)) {
+            res += weight(d, split[0]) * defend(d, split[0], split[1], 1);
+        }
+        return res;
+    }
+
+    // the most tricks the defenders can give, they lead any card from either hand, carry one or stop
+    private int defend(int d, int l, int r, int carry) {
+        if (d == 0) {
+            return 0;
+        }
+        int key = d | l << 8 | r << 16 | carry << 24;
+        Integer res = defendMemo.get(key);
+        if (res != null) {
+            return res;
+        }
+        int best = 0;
+        int[] hands = {d, l, r};
+        for (int p = L; p <= R; ++p) {
+            for (int c = 0; c < RANKS.length(); ++c) {
+                if ((hands[p] & 1 << c) == 0) {
+                    continue;
+                }
+                int[] h = hands.clone();
+                h[p] &= ~(1 << c);
+                best = Math.max(best, tricks(h, p, 1, c, p, carry));
+                if (carry > 0) {
+                    best = Math.max(best, defend(h[D], h[L], h[R], 0));
+                }
+            }
+        }
+        defendMemo.put(key, best);
+        return best;
+    }
+
+    // the declarer on lead leads the suit or another one
+    private int declarerLead(int d, int l, int r, int carry) {
+        int key = d | l << 8 | r << 16 | carry << 24;
+        Integer res = declarerLeadMemo.get(key);
+        if (res != null) {
+            return res;
+        }
+        int best = defend(d, l, r, carry);
+        for (int c = 0; c < RANKS.length(); ++c) {
+            if ((d & 1 << c) != 0) {
+                best = Math.min(best, tricks(new int[] {d & ~(1 << c), l, r}, D, 1, c, D, carry));
+            }
+        }
+        declarerLeadMemo.put(key, best);
+        return best;
+    }
+
+    // k cards played to the trick, top is the highest so far, played by topP
+    private int tricks(int[] hands, int leader, int k, int top, int topP, int carry) {
+        if (k == 3) {
+            if (topP == D) {
+                return 1 + declarerLead(hands[D], hands[L], hands[R], carry);
+            }
+            return defend(hands[D], hands[L], hands[R], carry);
+        }
+        int p = (leader + k) % 3;
+        if (hands[p] == 0) {
+            return tricks(hands, leader, k + 1, top, topP, carry);   // a discard
+        }
+        int best = p == D ? Integer.MAX_VALUE : 0;
+        for (int c = 0; c < RANKS.length(); ++c) {
+            if ((hands[p] & 1 << c) == 0) {
+                continue;
+            }
+            int[] h = hands.clone();
+            h[p] &= ~(1 << c);
+            int v = c > top ? tricks(h, leader, k + 1, c, p, carry) : tricks(h, leader, k + 1, top, topP, carry);
+            best = p == D ? Math.min(best, v) : Math.max(best, v);
+        }
+        return best;
     }
 
     // the defenders to lead, they choose what and, unless strict, who

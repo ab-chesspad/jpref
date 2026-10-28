@@ -14,10 +14,12 @@ import static com.ab.util.Logger.println;
 
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 
+@Ignore("experiment, no assertions")
 public class TestMaxPoolCapacity extends BaseTest {
     static GameManager gameManager;
     static TrickList trickList;

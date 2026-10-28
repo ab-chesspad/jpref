@@ -40,6 +40,8 @@ public class MisereBot extends Bot {
     // https://summoning.ru/games/miser.shtml, recalculated by MisereCatch:
     // probabilities to get a trick in misère, by the rank bitmap of a suit
     static final int[] misereTable = MisereCatch.table();
+    // ‰ of the declarer's expected tricks, by the rank bitmap of a suit, see MisereCatch
+    static final int[] trickTable = MisereCatch.trickTable();
 
     enum DeclarerDrop {
         First,      // the least risk
@@ -49,6 +51,13 @@ public class MisereBot extends Bot {
     static final double DROP_JUMP = 1.3;
     // when even the least risk of a drop is higher, likely caught anyway: one of all drops
     static final int HOPELESS_RISK = 500;
+    // to bid misère: the median risk over the possible talons is lower, fit to Утяцкий 7.6.5, see TestMisereBook
+    static final int MISERE_BID_RISK = 400;
+    // hopeless: a trick in a suit that may be caught tends to cost more, the declarer has to lead after it
+    static final double PROBABLE_TRICK_FACTOR = 1.5;
+    // hopeless: ‰, a suit of 2 or more cards without the 7 has no safe exit, the defenders duck under it
+    // and give the declarer the lead again and again, 'паровоз'
+    static final int NO_SEVEN_PENALTY = 500;
     private static final Random random = new Random();
 
     private static MisereBot instance;
@@ -93,18 +102,27 @@ public class MisereBot extends Bot {
         return getEval4Misere(dealtHand);
     }
 
-    // pa + pb, see getDrop()
-    int getRiskSum4Misere(CardSet cardSet) {
-        int res = 0;
+    // ‰ of the expected tricks, a sure trick as is, a probable one by PROBABLE_TRICK_FACTOR,
+    // plus NO_SEVEN_PENALTY per suit of 2 or more cards without the 7, see getDrop()
+    int getTricks4Misere(CardSet cardSet) {
+        double res = 0;
         int bitset = 0;
         while ((bitset = CardSet.bm4NextSuit(cardSet.getBitmap(), bitset)) != 0) {
             CardSet cards = new CardSet(bitset);
             if (cards.isClean4Misere()) {
                 continue;
             }
-            res += misereTable[ranks(cards)];
+            int r = ranks(cards);
+            if (misereTable[r] == MAX_EVAL) {
+                res += trickTable[r];
+            } else {
+                res += trickTable[r] * PROBABLE_TRICK_FACTOR;
+            }
+            if (cards.size() >= 2 && (r & 1) == 0) {
+                res += NO_SEVEN_PENALTY;
+            }
         }
-        return res;
+        return (int)Math.round(res);
     }
 
     // pa|b = 1 - (1-pa)(1-pb)
@@ -124,49 +142,45 @@ public class MisereBot extends Bot {
     // possible?
     // https://www.gamblergames.com/forum/index.php?showtopic=502338
     // https://www.gamblergames.com/forum/index.php?showtopic=501784&st=690
-    // eval possible talon out of 22 remaining cards
+    // eval every possible talon, 2 out of 22 remaining cards, with its best drop
     boolean evalMisere(int elderHand) {
-        int eval = getEval4Misere(myHand);
-        if (eval == 0) {
-            return true;
-        }
-        CardSet talonCandidates = myHand.complement();
-        CardSet myHand = new CardSet(this.myHand);
-        List<PlayerBid> playerBids = new ArrayList<>();
-        int bit0 = 0;
-        while ((bit0 = CardSet.next(talonCandidates.getBitmap(), bit0)) != 0) {
-            Card card0 = Card.get(bit0);
-            myHand.add(card0);
-            PlayerBid playerBid = new PlayerBid(Config.Bid.BID_MISERE);
-            playerBid.value = Integer.MAX_VALUE;    // will be used as probability
+        return getMisereBidRisk(elderHand) < MISERE_BID_RISK;
+    }
 
-            int bit1 = 0;
-            while ((bit1 = CardSet.next(myHand.getBitmap(), bit1)) != 0) {
-                Card card1 = Card.get(bit1);
-                if (card0.equals(card1)) {
-                    continue;
-                }
-                myHand.remove(card1);
-                eval = getEval4Misere(myHand);
-                myHand.add(card1);
-                if (playerBid.value > eval) {
-                    playerBid.value = eval;
-                    playerBid.drops.clear();
-                    playerBid.drops.add(card0);
-                    if (playerBid.value == 0) {
-                        break;
-                    }
+    // ‰ to be caught, the median over the talons, see evalMisere();
+    // the rule of 7 cards (https://gambiter.ru/pref/mizer-preferans.html) took one card and one drop,
+    // and missed hands with two bad cards, 7JQ or 7K / 79A, see TestMisereBook
+    int getMisereBidRisk(int elderHand) {
+        if (getEval4Misere(myHand) == 0) {
+            return 0;
+        }
+        int talonCandidates = myHand.complement().getBitmap();
+        List<Integer> risks = new ArrayList<>();
+        int bit0 = 0;
+        while ((bit0 = CardSet.next(talonCandidates, bit0)) != 0) {
+            int bit1 = bit0;
+            while ((bit1 = CardSet.next(talonCandidates, bit1)) != 0) {
+                risks.add(bestDropRisk(myHand.getBitmap() | bit0 | bit1));
+            }
+        }
+        Collections.sort(risks);
+        return risks.get(risks.size() / 2);
+    }
+
+    // the least risk of the 12 cards without 2 of them
+    private int bestDropRisk(int bitmap) {
+        int best = Integer.MAX_VALUE;
+        int bit0 = 0;
+        while ((bit0 = CardSet.next(bitmap, bit0)) != 0) {
+            int bit1 = bit0;
+            while ((bit1 = CardSet.next(bitmap, bit1)) != 0) {
+                best = Math.min(best, getEval4Misere(new CardSet(bitmap & ~bit0 & ~bit1)));
+                if (best == 0) {
+                    return 0;
                 }
             }
-            playerBids.add(playerBid);
-            myHand.remove(card0);
         }
-        Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
-        // rule of 7 cards
-        // https://gambiter.ru/pref/mizer-preferans.html
-        int index = 6;
-        PlayerBid playerBid = playerBids.get(index);
-        return playerBid.value < 500;
+        return best;
     }
 
     @Override
@@ -219,12 +233,12 @@ public class MisereBot extends Bot {
         boolean hopeless = playerBids.get(0).value > HOPELESS_RISK;
         if (hopeless) {
             // the risk to be caught in any suit is close to MAX_EVAL for most drops and tells them
-            // apart no more: the sum of the suits' risks, how many suits can catch, ♠78 ♣78KA ♦79J ♥7XJ:
-            // ♥XJ 582, ♣KA 667, ♠7 ♥X 50 + 582 + 649 - not 582, 667, 860
+            // apart no more: the fewest tricks, ♠7K ♣78XK ♦79X ♥8JK keeps ♥8 alone, not ♥8J;
+            // ♠8 ♣7A ♦78XK ♥78J + ♣J ♠K keeps ♠8 alone, not ♠8K, see NO_SEVEN_PENALTY
             for (PlayerBid probe : playerBids) {
                 CardSet rest = new CardSet(this.myHand);
                 rest.remove(probe.drops);
-                probe.value = getRiskSum4Misere(rest);
+                probe.value = getTricks4Misere(rest);
             }
             Collections.sort(playerBids, (b1, b2) -> b1.value - b2.value);
         }
@@ -236,8 +250,8 @@ public class MisereBot extends Bot {
     }
 
     // sorted by risk: a clean one if any, otherwise one of the least risks up to the first jump;
-    // hopeless, sorted by the sums of the suits' risks, see getDrop(): one within DROP_JUMP of the least,
-    // the sums grow slowly and the jumps between neighbours would take them all;
+    // hopeless, sorted by the expected tricks, see getDrop(): one within DROP_JUMP of the least,
+    // the values grow slowly and the jumps between neighbours would take them all;
     // a lower risk more likely, the weight is 1 / risk:
     // 249 249 280 | 1000 ... -> one of the first three, 35%, 35%, 31%
     static PlayerBid chooseDrop(List<PlayerBid> playerBids, boolean hopeless) {
