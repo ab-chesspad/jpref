@@ -23,8 +23,8 @@
 hs_err_pid*
 replay_pid*
 
-# build output; target/jpref.jar and the DPref debug apk are tracked and stay tracked.
-# not a plain build/: DPref/app/.gitignore re-includes the apk under DPref/app/build,
+# build output; target/jpref.jar and the DPref release apk and bundle are tracked and stay tracked.
+# not a plain build/: DPref/app/.gitignore re-includes them under DPref/app/build,
 # which is impossible once the directory itself is ignored
 target/
 /jpref-engine/build/
