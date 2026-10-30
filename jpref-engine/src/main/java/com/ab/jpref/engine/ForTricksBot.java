@@ -29,6 +29,7 @@ import com.ab.util.Bidder.PlayerBid;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 import static com.ab.jpref.cards.Card.Suit;
+import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 
 
@@ -167,7 +168,10 @@ public class ForTricksBot extends Bot {
     // safe under the most likely guesses, the least dropRisk(), then under the most guesses,
     // then the fewest tricks under the list's guess, then under all the guesses, then the list's
     // card. The various guesses alone outvote the likely one: ♠89QA vs 7 no trump ♠XJK ♦J,
-    // ♣8 ♥9 dropped, ♠A is safe under ♠XJ or ♠XK dropped, ♠8 gives the declarer a trick less
+    // ♣8 ♥9 dropped, ♠A is safe under ♠XJ or ♠XK dropped, ♠8 gives the declarer a trick less.
+    // Every candidate is searched from the first trick on, see openResults(): the list's guess can be
+    // the only one with all the cards equal, ♠K ♣A ♦789XKA ♥XK + ♠A ♣9, 9♦, the guess ♥XK dropped,
+    // the list leads ♥8 from ♠8XJ ♣8JQK ♦Q ♥8A; the declarer dropped ♣9 ♥X, ♥K takes a trick
     @Override
     Card robustCard(Trick trick, Card listCard) {
         if (trick.getTurn() == gameManager().declarerNumber) {
@@ -178,9 +182,6 @@ public class ForTricksBot extends Bot {
             return listCard;
         }
         CardList candidates = candidates(trick);
-        if (trick.getNumber() < SAME_RUN_TRICKS) {
-            candidates = sameRun(trick, candidates, listCard, guesses.get(0));
-        }
         if (candidates.size() < 2) {
             return listCard;
         }
@@ -216,10 +217,10 @@ public class ForTricksBot extends Bot {
                 res = trickList.builtResults(trick, guesses.get(g), candidates);    // searched by the list
             }
             if (res == null) {
-                res = trickList.evalCards(trick, guesses.get(g), candidates);
-            }
-            if (res == null) {
-                break;      // deadline, the last guesses are left out
+                if (trickList.deadlineExceeded()) {
+                    break;      // the last guesses are left out
+                }
+                res = openResults(trick, guesses.get(g), candidates);
             }
             if (complete++ == 0) {
                 listGuess = res;
@@ -275,6 +276,40 @@ public class ForTricksBot extends Bot {
         Logger.printf("trick %d, drops guessed %d, safe likely/all guesses, tricks for the list's guess:%s -> %s, %,d msec\n",
             trick.getNumber(), complete, sb, candidates.get(best), System.currentTimeMillis() - start);
         return candidates.get(best);
+    }
+
+    // the declarer's tricks after each candidate under the guess of the declarer's hand, as
+    // TrickList.evalCards() counts them; OpenPlay searches all the candidates under all the
+    // guesses in a fraction of the time the list's search takes for one guess
+    int[] openResults(Trick trick, CardSet guess, CardList candidates) {
+        int[] h = new int[NOP];
+        h[number] = guess.getBitmap();
+        h[(number + 1) % NOP] = leftHand.getBitmap();
+        h[(number + 2) % NOP] = rightHand.getBitmap();
+        int k = trick.size();
+        int[] cards = new int[NOP];
+        for (int i = 0; i < k; ++i) {
+            cards[i] = CardSet.bit(trick.getCard(i));
+        }
+        int trumpMask = 0;
+        Suit trump = gameManager().getMinBid().getTrump();
+        if (trump != null) {
+            trumpMask = CardSet.suitMask(trump);
+        }
+        int declarer = 1 << number;
+        int pastTricks = gameManager().getPlayers()[number].getTricks();
+        int turn = trick.getTurn();
+        int[] res = new int[candidates.size()];
+        for (int i = 0; i < res.length; ++i) {
+            int bit = CardSet.bit(candidates.get(i));
+            int[] hands = h.clone();
+            hands[turn] &= ~bit;
+            int[] played = cards.clone();
+            played[k] = bit;
+            res[i] = pastTricks + OpenPlay.futureTricks(hands, trick.getStartedBy(), played, k + 1,
+                trumpMask, new int[0], declarer, declarer);
+        }
+        return res;
     }
 
     static final int suitFlagTrump = 0x8;

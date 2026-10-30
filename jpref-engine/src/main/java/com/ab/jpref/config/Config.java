@@ -43,7 +43,7 @@ import java.util.Locale;
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
     public static final long projectSerialVersionUID = 21L;
-    public static final String VERSION = "1.1";
+    public static final String VERSION = "1.2";
 
     public static final String PROJECT_NAME = "JPref";
 
@@ -126,7 +126,7 @@ public abstract class Config implements Serializable {
 
     public static final int NOP = 3;    // Number of players
     public static final int ROUND_SIZE = 10;    // total tricks == initial hand size
-    private static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
+    public static final String CONFIG_FILENAME = PROJECT_NAME + ".config";
     public static final char NO_TRUMP = '-';
     private static final long serialVersionUID = projectSerialVersionUID;
     public final String GUID;

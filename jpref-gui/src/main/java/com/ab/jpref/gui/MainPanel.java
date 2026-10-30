@@ -52,6 +52,7 @@ import java.util.ArrayList;
 
 public class MainPanel extends JLayeredPane implements TableLayout.GUI {
     public static final boolean DEBUG_LOG = false;
+    static final int MIN_FONT_SIZE = 8;     // fitFont() does not go below
 
     private final Color LBL_BG_COLOR = Color.yellow;
     private final Color LBL_SELECTED_BG_COLOR = Color.green;
@@ -180,6 +181,9 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             }
             b.setHorizontalTextPosition(JButton.CENTER);
             b.setVerticalTextPosition(JButton.CENTER);
+            // the default margin (14px on each side) leaves small buttons too
+            // narrow for their text, Swing shows "6..." instead of "6♠"
+            b.setMargin(new Insets(0, 0, 0, 0));
             b.addActionListener(actionEvent -> widget.onClick());
             view = b;
         }
@@ -236,8 +240,7 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
                     ((JButton)jComponent).setIcon(new ImageIcon(image));
                 }
                 if (image == null || widget.getTextFace()) {
-                    Font _font = new Font("Serif", Font.PLAIN, fontSize);
-                    jComponent.setFont(_font);
+                    jComponent.setFont(fitFont(jComponent, text, fontSize));
                     ((JButton) jComponent).setText(text);
                 }
             }
@@ -251,6 +254,21 @@ public class MainPanel extends JLayeredPane implements TableLayout.GUI {
             // normal cursor
             this.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         }
+    }
+
+    // the font of fontSize or smaller, so that text fits within the component's insets
+    private static Font fitFont(JComponent jComponent, String text, int fontSize) {
+        Font font = new Font("Serif", Font.PLAIN, fontSize);
+        if (text == null || text.isEmpty()) {
+            return font;
+        }
+        Insets insets = jComponent.getInsets();
+        int width = jComponent.getWidth() - insets.left - insets.right;
+        while (font.getSize() > MIN_FONT_SIZE &&
+                jComponent.getFontMetrics(font).stringWidth(text) > width) {
+            font = font.deriveFont((float)(font.getSize() - 1));
+        }
+        return font;
     }
 
     // translates title and text

@@ -1,9 +1,30 @@
 #!/bin/bash
 # set release = true in Main (Swing) and MainActivity (Android), build target/jpref.jar with maven
-# (tests included, output in log) and the debug apk with gradle;
-# extra arguments go to mvn, e.g. ./release -o
+# (tests included, output in log), the signed release apk and the signed release bundle for Google Play with gradle;
+# the jar, the apk and the bundle are tracked in git
+# usage: ./release keystore password [mvn arguments], e.g. ./release ~/keys/keys-26.jks secret -o
+# the password is the same for the keystore and its key, alias key0
 set -e
 cd "$(dirname "$0")"
+
+if [ $# -lt 2 ]; then
+    echo "usage: $0 keystore password [mvn arguments]" >&2
+    exit 1
+fi
+KEYSTORE=$(realpath "$1")
+export RELEASE_PASSWORD="$2"
+shift 2
+KEY_ALIAS=key0
+
+if [ ! -f "$KEYSTORE" ]; then
+    echo "keystore $KEYSTORE not found" >&2
+    exit 1
+fi
+# fail early on a wrong password or alias; the password goes through the environment, not the command line
+if ! keytool -list -keystore "$KEYSTORE" -storepass:env RELEASE_PASSWORD -alias "$KEY_ALIAS" > /dev/null; then
+    echo "cannot open $KEY_ALIAS in $KEYSTORE" >&2
+    exit 1
+fi
 
 MAIN=jpref-gui/src/main/java/com/ab/jpref/gui/Main.java
 ACTIVITY=DPref/app/src/main/java/com/ab/droid/jpref/MainActivity.java
@@ -26,5 +47,23 @@ if ! mvn package "$@" > "$LOG" 2>&1; then
 fi
 ls -l target/jpref.jar
 
-(cd DPref && ./gradlew -q assembleDebug)
-ls -l DPref/app/build/outputs/apk/debug/app-debug.apk
+# signed as Android Studio does it (ORG_GRADLE_PROJECT_* environment variables do not reach these)
+APK=DPref/app/build/outputs/apk/release/app-release.apk
+AAB=DPref/app/build/outputs/bundle/release/app-release.aab
+rm -f "$APK" "$AAB"
+(cd DPref && ./gradlew -q assembleRelease bundleRelease \
+    "-Pandroid.injected.signing.store.file=$KEYSTORE" \
+    "-Pandroid.injected.signing.store.password=$RELEASE_PASSWORD" \
+    "-Pandroid.injected.signing.key.alias=$KEY_ALIAS" \
+    "-Pandroid.injected.signing.key.password=$RELEASE_PASSWORD")
+# the apk has v2+ signatures that jarsigner does not check, apksigner from the newest build-tools does
+APKSIGNER=$(ls -d "${ANDROID_HOME:-/opt/Android/Sdk}"/build-tools/*/apksigner | sort -V | tail -1)
+if ! "$APKSIGNER" verify "$APK"; then
+    echo "$APK is not signed" >&2
+    exit 1
+fi
+if ! jarsigner -verify "$AAB" | grep -q "jar verified"; then
+    echo "$AAB is not signed" >&2
+    exit 1
+fi
+ls -l "$APK" "$AAB"

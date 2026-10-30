@@ -731,10 +731,6 @@ public class Bot extends Player implements Serializable {
 
     static final int MIN_DROP_GUESSES = 4;  // see dropGuesses()
     static final int MAX_DROP_GUESSES = 8;
-    // in the first tricks ForTricksBot.robustCard() searches only the list card's run, see sameRun():
-    // with 9 or 10 tricks left a search per guess takes too long for every card; MisereBot does
-    // it in the first trick only, its guesses count the same, the list card can miss the catch
-    static final int SAME_RUN_TRICKS = 2;
 
     // the risk of the declarer's hand after a drop, the lower ones are the likelier drops,
     // a tie-break in dropGuesses()
@@ -784,7 +780,9 @@ public class Bot extends Player implements Serializable {
             if (!droppable(cards.get(i))) {
                 continue;
             }
-            for (int j = diff == 1 ? i : i + 1; j < cards.size(); ++j) {
+            // one card: j == i only, the pairs after it would leave the declarer a card short
+            int end = diff == 1 ? i + 1 : cards.size();
+            for (int j = diff == 1 ? i : i + 1; j < end; ++j) {
                 if (!droppable(cards.get(j))) {
                     continue;
                 }

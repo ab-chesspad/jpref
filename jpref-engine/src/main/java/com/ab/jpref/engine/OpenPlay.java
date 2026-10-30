@@ -149,7 +149,7 @@ public class OpenPlay {
                 continue;
             }
             int p = (leader + k) % NOP;
-            int legal = suitMask == 0 ? h[p] : AllPassEndgame.legal(h[p], suitMask);
+            int legal = suitMask == 0 ? h[p] : legal(h[p], suitMask);
             boolean maximizer = ((maximizers >> p) & 1) != 0;
             int chosen = 0;
             for (int bit = CardSet.next(legal, 0); bit != 0; bit = CardSet.next(legal, bit)) {
@@ -219,7 +219,7 @@ public class OpenPlay {
             return canReach(h, winner, t, need - won);
         }
         int p = (leader + k) % NOP;
-        int legal = suitMask == 0 ? h[p] : AllPassEndgame.legal(h[p], suitMask);
+        int legal = suitMask == 0 ? h[p] : legal(h[p], suitMask);
         int all = h[0] | h[1] | h[2];
         for (int i = 0; i < k; ++i) {
             all |= cards[i];
@@ -240,6 +240,19 @@ public class OpenPlay {
             }
         }
         return !maximizer;
+    }
+
+    // follow the suit, else trump, else any card
+    private int legal(int hand, int suitMask) {
+        int follow = hand & suitMask;
+        if (follow != 0) {
+            return follow;
+        }
+        int trumps = hand & trumpMask;
+        if (trumps != 0) {
+            return trumps;
+        }
+        return hand;
     }
 
     // the highest trump, else the highest card of the suit; nobody followed a talon card: the leader

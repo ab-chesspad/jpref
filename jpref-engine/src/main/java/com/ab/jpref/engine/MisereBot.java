@@ -313,9 +313,14 @@ public class MisereBot extends Bot {
         return handResults;
     }
 
+    // the defenders' cards are not known yet; no suit has a 100% clean lead: the shortest suit,
+    // the one with more cards out on a tie (one defender less likely void)
     private Card declarerPlay(Trick trick) {
         HandResults handResults = misereTricks(trick.getTurn());
         CardSet.ListData bestListData = null;
+        boolean anyClean = false;
+        CardSet.ListData shortest = null;
+        int shortestOthers = 0;
         for (CardSet.ListData listData : handResults.allListData) {
             if (listData == null) {
                 continue;
@@ -327,13 +332,75 @@ public class MisereBot extends Bot {
             if (bestListData == null || bestListData.maxMeStart > listData.maxMeStart) {
                 bestListData = listData;
             }
+            Card.Suit s = listData.suit;
+            CardSet others = new CardSet(leftHand.list(s), rightHand.list(s));
+            if (cleanLead(cardList, others) != null) {
+                anyClean = true;
+            }
+            if (shortest == null || shortest.thisSuit.size() > cardList.size() ||
+                    shortest.thisSuit.size() == cardList.size() && shortestOthers < others.size()) {
+                shortest = listData;
+                shortestOthers = others.size();
+            }
         }
         if (bestListData == null) {
             throw new RuntimeException("prog error");
         }
+        if (!anyClean) {
+            bestListData = shortest;
+        }
         CardSet cleanSuit = bestListData.thisSuit;
         Card.Suit s = bestListData.suit;
         return cleanSuit.getOptimalStart(leftHand.list(s), rightHand.list(s));
+    }
+
+    // a lead that cannot catch the declarer in this suit whatever the split, null if none;
+    // the highest one, a lower one stays for later. The worst split: all the others with one defender,
+    // the other one discards and never has to go over
+    static Card cleanLead(CardSet mine, CardSet others) {
+        int myRanks = ranks(mine);
+        int otherRanks = ranks(others);
+        if (otherRanks == 0) {
+            return null;    // nobody follows, the lead takes it
+        }
+        CardList myCards = mine.toCardList();
+        for (int i = myCards.size() - 1; i >= 0; --i) {
+            int lead = 1 << rankIndex(myCards.get(i));
+            if ((otherRanks & (lead - 1)) != 0) {
+                continue;   // a card under it
+            }
+            boolean clean = true;
+            for (int over = otherRanks; over != 0; over &= over - 1) {
+                // the defender goes over with any card, then leads the rest at will
+                if (!survives(myRanks & ~lead, otherRanks & ~(over & -over))) {
+                    clean = false;
+                    break;
+                }
+            }
+            if (clean) {
+                return myCards.get(i);
+            }
+        }
+        return null;
+    }
+
+    // rank bitmaps of one suit: the defender leads its cards in any order,
+    // the declarer goes under each with the highest card that does
+    private static boolean survives(int mine, int others) {
+        if (mine == 0) {
+            return true;
+        }
+        for (int h = others; h != 0; h &= h - 1) {
+            int bit = h & -h;
+            int under = mine & (bit - 1);
+            if (under == 0) {
+                return false;
+            }
+            if (!survives(mine & ~Integer.highestOneBit(under), others & ~bit)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int rankIndex(Card card) {

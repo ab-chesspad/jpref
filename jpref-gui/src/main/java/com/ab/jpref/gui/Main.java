@@ -238,7 +238,7 @@ public class Main implements Logger.LogHolder, Host {
                 } catch (Throwable t) {
                     Logger.printStackTrace(t);
                     if (mainPanel.showMessage("Program crash", m("Submit log") + "?", "Yes", "No") == 0) {
-                        tableLayout.submitLog(null);
+                        tableLayout.submitLog(getLogFileName(), true);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } finally {

@@ -1113,7 +1113,7 @@ public class TableLayout implements GameManager.EventObserver {
                 if (!userComments.trim().isEmpty()) {
                     Logger.printf("*** comment start ***\n%s\n*** comment end ***\n", userComments);
                 }
-                submitLog(gui);
+                submitLog(host.getLogFileName(), false);
                 break;
             case settings:
                 host.updateSettings();
@@ -1192,15 +1192,15 @@ public class TableLayout implements GameManager.EventObserver {
         }
     }
 
-    public synchronized void submitLog(GUI gui) {
+    // logFilePath: e.g. the log of a previous run that crashed
+    public synchronized void submitLog(String logFilePath, boolean restart) {
         while (!host.getUtil().isConnected()) {
-            if (this.gui.showMessage("No Internet Connection", "Please correct",
+            if (gui.showMessage("No Internet Connection", "Please correct",
                     "Retry", "Cancel") != 0) {
                 return;
             }
         }
         Logger.flush();     // submit the log up to this moment
-        String logFilePath = host.getLogFileName();
         final String[] res = new String[1];
         Thread worker = new Thread(() -> {
             res[0] = host.getUtil().submitLog(logFilePath);
@@ -1220,19 +1220,23 @@ public class TableLayout implements GameManager.EventObserver {
             i = fn.length();
         }
         String msg = res[0];
-        if (msg.startsWith(fn.substring(0, i))) {
+        String text;
+        if (!restart && msg.startsWith(fn.substring(0, i))) {
             msg = m(msg.substring(fn.length() + 1));
+            text = String.format("%s %s", fn, msg);
+            if (gui != null) {
+                gui.showMessage("Confirmation", text, "Continue");
+            }
         } else {
-            fn = "";
-        }
-        String text = String.format("%s %s\n%s", fn, msg, m("Restart JPref") + "?");
-        if (gui != null) {
+            text = String.format("%s\n%s", msg, m("Restart JPref") + "?");
             if (gui.showMessage("Confirmation", text, "Yes", "No") == 0) {
                 // runs on the button handler's thread; the game thread picks it up
                 // and throws PrefExceptionReset out of runGame() to the main loop
+                Logger.println("Restart after submitting log");
                 GameManager.getInstance().restart(GameManager.RestartCommand.reset);
             }
         }
+        Logger.println("Continue after submitting log");
     }
 
     private void showHelp() {

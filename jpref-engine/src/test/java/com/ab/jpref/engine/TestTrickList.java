@@ -436,6 +436,26 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
         return bot;
     }
 
+    // the offer's dry run: a player out of the suit must trump, p0 7 tricks, 6 after ♥AX9
+    @Test
+    public void testOpenPlay() {
+        String[] sources = {
+            "♠9A ♣79XA ♥JQKA  ♠78X ♣Q ♦8XA ♥78X  ♠JQK ♣8JK ♦7QK ♥9 -> 7",
+            "♠9A ♣79XA ♥JQK  ♠78X ♣Q ♦8XA ♥78  ♠JQK ♣8JK ♦7QK -> 6",
+        };
+        int trumpMask = CardSet.suitMask(Card.Suit.HEART);
+        for (String source : sources) {
+            String[] parts = source.split("\\s+->\\s+");
+            String[] hands = parts[0].split("  ");
+            int[] h = new int[NOP];
+            for (int i = 0; i < NOP; ++i) {
+                h[i] = new CardSet(util.toCardList(hands[i])).getBitmap();
+            }
+            int tricks = OpenPlay.futureTricks(h, 0, new int[NOP], 0, trumpMask, new int[0], 1, 1);
+            Assert.assertEquals(source, Integer.parseInt(parts[1]), tricks);
+        }
+    }
+
     @Test
     public void testTrickList() {
         String[] sources = {
@@ -443,6 +463,8 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
             "♠K ♣A ♦7XKA ♥JKA  ♣78Q ♦9JQ ♥8XQ  ♠7XJ ♣9XJK ♦8 ♥7 : 2 7♦ -> 7",
             "♠K ♣A ♦7XKA ♥JKA  ♣78Q ♦9JQ ♥8XQ  ♠7XJ ♣9XJK ♦8 ♥7 : 1 7♦ -> 7",
             "♦XA ♥7JQK  ♠K ♦78QK ♥X  ♠9 ♣K ♦9 ♥89A : 6♣ -> 3",
+            // open cards, after ♥AX9 6 more: [♠97J, ♠QA8, ♣7Q8, ♠XK ♥J, ♣9 ♥7 ♣J, ♦87 ♥Q, ♥K8 ♣K, ♣X ♦XQ, ♣A ♦AK]
+            "♠9A ♣79XA ♥JQKA  ♠78X ♣Q ♦8XA ♥78X  ♠JQK ♣8JK ♦7QK ♥9 : 7♥ -> 7",
 //            "♠79 ♥XJ  ♠JQ ♦A ♥K  ♠K ♦K ♥QA : 6♥ -> 0",  // [♠7JK, ♦K ♥X ♦A, ♠9Q ♥Q, ♥AJK]
 //            "♠89XKA ♣7X ♦JK  ♠Q ♣9J ♦78X ♥JKA  ♠7J ♣A ♦9QA ♥79Q : 6♠ -> 5",
         };

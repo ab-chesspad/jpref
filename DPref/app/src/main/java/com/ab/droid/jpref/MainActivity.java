@@ -50,7 +50,9 @@ import android.widget.RelativeLayout.LayoutParams;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,6 +76,17 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     // PConfig.deleteLogsAfter used to have. If Android should let the user
     // configure this too, give DConfig its own Property instead.
     private static final int DELETE_LOGS_AFTER_DAYS = 1;
+
+    // written by the crash handler: the number of crashes in a row and the log
+    // of the last one; removed once the next start gets as far as asking to
+    // submit that log. Crashing again before that means the start itself
+    // crashes, likely on the saved state, so it is set aside.
+    private static final String CRASH_MARKER_NAME = "crash.marker";
+    private static final String CRASHED_EXT = ".crashed";
+    private static final int CRASHES_TO_SET_GAME_ASIDE = 2;
+    private static final int CRASHES_TO_RESET_SETTINGS = 3;
+    private volatile int previousCrashes;
+    private String crashedLogFileName;
 
     static {
         if (release) {
@@ -118,6 +131,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         context = this;
         super.onCreate(savedInstanceState);
         Logger.setHolder(this);
+        readCrashMarker();
         installCrashLogger();
 
         // Show the window immediately - dUtil/config loading below is blocking
@@ -133,6 +147,12 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         this.setContentView(mainLayout, rlp);
 
         new Thread(() -> {
+            if (previousCrashes >= CRASHES_TO_SET_GAME_ASIDE) {
+                setAside(Util.DATA_FILE_NAME);
+            }
+            if (previousCrashes >= CRASHES_TO_RESET_SETTINGS) {
+                setAside(Config.CONFIG_FILENAME);
+            }
             DUtil loadedDUtil = new DUtil(this);
             DConfig loadedConfig = (DConfig) Config.unserialize(this);
             runOnUiThread(() -> finishCreate(loadedDUtil, loadedConfig));
@@ -187,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         trickList.init();
 
         new Thread(() -> {
+            askToSubmitCrashLog();
             while (true) {
                 try {
                     gameManager.runGame(testInputStream, 0);
@@ -199,8 +220,8 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
                 } catch (Throwable t) {
                     Logger.printStackTrace(t);
                     getLogStream().flush();
-                    if (mainView.showMessage("Program crash", m("Submit log") + "?", "Yes", "No") == 0) {
-                        tableLayout.submitLog(null);
+                    if (mainView.showMessage("Program crash", m("Submit Log") + "?", "Yes", "No") == 0) {
+                        tableLayout.submitLog(getLogFileName(), true);
                     }
                     gameManager.setRoundStage(GameManager.RoundStage.dealing);
                 } finally {
@@ -302,10 +323,80 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
             } catch (Throwable loggingFailure) {
                 // don't let a logging failure block the real crash handling below
             }
+            try {
+                writeCrashMarker();
+            } catch (Throwable markerFailure) {
+                // don't let a logging failure block the real crash handling below
+            }
             if (defaultHandler != null) {
                 defaultHandler.uncaughtException(thread, throwable);
             }
         });
+    }
+
+    private File crashMarker() {
+        return new File(getDataDirectory(), CRASH_MARKER_NAME);
+    }
+
+    private void readCrashMarker() {
+        File marker = crashMarker();
+        if (!marker.exists()) {
+            return;
+        }
+        try (BufferedReader br = new BufferedReader(new FileReader(marker))) {
+            previousCrashes = Integer.parseInt(br.readLine().trim());
+            crashedLogFileName = br.readLine();
+        } catch (Throwable t) {
+            // a damaged marker still means a crash
+            previousCrashes = 1;
+        }
+    }
+
+    private void writeCrashMarker() throws IOException {
+        try (PrintStream ps = new PrintStream(new FileOutputStream(crashMarker()), false,
+                StandardCharsets.UTF_8.name())) {
+            ps.println(previousCrashes + 1);
+            if (logFileName != null) {
+                ps.println(logFileName);
+            }
+        }
+    }
+
+    // renamed, not deleted, to keep it for diagnosis
+    private void setAside(String fileName) {
+        File f = new File(getDataDirectory(), fileName);
+        if (f.exists()) {
+            File aside = new File(f.getPath() + CRASHED_EXT);
+            aside.delete();
+            f.renameTo(aside);
+        }
+    }
+
+    // on the game thread, the UI is up
+    private void askToSubmitCrashLog() {
+        if (previousCrashes == 0) {
+            return;
+        }
+        String text = m("The program crashed last time") + ".";
+        if (previousCrashes >= CRASHES_TO_SET_GAME_ASIDE) {
+            text += "\n" + m("The saved game is set aside, a new game is started") + ".";
+        }
+        if (previousCrashes >= CRASHES_TO_RESET_SETTINGS) {
+            text += "\n" + m("The settings are reset") + ".";
+        }
+        Logger.println(String.format("%d crashes in a row, log %s", previousCrashes, crashedLogFileName));
+        boolean haveLog = crashedLogFileName != null && new File(crashedLogFileName).exists();
+        if (haveLog) {
+            text += "\n" + m("Submit Log") + "?";
+            if (mainView.showMessage("Program crash", text, "Yes", "No") == 0) {
+                tableLayout.submitLog(crashedLogFileName, true);
+            }
+        } else {
+            mainView.showMessage("Program crash", text, "Continue");
+        }
+        // got this far, the start does not crash
+        crashMarker().delete();
+        previousCrashes = 0;
     }
 
     @Override

@@ -68,6 +68,10 @@ class DLabel extends View {
     // the raw HTML string directly, since only Html.fromHtml() parses that markup
     // into the Spanned that colors/styles actually come from).
     void setText(String text) {
+        if (text == null) {
+            // the same as TextView.setText(null)
+            text = "";
+        }
         this.text = suitGlyphs(getContext(), fromHtml(text));
         layout = null;
         invalidate();
@@ -82,6 +86,10 @@ class DLabel extends View {
     private static Typeface suitTypeface;
 
     static CharSequence suitGlyphs(Context context, CharSequence text) {
+        if (text == null) {
+            // widgets without text, setText(null) shows them empty
+            return null;
+        }
         SpannableStringBuilder sb = null;
         for (int i = 0; i < text.length(); ++i) {
             if (SUITS.indexOf(text.charAt(i)) < 0) {

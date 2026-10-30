@@ -45,7 +45,7 @@ public abstract class Player implements Serializable {
     }
 
     protected int number;
-    protected Config.Bid bid;
+    protected Config.Bid bid = Config.Bid.BID_UNDEFINED;     // before the first deal too
     public boolean halfWhist;
     protected CardSet myHand = new CardSet();
     protected CardSet leftHand = new CardSet();

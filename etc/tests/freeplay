@@ -1,6 +1,7 @@
 freeplay: hands, talon, elderhand -> bid, tricks
 
 #*** exit ***
+deal: ♠K ♣A ♦789XKA ♥XK  ♠8XJ ♣8JQK ♦Q ♥8A  ♠79Q ♣7X ♦J ♥79JQ  ♠A ♣9  1 -> 9♦ 9
 deal: ♠A ♣8JKA ♦9XQK ♥J  ♠JK ♣79XQ ♦7 ♥8KA  ♠8XQ ♦8JA ♥79XQ  ♠79  0 -> 6♣ 5
 deal: ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♠789X ♣8 ♦789 ♥89  ♣KA 0 -> 2 Misère 1 # 70 d 1 # Ковалевская
 deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> Misère 1 # 70 d 1 # Ковалевская

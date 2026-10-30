@@ -106,7 +106,7 @@ String path;
         deadlineHit = false;
     }
 
-    private boolean deadlineExceeded() {
+    boolean deadlineExceeded() {
         if (DEBUG_IGNORE_DEADLINE) {
             return false;
         }
