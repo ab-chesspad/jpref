@@ -26,6 +26,7 @@ import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
 import com.ab.util.Bidder;
 import com.ab.util.Bidder.PlayerBid;
+import com.ab.util.Logger;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -34,6 +35,12 @@ import java.util.Random;
 
 public class Bot extends Player implements Serializable {
     public static CardList debugDrop = null;
+    public static DeclarerDrop declarerDrop = DeclarerDrop.Random;
+
+    enum DeclarerDrop {
+        First,      // the least risk
+        Random      // one of the least risks, the defenders cannot be sure of it, see chooseDrop()
+    }
 
     // when declarer is Bot, it uses the same logic for declarer and defenders
     // so playerBid is the same and can be shared
@@ -722,7 +729,6 @@ public class Bot extends Player implements Serializable {
         return myRand.nextInt(max);
     }
 
-
     static class HandResults {
         final CardSet.ListData[] allListData = new CardSet.ListData[Card.TOTAL_SUITS];
         int totalTricks = 0;    // the best
@@ -740,6 +746,11 @@ public class Bot extends Player implements Serializable {
 
     // the declarer can drop the card, see dropGuesses()
     boolean droppable(Card card) {
+        return true;
+    }
+
+    // the declarer's hand now agrees with how he played, see dropGuesses()
+    boolean plausibleDrop(CardSet hand) {
         return true;
     }
 
@@ -769,8 +780,15 @@ public class Bot extends Player implements Serializable {
         if (diff <= 0) {
             return res;     // all known
         }
+        // not the drops he would have misplayed with, unless all are such, checked when chosen, it takes time
+        List<CardSet> implausible = new ArrayList<>();
         if (knownHand.contains(myHand) && myHand.size() == declarerSize) {
-            res.add(new CardSet(myHand));
+            // the list's guess is the drop of a bot declarer, a human one may have dropped otherwise
+            if (gameManager.getDeclarer() instanceof Bot || plausibleDrop(myHand)) {
+                res.add(new CardSet(myHand));
+            } else {
+                implausible.add(new CardSet(myHand));
+            }
         }
         // the dropped cards not shown yet, 1 or 2
         List<CardSet> hands = new ArrayList<>();
@@ -815,7 +833,7 @@ public class Bot extends Player implements Serializable {
             CardSet next = null;
             int maxCovered = 0;
             for (CardSet hand : hands) {
-                if (res.contains(hand)) {
+                if (res.contains(hand) || implausible.contains(hand)) {
                     continue;
                 }
                 int covered = knownHand.diff(hand).intersection(notDropped).size() +
@@ -828,9 +846,25 @@ public class Bot extends Player implements Serializable {
             if (next == null) {
                 break;      // all covered, at least MIN_DROP_GUESSES, or no more hands
             }
+            if (!plausibleDrop(next)) {
+                implausible.add(next);
+                continue;
+            }
             res.add(next);
             notDropped.remove(knownHand.diff(next));
             notKept.remove(next);
+        }
+        if (!implausible.isEmpty()) {
+            Logger.printf("the declarer's plays rule out %d drops, kept %s\n", implausible.size(), res);
+        }
+        if (res.size() < 2) {
+            // he misplayed under every guess, so any of them
+            for (CardSet hand : implausible) {
+                if (res.size() >= MIN_DROP_GUESSES) {
+                    break;
+                }
+                res.add(hand);
+            }
         }
         return res;
     }

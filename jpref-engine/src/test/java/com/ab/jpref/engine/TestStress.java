@@ -166,14 +166,14 @@ public class TestStress extends BaseTest {
             CardList deck = shuffledDeck(seed);
             for (int declarerNum = 0; declarerNum < NOP; ++declarerNum) {
                 final int declarerNumF = declarerNum;
-                for (MisereBot.DeclarerDrop dropStrategy : MisereBot.DeclarerDrop.values()) {
+                for (MisereBot.DeclarerDrop dropStrategy : Bot.DeclarerDrop.values()) {
                     ++ran;
                     int elderHand = (declarerNum + d) % NOP;
                     safeRun("stressForcedMisere declarer=" + declarerNum + " elderHand=" + elderHand
                             + " drop=" + dropStrategy, seed, deck, () -> {
                         GameManager gameManager = freshGameManager();
                         config.maxMoveTime.set(20);
-                        MisereBot.declarerDrop = dropStrategy;
+                        Bot.declarerDrop = dropStrategy;
                         CardList talon = new CardList(deck.subList(30, 32));
                         Bot.debugDrop = new CardList(talon);
                         gameManager.elderHand = elderHand;

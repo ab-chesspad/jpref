@@ -307,7 +307,7 @@ public class TestGameManager extends BaseTest {
                     deck.addAll(new CardList(_talonCards));
                     for (int i = 0; i < tot; ++i) {
                         CardList talonCards = new CardList(_talonCards);
-                        MisereBot.declarerDrop = MisereBot.DeclarerDrop.values()[i];
+                        Bot.declarerDrop = Bot.DeclarerDrop.values()[i];
                         gameManager.getTrick().clear(elderHand);
                         gameManager.elderHand = elderHand;
                         gameManager.deal(deck);

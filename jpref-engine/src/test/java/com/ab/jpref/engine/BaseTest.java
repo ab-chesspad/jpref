@@ -27,8 +27,7 @@ public class BaseTest {
     public void resetBotStatics() {
         Bot.debugDrop = null;
         Bot.playerBid = null;
-        MisereBot.declarerDrop = MisereBot.DeclarerDrop.First;      // тест results must not depend on chance
-        ForTricksBot.declarerDrop = MisereBot.DeclarerDrop.First;   // тест results must not depend on chance
+        Bot.declarerDrop = Bot.DeclarerDrop.First;      // тест results must not depend on chance
     }
 
     public static class TestConfig extends Config {

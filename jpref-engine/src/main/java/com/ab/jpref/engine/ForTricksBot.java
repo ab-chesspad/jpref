@@ -29,7 +29,6 @@ import com.ab.util.Bidder.PlayerBid;
 import com.ab.util.Logger;
 import com.ab.util.Pair;
 import static com.ab.jpref.cards.Card.Suit;
-import static com.ab.jpref.config.Config.NOP;
 import static com.ab.jpref.config.Config.ROUND_SIZE;
 
 
@@ -38,8 +37,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class ForTricksBot extends Bot {
-    // MisereBot.DeclarerDrop.Random: one of the drops as good as the Bidder's, see Bidder.equalDrops()
-    public static MisereBot.DeclarerDrop declarerDrop = MisereBot.DeclarerDrop.Random;
     PlayerBid maxPlayerBid;
 
     private static ForTricksBot instance;
@@ -120,7 +117,7 @@ public class ForTricksBot extends Bot {
             myHand.add(playedCard);
         }
         playerBid = Bidder.getInstance().getBid(myHand, bid, elderHand, nDrops);
-        if (declarerDrop == MisereBot.DeclarerDrop.Random && playedCard == null &&
+        if (declarerDrop == Bot.DeclarerDrop.Random && playedCard == null &&
                 gameManager().getDeclarer() instanceof Bot) {
             // a bot declarer's own drop, one of the equal ones; the defenders guessing a human's drop take the Bidder's
             List<CardSet> drops = Bidder.getInstance().equalDrops(myHand, bid, elderHand, playerBid.drops);

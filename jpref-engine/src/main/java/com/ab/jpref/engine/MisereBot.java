@@ -32,8 +32,6 @@ import com.ab.util.Logger;
 import java.util.*;
 
 public class MisereBot extends Bot {
-//    public static DeclarerDrop declarerDrop = DeclarerDrop.First;
-    public static DeclarerDrop declarerDrop = DeclarerDrop.Random;
     public static final boolean DEBUG_LOG = false;
 
     static final int MAX_EVAL = 1000;   // in ‰
@@ -43,10 +41,6 @@ public class MisereBot extends Bot {
     // ‰ of the declarer's expected tricks, by the rank bitmap of a suit, see MisereCatch
     static final int[] trickTable = MisereCatch.trickTable();
 
-    enum DeclarerDrop {
-        First,      // the least risk
-        Random      // one of the least risks, the defenders cannot be sure of it, see chooseDrop()
-    }
     // risks of drops for DeclarerDrop.Random end at the first one more than 30% over the previous
     static final double DROP_JUMP = 1.3;
     // when even the least risk of a drop is higher, likely caught anyway: one of all drops
@@ -610,6 +604,124 @@ public class MisereBot extends Bot {
         Logger.printf("trick %d, drops guessed %d, caught guesses,now/tricks for the list's guess:%s -> %s, %,d msec\n",
             trick.getNumber(), complete, sb, candidates.get(best), System.currentTimeMillis() - start);
         return candidates.get(best);
+    }
+
+    // misère with the defenders' cards open: the declarer's plays, they tell his drop, see plausibleDrop()
+    private static final List<DeclarerPlay> declarerPlays = new ArrayList<>();
+
+    static void clearDeclarerPlays() {
+        declarerPlays.clear();
+    }
+
+    // before the card leaves the declarer's hand
+    static void declarerPlays(Trick trick, Card card) {
+        GameManager gameManager = GameManager.getInstance();
+        if (!Config.Bid.BID_MISERE.equals(trick.minBid) || !gameManager.cardsRevealed) {
+            return;
+        }
+        declarerPlays.add(new DeclarerPlay(trick, card));
+    }
+
+    // a guess where the declarer, seeing the defenders' cards, played a card taking more tricks than another
+    // one would: with ♦7J ♦7 on ♦8 leaves ♦J for 6 tricks, the declarer would rather take one with it now
+    @Override
+    boolean plausibleDrop(CardSet hand) {
+        GameManager gameManager = gameManager();
+        int played = gameManager.declarerPlayed.getBitmap();
+        for (DeclarerPlay declarerPlay : declarerPlays) {
+            int then = hand.getBitmap() | (played & ~declarerPlay.playedBefore);
+            Boolean res = declarerPlay.plausible.get(then);
+            if (res == null) {
+                res = declarerPlay.plausible(then);
+                declarerPlay.plausible.put(then, res);
+            }
+            if (!res) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static class DeclarerPlay {
+        final int declarer;
+        final int leader;
+        final int k;
+        final int[] cards = new int[NOP];   // the trick, then the declarer's card
+        final int card;
+        final int[] hands = new int[NOP];   // the defenders' ones
+        final int playedBefore;             // GameManager.declarerPlayed
+        // by the guess of the declarer's hand then
+        final Map<Integer, Boolean> plausible = new HashMap<>();
+
+        DeclarerPlay(Trick trick, Card card) {
+            GameManager gameManager = GameManager.getInstance();
+            declarer = gameManager.declarerNumber;
+            leader = trick.getStartedBy();
+            k = trick.size();
+            for (int i = 0; i < k; ++i) {
+                cards[i] = CardSet.bit(trick.getCard(i));
+            }
+            this.card = CardSet.bit(card);
+            Player[] players = gameManager.getPlayers();
+            for (int i = 0; i < NOP; ++i) {
+                if (i != declarer) {
+                    hands[i] = players[i].myHand.getBitmap();
+                }
+            }
+            playedBefore = gameManager.declarerPlayed.getBitmap();
+        }
+
+        // hand: the declarer's then
+        boolean plausible(int hand) {
+            if ((hand & card) == 0) {
+                return true;
+            }
+            int legal = hand;
+            if (k > 0) {
+                int follow = hand & AllPassEndgame.suitMaskOf(cards[0]);
+                if (follow != 0) {
+                    legal = follow;
+                }
+            }
+            if (legal == card) {
+                return true;    // no choice
+            }
+            int tricks = tricks(hand, card);
+            for (int bit = CardSet.next(legal, 0); bit != 0; bit = CardSet.next(legal, bit)) {
+                if (bit == card) {
+                    continue;
+                }
+                if (k == NOP - 1 && !wins(card) && wins(bit)) {
+                    continue;   // a misère declarer never takes a trick to lose fewer later
+                }
+                if (tricks(hand, bit) < tricks) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // the card tops the trick so far
+        private boolean wins(int bit) {
+            Card c = Card.get(bit);
+            for (int i = 0; i < k; ++i) {
+                Card other = Card.get(cards[i]);
+                if (other.getSuit().equals(c.getSuit()) && other.compareInTrick(c) > 0) {
+                    return false;
+                }
+            }
+            return c.getSuit().equals(Card.get(cards[0]).getSuit());
+        }
+
+        // the declarer's tricks from this one on, the open cards
+        private int tricks(int hand, int bit) {
+            int[] h = hands.clone();
+            h[declarer] = hand ^ bit;
+            int[] c = cards.clone();
+            c[k] = bit;
+            int defenders = ((1 << NOP) - 1) & ~(1 << declarer);
+            return OpenPlay.futureTricks(h, leader, c, k + 1, 0, new int[0], 1 << declarer, defenders);
+        }
     }
 
     // the declarer takes this trick with the card played, whatever he plays next
