@@ -19,6 +19,12 @@
  */
 package com.ab.jpref.engine;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,19 +58,80 @@ public class MisereCatch {
     // ‰ to catch every holding, indexed by the rank bitmap, 7 is bit 0;
     // free lead transfer, one carry, the defenders on lead: no card is known yet
     static int[] table() {
-        MisereCatch misereCatch = new MisereCatch(false);
         int[] res = new int[1 << RANKS.length()];
+        if (STORED != null) {
+            for (int d = 1; d < res.length; ++d) {
+                res[d] = STORED[0][d];
+            }
+            return res;
+        }
+        MisereCatch misereCatch = new MisereCatch(false);
         for (int d = 1; d < res.length; ++d) {
             res[d] = (int) Math.round(misereCatch.prob(d, 1)[1] * MisereBot.MAX_EVAL);
         }
         return res;
     }
 
+    // the evaluations precomputed by jpref-data, a slow phone took 10+ sec to compute them on demand:
+    // {‰ to be caught, ‰ of the expected tricks} by r | g << 8, the rank bitmaps of the declarer's
+    // cards and of the dropped ones, -1 when not stored; null without the resource
+    public static final String STORED_RESOURCE = "jpref/misere-suits";
+    static final int[][] STORED = load();
+
+    private static int[][] load() {
+        ClassLoader classloader = MisereCatch.class.getClassLoader();
+        try (InputStream is = classloader.getResourceAsStream(STORED_RESOURCE)) {
+            if (is == null) {
+                return null;
+            }
+            int[][] res = new int[2][1 << 16];
+            Arrays.fill(res[0], -1);
+            Arrays.fill(res[1], -1);
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] tokens = line.trim().split(" ");
+                if (tokens.length != 4) {
+                    continue;
+                }
+                int key = Integer.parseInt(tokens[0]) | Integer.parseInt(tokens[1]) << 8;
+                res[0][key] = Integer.parseInt(tokens[2]);
+                res[1][key] = Integer.parseInt(tokens[3]);
+            }
+            return res;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // every holding r of the declarer, every dropped g of the other ranks: r g ‰caught ‰tricks,
+    // g = 0 as in table() and trickTable()
+    public static void save(PrintStream pr) {
+        MisereCatch misereCatch = new MisereCatch(false);
+        for (int r = 1; r < 1 << RANKS.length(); ++r) {
+            pr.printf("%d %d %d %d\n", r, 0,
+                Math.round(misereCatch.prob(r, 1)[1] * MisereBot.MAX_EVAL),
+                Math.round(misereCatch.expectedTricks(r) * MisereBot.MAX_EVAL));
+            int rest = ~r & 0xff;
+            for (int g = rest; g != 0; g = (g - 1) & rest) {
+                pr.printf("%d %d %d %d\n", r, g,
+                    Math.round(misereCatch.prob(r, g, 1)[1] * MisereBot.MAX_EVAL),
+                    Math.round(misereCatch.expectedTricks(r, g) * MisereBot.MAX_EVAL));
+            }
+        }
+    }
+
     // ‰ of the declarer's expected tricks for every holding, the same model as table(),
     // the defenders take as many tricks as they can, the declarer may lead the suit after winning a trick
     static int[] trickTable() {
-        MisereCatch misereCatch = new MisereCatch(false);
         int[] res = new int[1 << RANKS.length()];
+        if (STORED != null) {
+            for (int d = 1; d < res.length; ++d) {
+                res[d] = STORED[1][d];
+            }
+            return res;
+        }
+        MisereCatch misereCatch = new MisereCatch(false);
         for (int d = 1; d < res.length; ++d) {
             res[d] = (int) Math.round(misereCatch.expectedTricks(d) * MisereBot.MAX_EVAL);
         }
@@ -121,11 +188,16 @@ public class MisereCatch {
 
     // {lead, other}, strict: {lead, other with L on lead, other with R on lead}
     double[] prob(int d, int carry) {
+        return prob(d, 0, carry);
+    }
+
+    // gone: the ranks out of play, the declarer's drop, the defenders do not hold them
+    double[] prob(int d, int gone, int carry) {
         double[] other = new double[3];
         for (int leader = L; leader <= R; ++leader) {
-            for (int[] split : splits(d)) {
+            for (int[] split : splits(d, gone)) {
                 if (caught(d, split[0], split[1], carry, strict ? leader : FREE)) {
-                    other[leader] += weight(d, split[0]);
+                    other[leader] += weight(d, gone, split[0]);
                 }
             }
         }
@@ -134,18 +206,18 @@ public class MisereCatch {
             if ((d & 1 << c) == 0) {
                 continue;
             }
-            lead = Math.min(lead, leadProb(d, c, carry));
+            lead = Math.min(lead, leadProb(d, gone, c, carry));
         }
         return strict ? new double[] {lead, other[L], other[R]} : new double[] {lead, other[L]};
     }
 
     // I lead card, the rank index, from d
-    double leadProb(int d, int card, int carry) {
+    double leadProb(int d, int gone, int card, int carry) {
         double p = 0;
-        for (int[] split : splits(d)) {
+        for (int[] split : splits(d, gone)) {
             int[] hands = {d & ~(1 << card), split[0], split[1]};
             if (play(hands, D, 1, card, D, carry)) {
-                p += weight(d, split[0]);
+                p += weight(d, gone, split[0]);
             }
         }
         return p;
@@ -180,7 +252,11 @@ public class MisereCatch {
 
     // the left defender's hands, the right one gets the rest
     static int[][] splits(int d) {
-        int out = ~d & 0xff;
+        return splits(d, 0);
+    }
+
+    static int[][] splits(int d, int gone) {
+        int out = ~d & ~gone & 0xff;
         int n = 1 << Integer.bitCount(out);
         int[][] res = new int[n][];
         int i = 0;
@@ -196,7 +272,11 @@ public class MisereCatch {
 
     // probability of one exact split
     static double weight(int d, int l) {
-        int m = 8 - Integer.bitCount(d);
+        return weight(d, 0, l);
+    }
+
+    static double weight(int d, int gone, int l) {
+        int m = 8 - Integer.bitCount(d | gone);
         int j = Integer.bitCount(l);
         return comb(UNKNOWN - m, HAND_SIZE - j) / comb(UNKNOWN, HAND_SIZE);
     }
@@ -214,9 +294,13 @@ public class MisereCatch {
 
     // the declarer's tricks over all the splits, with one carry
     double expectedTricks(int d) {
+        return expectedTricks(d, 0);
+    }
+
+    double expectedTricks(int d, int gone) {
         double res = 0;
-        for (int[] split : splits(d)) {
-            res += weight(d, split[0]) * defend(d, split[0], split[1], 1);
+        for (int[] split : splits(d, gone)) {
+            res += weight(d, gone, split[0]) * defend(d, split[0], split[1], 1);
         }
         return res;
     }

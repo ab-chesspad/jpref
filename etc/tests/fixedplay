@@ -51,7 +51,9 @@ deal: ♠8 ♣79Q ♦79J ♥79J   ♠7X ♣XA ♦8QA ♥8XK  ♠9JQ ♣8JK ♦XK
 deal: ♠789XJ ♣9 ♦78X ♥7   ♠QA ♣78 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 9 не ловится ♣9 2
 deal: ♠7X ♣7 ♦79J ♥789J  ♠8J ♣8XJ ♦XA ♥XQA  ♠9QKA ♣9Q ♦8QK ♥K  ♣KA  1 -> Misère 0 # 8 не ловится ♠7X
 deal: ♠7X ♣7 ♦79J ♥789J  ♠8 ♣9XJQ ♦XA ♥XKA  ♠9JQKA ♣8 ♦8QK ♥Q  ♣KA  1 -> Misère 0 # 7
-deal: ♠789X ♣8 ♦789 ♥89  ♠JK ♣79 ♦XJQK ♥7J  ♠QA ♣XJQ ♦A ♥XQKA   ♣KA 1 -> Misère 0 # 6 reversed Ковалевская
+deal: ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♠789X ♣8 ♦789 ♥89  ♣KA 0 -> 2 Misère 1 # 6 Ковалевская
+deal: ♠789X ♣8 ♦789 ♥89  ♠QA ♣XJQ ♦A ♥XQKA   ♠JK ♣79 ♦XJQK ♥7J  ♣KA 1 -> Misère 1 # 6-1 Ковалевская
+deal: ♠789X ♣8 ♦789 ♥89  ♠JK ♣79 ♦XJQK ♥7J  ♠QA ♣XJQ ♦A ♥XQKA   ♣KA 1 -> Misère 0 # 6-2 reversed Ковалевская
 deal: ♠78 ♣78 ♦7XJ ♥7XJ  ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♣KA  1 -> Misère 0 # 5 preferans.de/004
 deal: ♠JQKA ♣JQ ♦9K ♥9K  ♠9X ♣9X ♦8QA ♥8QA  ♠78 ♣78 ♦7XJ ♥7XJ  ♣KA  1 -> 2 Misère 0 # 4 https://preferans.de/004
 deal: ♠789XJ ♣7 ♦78X ♥7   ♠QA ♣89 ♦9JQK ♥9J   ♠K ♣XJQKA  ♥8XQK   ♦A ♥A  0 -> Misère 0 # 2

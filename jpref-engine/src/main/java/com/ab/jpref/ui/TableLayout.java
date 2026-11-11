@@ -43,11 +43,13 @@ import static com.ab.jpref.engine.GameManager.RoundStage;
 import com.ab.jpref.config.Metrics;
 import com.ab.util.*;
 
+import static com.ab.util.Logger.printf;
 import static com.ab.util.Util.sleep;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TableLayout implements GameManager.EventObserver {
@@ -135,6 +137,8 @@ public class TableLayout implements GameManager.EventObserver {
     public final Widget[] labels = new Widget[NOP];
     // bot declarer's misère hand as defenders know it, one line per suit
     private final Widget[] declarerHandLines = new Widget[Suit.values().length];
+    // each hand's suit order for the round, see suitOrder()
+    private final Suit[][] suitOrders = new Suit[NOP][];
     public final Widget menuBtn;
     public final ButtonPanel menuPanel;
     public final ButtonPanel declareRoundPanel;
@@ -183,10 +187,9 @@ public class TableLayout implements GameManager.EventObserver {
                 {ButtonCommand.halfWhist},
                 {ButtonCommand.pass},
             });
-        ButtonPanel whistOptionPanel = create(RoundStage.selectWhistOption, 4, 1, 1,
+        ButtonPanel whistOptionPanel = create(RoundStage.selectWhistOption, 2.5, 1, 1,
             new ButtonCommand[][] {
-                {ButtonCommand.laying},
-                {ButtonCommand.standing},
+                {ButtonCommand.laying, ButtonCommand.standing},
             });
 
         // labels
@@ -274,6 +277,7 @@ public class TableLayout implements GameManager.EventObserver {
                     this.roundStage = roundStage;
                     if (RoundStage.bidding.equals(roundStage)) {
                         banner = null;      // a new round, or the round replayed
+                        Arrays.fill(suitOrders, null);
                     }
                 }
 
@@ -429,10 +433,15 @@ public class TableLayout implements GameManager.EventObserver {
                 case yourOffer:
                     boolean enabled = roundStage.equals(RoundStage.trickTaken) ||
                         roundStage.equals(RoundStage.play);
-                    if (BID_ALL_PASS.equals(gameManager.getMinBid()) && !gameManager.getTalonCards().isEmpty()) {
-                        enabled = false;    // all-pass tricks with the talon: a talon card is removed after its trick
+                    if (BID_ALL_PASS.equals(gameManager.getMinBid()) && gameManager.getTalonCards().size() > 1) {
+                        enabled = false;    // the 2nd talon card still hidden, the 1st one starts the trick
                     }
                     if (gameManager.replayMode) {
+                        enabled = false;
+                    }
+                    if (gameManager.standing && gameManager.declarerNumber != 0) {
+                        // players[0] defends standing: an offer's open-card count sees the hidden cards;
+                        // players[0] declarer offers laying or standing, the defenders check it with all cards
                         enabled = false;
                     }
                     widget.setEnabled(enabled);
@@ -446,7 +455,7 @@ public class TableLayout implements GameManager.EventObserver {
                     break;
                 case replay:
                 case newRound:
-                    widget.setVisible(menuPanel.isVisible() && !config().release.get());
+                    widget.setVisible(menuPanel.isVisible() && !Config.release);
                     break;
                 case backToGame:
                     widget.setVisible(menuPanel.isVisible() && gameManager.replayMode);
@@ -565,8 +574,13 @@ public class TableLayout implements GameManager.EventObserver {
                 break;
 
             case selectWhistOption:
-                widget = buttonPanel.getWidget(1, 0);  // standing, speed vs. convenience
-                widget.setEnabled(false);        // no standing whist!
+                if (!gameManager.getTrick().isEmpty()) {
+                    y = metrics.panelY + metrics.panelHeight - (int) (
+                        buttonPanel.height + metrics.cardW * metrics.hLabel +
+                            metrics.cardH + 5 * metrics.yMargin + metrics.ySelected * metrics.cardW
+                    );
+                }
+                buttonPanel.setBounds(buttonPanel.x, y, buttonPanel.width, buttonPanel.height);
                 break;
         }
     }
@@ -653,6 +667,52 @@ public class TableLayout implements GameManager.EventObserver {
         }
     }
 
+    // a hand's suit order, set at the start of the round with the colors alternating and kept
+    // to its end, so the suits do not jump as they run out; a suit the talon brings goes
+    // where the absent ones are
+    private Suit[] suitOrder(int number, CardSet hand) {
+        Suit[] order = suitOrders[number];
+        if (order == null) {
+            int present = 0;
+            for (Suit suit : Suit.values()) {
+                if (!hand.list(suit).isEmpty()) {
+                    present |= 1 << suit.getValue();
+                }
+            }
+            order = alternateColors(present);
+            suitOrders[number] = order;
+        }
+        return order;
+    }
+
+    // the present suits black and red in turn, starting with the color of more of them, ♠ before ♣
+    // and ♦ before ♥; the absent ones after them
+    static Suit[] alternateColors(int present) {
+        List<Suit> black = new ArrayList<>();
+        List<Suit> red = new ArrayList<>();
+        List<Suit> absent = new ArrayList<>();
+        for (Suit suit : new Suit[]{SPADE, CLUB, DIAMOND, HEART}) {
+            if ((present & 1 << suit.getValue()) == 0) {
+                absent.add(suit);
+            } else if (suit == SPADE || suit == CLUB) {
+                black.add(suit);
+            } else {
+                red.add(suit);
+            }
+        }
+        List<Suit> first = black.size() >= red.size() ? black : red;
+        List<Suit> second = first == black ? red : black;
+        List<Suit> res = new ArrayList<>();
+        for (int i = 0; i < first.size(); ++i) {
+            res.add(first.get(i));
+            if (i < second.size()) {
+                res.add(second.get(i));
+            }
+        }
+        res.addAll(absent);
+        return res.toArray(new Suit[0]);
+    }
+
     private <T> void paintHand(T graphics, Player player) {
         int actualW, actualH;
         double cardW, cardH, dx, dy, dxSuit, dySuit;
@@ -704,16 +764,7 @@ public class TableLayout implements GameManager.EventObserver {
         }
 
         CardSet myHand = player.getMyHand();
-        final Suit[] suits = {SPADE, DIAMOND, CLUB, HEART};
-
-        // todo: 2 suits m.b. absent
-        if (myHand.list(DIAMOND).isEmpty()) {
-            suits[1] = HEART;
-        }
-        if (myHand.list(CLUB).isEmpty()) {
-            suits[0] = DIAMOND;
-            suits[2] = SPADE;
-        }
+        final Suit[] suits = suitOrder(player.getNumber(), myHand);
         boolean showCards = showCards(player.getNumber());
 
         Card handDraggedCard = null;
@@ -872,6 +923,11 @@ public class TableLayout implements GameManager.EventObserver {
             }
         }
         return false;
+    }
+
+    @Override
+    public int showMessage(String title, String text, String... buttons) {
+        return gui.showMessage(title, text, buttons);
     }
 
     @Override
@@ -1186,7 +1242,6 @@ public class TableLayout implements GameManager.EventObserver {
                 currentPlayer.accept(Bid.BID_WHIST_LAYING);
                 break;
             case standing:
-                // disabled
                 currentPlayer.accept(Bid.BID_WHIST_STANDING);
                 break;
         }
@@ -1356,16 +1411,13 @@ public class TableLayout implements GameManager.EventObserver {
         boolean forMaxTricks;
         minTricks = players[0].getTricks();
         maxTricks = ROUND_SIZE - players[1].getTricks() - players[2].getTricks();
-        if (players[0].getBid().equals(BID_WHIST) ||
-                players[0].getBid().equals(BID_WHIST_LAYING) ||
-                players[0].getBid().equals(BID_WHIST_STANDING)) {
+        if (players[0].getBid().isWhist()) {
             forMaxTricks = !gameManager.getMinBid().equals(BID_MISERE);
-            if (players[1].getBid() == Bid.BID_PASS) {
-                minTricks += players[1].getTricks();
-                maxTricks = ROUND_SIZE - players[2].getTricks();
-            } else {
-                minTricks += players[2].getTricks();
-                maxTricks = ROUND_SIZE - players[1].getTricks();
+            int partner = NOP - gameManager.declarerNumber;
+            if (!players[partner].getBid().isWhist()) {
+                // the passer's tricks count for players[0]; both whist: each his own
+                minTricks += players[partner].getTricks();
+                maxTricks = ROUND_SIZE - players[gameManager.declarerNumber].getTricks();
             }
         } else {
             // all-pass or players[0] misère: the fewer, the better
@@ -1405,10 +1457,12 @@ public class TableLayout implements GameManager.EventObserver {
         players[0].setTricks(acceptedTricks);
         int declarerNumber = gameManager.declarerNumber;
         if (gameManager.getDeclarer() != null && declarerNumber != 0) {
-            // players[0] defends, the offer counts the partner's tricks for players[0]
-            for (int i = 1; i < NOP; ++i) {
-                players[i].setTricks(i == declarerNumber ? ROUND_SIZE - acceptedTricks : 0);
-            }
+            // players[0] defends, the offer counts the partner's tricks for players[0];
+            // both whist: the partner keeps his tricks of the open cards
+            int partner = NOP - declarerNumber;
+            int partnerTricks = bothWhist() ? Math.min(dryRun[partner], ROUND_SIZE - acceptedTricks) : 0;
+            players[partner].setTricks(partnerTricks);
+            players[declarerNumber].setTricks(ROUND_SIZE - acceptedTricks - partnerTricks);
         } else {
             // the offer may give the others more than the open cards or, all-pass, fewer:
             // the difference from the one with the most tricks on
@@ -1452,7 +1506,9 @@ public class TableLayout implements GameManager.EventObserver {
                 counted = defenders;
             }
         }
+        long start = System.currentTimeMillis();
         int[] res = OpenPlay.futureTricksByPlayer(counted, maximizers);
+        printf("futureTricksByPlayer, time %,d msec\n", System.currentTimeMillis() - start);
         for (int i = 0; i < NOP; ++i) {
             res[i] += players[i].getTricks();
         }
@@ -1468,7 +1524,18 @@ public class TableLayout implements GameManager.EventObserver {
         if (BID_MISERE.equals(gameManager.getMinBid())) {
             return ROUND_SIZE - tricks[declarerNumber];     // the declarer gets the rest
         }
+        if (bothWhist()) {
+            return tricks[0];   // each whister his own
+        }
         return tricks[0] + tricks[NOP - declarerNumber];    // with the partner
+    }
+
+    // players[0] defends, the partner whists too
+    private boolean bothWhist() {
+        Player[] players = gameManager.getPlayers();
+        int declarerNumber = gameManager.declarerNumber;
+        return declarerNumber > 0 && players[0].getBid().isWhist() &&
+            players[NOP - declarerNumber].getBid().isWhist();
     }
 
     public interface GUI {

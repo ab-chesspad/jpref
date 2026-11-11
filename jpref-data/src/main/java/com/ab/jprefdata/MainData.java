@@ -20,6 +20,7 @@
 
 package com.ab.jprefdata;
 
+import com.ab.jpref.engine.MisereCatch;
 import static com.ab.util.Logger.println;
 import static com.ab.util.Logger.printf;
 
@@ -63,6 +64,7 @@ public class MainData implements Logger.LogHolder {
         Utyatsky utyatsky = new Utyatsky();
         utyatsky.run("utyatsky-1", allBidData);
         utyatsky.run("utyatsky-2", allBidData);
+        new Expander().run(allBidData);
         complete();
         File f = new File(OUTPUT_DIR_NAME);
         f.mkdirs();
@@ -189,6 +191,18 @@ public class MainData implements Logger.LogHolder {
     public void save() {
         saveBids(allBidData, BIDS_FILE_NAME);
         saveTricks(TRICKS_FILE_NAME);
+        saveMisereSuits();
+    }
+
+    // MisereCatch evaluations for every suit with dropped cards, see MisereCatch.STORED
+    void saveMisereSuits() {
+        File f = new File("jpref-engine/src/main/resources", MisereCatch.STORED_RESOURCE);
+        printf("saveMisereSuits to %s\n", f.getAbsolutePath());
+        try (PrintStream pr = new PrintStream(f, StandardCharsets.UTF_8.name())) {
+            MisereCatch.save(pr);
+        } catch (Exception e) {
+            println("ERROR: " + e.getMessage());
+        }
     }
 
     void saveBids(List<Tuple<Object>> bidDataList, String fileName) {
@@ -201,38 +215,6 @@ public class MainData implements Logger.LogHolder {
                 OneBid[] bidData = (OneBid[])bidPair.getValue(2);
                 printf("%s: %s -> %s\n", lineNum, key, string(bidData));
                 pr.printf("%s: %s -> %s\n", lineNum, key, string(bidData));
-                List<String> parts = new ArrayList<>();
-                Pattern p = Pattern.compile("\\d\\D*");
-                Matcher m = p.matcher(key);
-                while (m.find()) {
-                    parts.add(m.group());
-                }
-                int free = 4 - parts.size();
-                if (free == 0 || !key.endsWith("2")) {
-                    continue;
-                }
-/*
-                String last = parts.get(parts.size() - 1);
-                int len = Integer.parseInt(last.substring(0, 1));
-                last = last.substring(1);
-                int avail = len - last.length();
-*/
-
-                // distribute avail cards between free suits
-
-/*
-                if (!key.endsWith("2") || k > 3) {
-                    continue;
-                }
-*/
-
-                // for hands ending with "  xx" add endings "  x  x"
-                key = key.substring(0, key.length() - 1) + "11";
-                for (OneBid oneBid : bidData) {
-                    oneBid.drops[1] = oneBid.drops[0] + 1;
-                }
-                printf("%s: %s -> %s\n", lineNum + "-a", key, string(bidData));
-                pr.printf("%s: %s -> %s\n", lineNum + "-a", key, string(bidData));
             }
         } catch (Exception e) {
             println("ERROR: " + e.getMessage());

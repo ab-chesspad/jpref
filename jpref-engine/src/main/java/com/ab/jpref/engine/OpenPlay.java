@@ -38,9 +38,6 @@ public class OpenPlay {
     private static final int BOUND_MASK = (1 << BOUND_BITS) - 1;
     private static final int MAX_TALON = 2;
 
-    // one for every call, its memo keeps the grown capacity
-    private static final OpenPlay instance = new OpenPlay();
-
     private int counted;
     private int maximizers;
     private int trumpMask;    // 0 without trump
@@ -48,7 +45,8 @@ public class OpenPlay {
     // trick-start positions by leader and talon cards played: the known bounds of the counted tricks
     private final AllPassEndgame.Memo[] memo = new AllPassEndgame.Memo[NOP * (MAX_TALON + 1)];
 
-    private OpenPlay() {
+    // the bots share one, Bot.seriesOpenPlay, its memo keeps the grown capacity
+    OpenPlay() {
         for (int i = 0; i < memo.length; ++i) {
             memo[i] = new AllPassEndgame.Memo();
         }
@@ -64,8 +62,33 @@ public class OpenPlay {
         }
     }
 
+    // a series of searches under the same rules, the memo kept from one to the next: the positions
+    // after the current trick repeat for every card played to it
+    void startSeries(int trumpMask, int counted, int maximizers) {
+        init(counted, maximizers, trumpMask, new int[0]);
+    }
+
+    // in a series: the counted players' tricks from the current trick to the end of the round,
+    // searched from the guess up or down, one search to check the guess and one per trick it is off
+    int countTricks(int[] h, int leader, int[] cards, int k, int guess) {
+        int suitMask = k > 0 ? AllPassEndgame.suitMaskOf(cards[0]) : 0;
+        int total = CardSet.size(h[leader]) + (k > 0 ? 1 : 0);
+        int res = Math.max(0, Math.min(guess, total));
+        if (res > 0 && !play(h.clone(), leader, 0, k, suitMask, cards.clone(), res)) {
+            do {
+                --res;
+            } while (res > 0 && !play(h.clone(), leader, 0, k, suitMask, cards.clone(), res));
+        } else {
+            while (res < total && play(h.clone(), leader, 0, k, suitMask, cards.clone(), res + 1)) {
+                ++res;
+            }
+        }
+        return res;
+    }
+
     // the tricks of every player from the current trick to the end of the round, along one line
-    // of the open play: the counted players get all the maximizers can force, not more
+    // of the open play: the counted players get all the maximizers can force, not more;
+    // the offer's dry run, on the UI thread, searches with an instance of its own
     public static int[] futureTricksByPlayer(int counted, int maximizers) {
         GameManager gameManager = GameManager.getInstance();
         Player[] players = gameManager.getPlayers();
@@ -92,12 +115,12 @@ public class OpenPlay {
         for (int i = 0; i < trick.size(); ++i) {
             cards[i] = CardSet.bit(trick.getCard(i));
         }
-        return futureTricksByPlayer(h, trick.getStartedBy(), cards, trick.size(), trumpMask, talon,
+        return new OpenPlay().futureTricksByPlayer(h, trick.getStartedBy(), cards, trick.size(), trumpMask, talon,
             counted, maximizers);
     }
 
-    // the counted players' tricks from the current trick to the end of the round
-    static int futureTricks(int[] h, int leader, int[] cards, int k, int trumpMask, int[] talon,
+    // the counted players' tricks from the current trick to the end of the round, a search anew
+    int futureTricks(int[] h, int leader, int[] cards, int k, int trumpMask, int[] talon,
                             int counted, int maximizers) {
         int[] byPlayer = futureTricksByPlayer(h, leader, cards, k, trumpMask, talon, counted, maximizers);
         int res = 0;
@@ -108,22 +131,21 @@ public class OpenPlay {
     }
 
     // h: the cards not played yet, cards: k cards of the current trick, talon[0] starts it if any
-    static synchronized int[] futureTricksByPlayer(int[] h, int leader, int[] cards, int k, int trumpMask,
-                                                   int[] talon, int counted, int maximizers) {
+    int[] futureTricksByPlayer(int[] h, int leader, int[] cards, int k, int trumpMask,
+                               int[] talon, int counted, int maximizers) {
         int suitMask = 0;
         if (talon.length > 0) {
             suitMask = AllPassEndgame.suitMaskOf(talon[0]);
         } else if (k > 0) {
             suitMask = AllPassEndgame.suitMaskOf(cards[0]);
         }
-        OpenPlay openPlay = instance;
-        openPlay.init(counted, maximizers, trumpMask, talon);
+        init(counted, maximizers, trumpMask, talon);
         int total = CardSet.size(h[leader]) + (k > 0 ? 1 : 0);
         int res = 0;
-        while (res < total && openPlay.play(h.clone(), leader, 0, k, suitMask, cards.clone(), res + 1)) {
+        while (res < total && play(h.clone(), leader, 0, k, suitMask, cards.clone(), res + 1)) {
             ++res;
         }
-        return openPlay.line(h.clone(), leader, 0, k, suitMask, cards.clone(), res);
+        return line(h.clone(), leader, 0, k, suitMask, cards.clone(), res);
     }
 
     // plays one line on: every card keeps the counted players' tricks to come at value, exactly;

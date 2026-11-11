@@ -451,7 +451,7 @@ Logger.printf("*** drop: %s ***\n", playerBid.drops);
             for (int i = 0; i < NOP; ++i) {
                 h[i] = new CardSet(util.toCardList(hands[i])).getBitmap();
             }
-            int tricks = OpenPlay.futureTricks(h, 0, new int[NOP], 0, trumpMask, new int[0], 1, 1);
+            int tricks = new OpenPlay().futureTricks(h, 0, new int[NOP], 0, trumpMask, new int[0], 1, 1);
             Assert.assertEquals(source, Integer.parseInt(parts[1]), tricks);
         }
     }

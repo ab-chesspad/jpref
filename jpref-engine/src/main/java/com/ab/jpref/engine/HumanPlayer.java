@@ -22,7 +22,8 @@ package com.ab.jpref.engine;
 import static com.ab.jpref.engine.GameManager.RestartCommand;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.config.Config;
-import com.ab.util.Logger;
+import static com.ab.util.Logger.printf;
+import static com.ab.util.Logger.println;
 
 import java.io.Serializable;
 import java.util.concurrent.BlockingQueue;
@@ -73,9 +74,9 @@ public class HumanPlayer extends Player implements Serializable {
 
     private Config.Queueable takeFromQueue() throws Config.PrefExceptionRerun, Config.PrefExceptionReset {
         try {
-            Logger.printf(DEBUG_LOG, "%s, human blocking:%s\n", gameManager().getRoundStage().name(), currentThread().getName());
+            printf(DEBUG_LOG, "%s, human blocking:%s\n", gameManager().getRoundStage().name(), currentThread().getName());
             Config.Queueable q = queue.take();
-            Logger.printf(DEBUG_LOG, "%s, human unblock:%s got %s\n", gameManager().getRoundStage().name(), currentThread().getName(), q);
+            printf(DEBUG_LOG, "%s, human unblock:%s got %s\n", gameManager().getRoundStage().name(), currentThread().getName(), q);
             // not this player's turn anymore, so the view shows the progress bar while bots think
             clickable.setCurrentPlayer(null);
             if (RestartCommand.reset.equals(q)) {
@@ -96,6 +97,7 @@ public class HumanPlayer extends Player implements Serializable {
         Config.Queueable q = takeFromQueue();
         if (q instanceof Config.Bid) {
             bid = (Config.Bid)q;
+            printf("%s bid: %s\n", this.getName(), bid);
             return bid;
         }
         return Config.Bid.BID_6S;
@@ -106,7 +108,7 @@ public class HumanPlayer extends Player implements Serializable {
     public void acknowledge() {
         clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();
-        Logger.printf(DEBUG_LOG, "view acknowledged, %s", q.toString());
+        printf(DEBUG_LOG, "view acknowledged, %s", q.toString());
     }
 
     // returns BID_WITHOUT_THREE or a game
@@ -135,6 +137,7 @@ public class HumanPlayer extends Player implements Serializable {
         Config.Queueable q = takeFromQueue();        // block
         this.bid = (Config.Bid)q;
         halfWhist = bid.equals(Config.Bid.BID_HALF_WHIST);
+        printf("%s whisting: %s\n", this.getName(), this.getBid());
     }
 
     @Override
@@ -150,7 +153,7 @@ public class HumanPlayer extends Player implements Serializable {
         clickable.setCurrentPlayer(this);
         Config.Queueable q = takeFromQueue();
         if (!(q instanceof Card)) {
-            Logger.println(q);
+            println(q);
             return Card.fromValue(1);  // dummy
         }
         return (Card)q;

@@ -58,6 +58,8 @@ public abstract class Player implements Serializable {
     public abstract void declareRound(Config.Bid minBid, int elderHand, Trick trick);
     public abstract void acknowledge();         // wait for mouse click
     public abstract void respondOnDeclaration(); // return whist or half-whist or pass
+    public boolean playWhistLaying() { return true; }
+
     public abstract Card play(Trick trick);
 
     // to be implemented in a subclass (human player)
@@ -69,9 +71,6 @@ public abstract class Player implements Serializable {
     // to be implemented in a subclass e.g. human player
     // returns BID_WITHOUT_THREE or a game
     public abstract Config.Bid drop();
-
-    // to be implemented in a subclass (human player)
-    public boolean playWhistLaying() { return true; }
 
     public static GameManager gameManager() {
         return GameManager.getInstance();

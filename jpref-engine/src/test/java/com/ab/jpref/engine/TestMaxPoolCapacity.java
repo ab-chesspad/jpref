@@ -7,6 +7,7 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 
 import static com.ab.util.Logger.printf;
@@ -43,7 +44,7 @@ public class TestMaxPoolCapacity extends BaseTest {
         deck.addAll(talonCards);
         deck.verifyDeck();
 
-        Bot.debugDrop = new CardList(talonCards);
+        Bot.debugDrop = new CardSet(talonCards);
         gameManager.elderHand = elderHand;
         gameManager.deal(deck);
         gameManager.prepareTest(0, bid, talonCards);

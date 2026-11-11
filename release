@@ -1,5 +1,5 @@
 #!/bin/bash
-# set release = true in Main (Swing) and MainActivity (Android), build target/jpref.jar with maven
+# set release = true in Main (Swing) and MainActivity (Android), Config.VERSION to x.y, build target/jpref.jar with maven
 # (tests included, output in log), the signed release apk and the signed release bundle for Google Play with gradle;
 # the jar, the apk and the bundle are tracked in git
 # usage: ./release keystore password [mvn arguments], e.g. ./release ~/keys/keys-26.jks secret -o
@@ -37,6 +37,16 @@ for f in "$MAIN" "$ACTIVITY"; do
     sed -i 's/static final boolean release = false;/static final boolean release = true;/' "$f"
     grep -H 'static final boolean release' "$f"
 done
+
+# Config.VERSION x.y.z of the debug builds, see DPref/app/build.gradle, released as x.y;
+# the next debug build makes it x.y.0
+CONFIG=jpref-engine/src/main/java/com/ab/jpref/config/Config.java
+if ! grep -q 'VERSION = "[0-9]*\.[0-9]*\(\.[0-9]*\)\?";' "$CONFIG"; then
+    echo "VERSION not found in $CONFIG" >&2
+    exit 1
+fi
+sed -i 's/VERSION = "\([0-9]*\.[0-9]*\)\(\.[0-9]*\)\?";.*$/VERSION = "\1";/' "$CONFIG"
+grep -H 'VERSION = ' "$CONFIG"
 
 LOG=log
 echo "mvn package, output in $LOG"

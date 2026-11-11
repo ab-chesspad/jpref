@@ -21,7 +21,6 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
-import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Bidder;
@@ -152,7 +151,7 @@ public class ForTricksBot extends Bot {
     // the declarer drops for the most tricks, the chances of tricks more break ties:
     // ♣79XJQKA ♦XQ ♥XQK drops ♦XQ, ♥X takes a trick when ♥J falls, ♦X or ♦Q never
     @Override
-    int dropRisk(CardSet dealtHand) {
+    int dropRisk(CardSet dealtHand, CardSet dropped) {
         CardSet dealt = CardSet.union(gameManager().declarerHand, gameManager().declarerPlayed);
         return (int)Math.round(-1000 * Bidder.getInstance().estimateTricks(dealtHand, dealt, bid.getTrump()));
     }
@@ -178,12 +177,12 @@ public class ForTricksBot extends Bot {
         if (guesses.size() < 2) {
             return listCard;
         }
-        CardList candidates = candidates(trick);
-        if (candidates.size() < 2) {
+        int candidates = candidates(trick);
+        if (CardSet.size(candidates) < 2) {
             return listCard;
         }
         TrickList trickList = TrickList.getInstance();
-        int n = candidates.size();
+        int n = CardSet.size(candidates);
         int[] safe = new int[n];
         int[] likelySafe = new int[n];
         int[] totalTricks = new int[n];
@@ -194,7 +193,7 @@ public class ForTricksBot extends Bot {
         for (int g = 0; g < guesses.size(); ++g) {
             CardSet dealtHand = new CardSet(guesses.get(g));
             dealtHand.add(gameManager().declarerPlayed);
-            risks[g] = dropRisk(dealtHand);
+            risks[g] = dropRisk(dealtHand, gameManager().declarerHand.diff(guesses.get(g)));
             minRisk = Math.min(minRisk, risks[g]);
         }
         int remainingLikely = 0;
@@ -206,6 +205,7 @@ public class ForTricksBot extends Bot {
         }
         int complete = 0;
         long start = System.currentTimeMillis();
+        startOpenSeries();
         int remaining = guesses.size();
         // in the order of dropGuesses(), within the move's deadline, set in TrickList.getCard()
         for (int g = 0; g < guesses.size(); ++g) {
@@ -246,7 +246,7 @@ public class ForTricksBot extends Bot {
         if (complete == 0) {
             return listCard;
         }
-        int listIndex = candidates.indexOf(listCard);
+        int listIndex = CardSet.indexOf(candidates, listCard);
         int best = 0;
         for (int i = 1; i < n; ++i) {
             int diff = likelySafe[i] - likelySafe[best];
@@ -268,17 +268,17 @@ public class ForTricksBot extends Bot {
         }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < n; ++i) {
-            sb.append(String.format(" %s %d/%d/%d", candidates.get(i), likelySafe[i], safe[i], listGuess[i]));
+            sb.append(String.format(" %s %d/%d/%d", CardSet.get(candidates, i), likelySafe[i], safe[i], listGuess[i]));
         }
         Logger.printf("trick %d, drops guessed %d, safe likely/all guesses, tricks for the list's guess:%s -> %s, %,d msec\n",
-            trick.getNumber(), complete, sb, candidates.get(best), System.currentTimeMillis() - start);
-        return candidates.get(best);
+            trick.getNumber(), complete, sb, CardSet.get(candidates, best), System.currentTimeMillis() - start);
+        return CardSet.get(candidates, best);
     }
 
     // the declarer's tricks after each candidate under the guess of the declarer's hand, as
     // TrickList.evalCards() counts them; OpenPlay searches all the candidates under all the
     // guesses in a fraction of the time the list's search takes for one guess
-    int[] openResults(Trick trick, CardSet guess, CardList candidates) {
+    int[] openResults(Trick trick, CardSet guess, int candidates) {
         int[] h = new int[NOP];
         h[number] = guess.getBitmap();
         h[(number + 1) % NOP] = leftHand.getBitmap();
@@ -288,25 +288,33 @@ public class ForTricksBot extends Bot {
         for (int i = 0; i < k; ++i) {
             cards[i] = CardSet.bit(trick.getCard(i));
         }
+        int pastTricks = gameManager().getPlayers()[number].getTricks();
+        int turn = trick.getTurn();
+        int[] res = new int[CardSet.size(candidates)];
+        // the next candidate most likely takes as many tricks as the one before
+        int guessTricks = gameManager().getMinBid().goal() - pastTricks;
+        int i = 0;
+        int bit = 0;
+        while ((bit = CardSet.next(candidates, bit)) != 0) {
+            int[] hands = h.clone();
+            hands[turn] &= ~bit;
+            int[] played = cards.clone();
+            played[k] = bit;
+            guessTricks = seriesOpenPlay.countTricks(hands, trick.getStartedBy(), played, k + 1, guessTricks);
+            res[i++] = pastTricks + guessTricks;
+        }
+        return res;
+    }
+
+    // the searches of a move under the same rules, one memo: the positions repeat for the candidates,
+    // some across the guesses
+    private void startOpenSeries() {
         int trumpMask = 0;
         Suit trump = gameManager().getMinBid().getTrump();
         if (trump != null) {
             trumpMask = CardSet.suitMask(trump);
         }
-        int declarer = 1 << number;
-        int pastTricks = gameManager().getPlayers()[number].getTricks();
-        int turn = trick.getTurn();
-        int[] res = new int[candidates.size()];
-        for (int i = 0; i < res.length; ++i) {
-            int bit = CardSet.bit(candidates.get(i));
-            int[] hands = h.clone();
-            hands[turn] &= ~bit;
-            int[] played = cards.clone();
-            played[k] = bit;
-            res[i] = pastTricks + OpenPlay.futureTricks(hands, trick.getStartedBy(), played, k + 1,
-                trumpMask, new int[0], declarer, declarer);
-        }
-        return res;
+        seriesOpenPlay.startSeries(trumpMask, 1 << number, 1 << number);
     }
 
     static final int suitFlagTrump = 0x8;

@@ -34,7 +34,7 @@ import java.io.Serializable;
 import java.util.*;
 
 // bits are counted from right (lsb) to left (msb)
-public class CardSet implements Serializable {
+public class CardSet implements Serializable, Iterable<Card> {
     // todo: first, last, random
     public static final boolean RANDOM_ANY_CARD = false;
     /* this is nice, but I don't want to see it in debugger
@@ -286,6 +286,49 @@ public class CardSet implements Serializable {
 
     public int size() {
         return size(bitmap);
+    }
+
+    // the card's order in the bitmap, -1 when not in it
+    public static int indexOf(int bitmap, Card card) {
+        int bit = bit(card);
+        if ((bitmap & bit) == 0) {
+            return -1;
+        }
+        return size(bitmap & (bit - 1));
+    }
+
+    // the card of the order in the bitmap, null when there are fewer cards
+    public static Card get(int bitmap, int order) {
+        int bit = 0;
+        while ((bit = next(bitmap, bit)) != 0) {
+            if (order-- == 0) {
+                return Card.get(bit);
+            }
+        }
+        return null;
+    }
+
+    // the cards in the bitmap order, as they were at the start: the set can change meanwhile
+    @Override
+    public Iterator<Card> iterator() {
+        return new Iterator<Card>() {
+            private int rest = bitmap;
+
+            @Override
+            public boolean hasNext() {
+                return rest != 0;
+            }
+
+            @Override
+            public Card next() {
+                if (rest == 0) {
+                    throw new NoSuchElementException();
+                }
+                int bit = rest & -rest;
+                rest &= ~bit;
+                return Card.get(bit);
+            }
+        };
     }
 
     public int size(Suit suit) {

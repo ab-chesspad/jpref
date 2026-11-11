@@ -42,12 +42,12 @@ import java.util.Locale;
 
 public abstract class Config implements Serializable {
     // update projectSerialVersionUID every time a property is being added/changed!
-    public static final long projectSerialVersionUID = 21L;
-    public static final String VERSION = "1.2";
+    public static final long projectSerialVersionUID = 22L;
+    public static final String VERSION = "2.0";
 
     public static final String PROJECT_NAME = "JPref";
 
-    public final Property<Boolean> release = new Property<>("", true);
+    public static boolean release = true;
 
     public transient GameManager.EventObserver eventObserver;
     public final Point mainPosition = new Point(0, 0);
@@ -99,6 +99,21 @@ public abstract class Config implements Serializable {
         new Property<>("Whist Type", new Selection<>(WhistType.values()), NewGame.yes);
 
     public final Property<Boolean> whistTotus = new Property<>("Whist Totus", true, NewGame.yes);
+    public final Property<Boolean> stalingrad = new Property<>("Stalingrad", true, NewGame.yes);
+
+    public enum AllPassSequence implements Selectable<AllPassSequence> {
+        x1_x1,
+        x1_x2_x3_x1_x2_x3,
+        x1_x2_x3_x3_x3,
+        ;
+
+        @Override
+        public AllPassSequence[] getAll() {
+            return values();
+        }
+    }
+    public final Property<Selection<AllPassSequence>> allPassSequence =
+        new Property<>("All Pass Sequence", new Selection<>(AllPassSequence.values()), NewGame.yes);
 
     public enum MoveMethod implements Selectable<MoveMethod> {
         SingleClick,
@@ -119,7 +134,6 @@ public abstract class Config implements Serializable {
 
     public final Property<Integer> pauseBetweenTricks = new Property<>("Pause between tricks, msec", 1500);
     public final Property<Integer> pauseBetweenMoves = new Property<>("Pause between moves, msec", 500);
-
     public final Property<Integer> pauseBetweenRounds = new Property<>("", 100);
 //    public final Property<IntTriplet> animDelay = new Property<>("Animation Timeout", new IntTriplet(100, 1, 200));
 //    public final Property<Integer> animDelay = new Property<>("", 100);
@@ -145,7 +159,14 @@ public abstract class Config implements Serializable {
            }
         }
         GUID = java.util.UUID.randomUUID().toString();
-        this.whistType.get().setSelected(0);
+        this.whistType.get().setSelectedValue(WhistType.Gentleman);
+        this.moveMethod.get().setSelectedValue(MoveMethod.Dragging);
+        this.allPassSequence.get().setSelectedValue(AllPassSequence.x1_x2_x3_x1_x2_x3);
+        if (!release) {
+            this.language.get().setSelected(1); // russian
+            this.pauseBetweenTricks.set(500);
+            this.pauseBetweenMoves.set(100);
+        }
     }
 
     public static Config unserialize(Host host) {
@@ -403,6 +424,10 @@ public abstract class Config implements Serializable {
                 return null;
             }
             return Card.Suit.fromValue(suitNum - 1);
+        }
+
+        public boolean isWhist() {
+            return this == BID_WHIST || this == BID_WHIST_LAYING || this == BID_WHIST_STANDING;
         }
 
         public int goal() {

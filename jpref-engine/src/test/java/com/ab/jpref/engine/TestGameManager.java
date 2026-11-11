@@ -6,6 +6,7 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 
 import static com.ab.util.Logger.printf;
@@ -24,8 +25,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
+import java.util.Random;
 
 public class TestGameManager extends BaseTest {
+    public static final boolean RUN_ALL_TESTS = false;
     public static final int NOP = Config.NOP;
 
     static GameManager gameManager;
@@ -79,6 +82,7 @@ public class TestGameManager extends BaseTest {
                 if (!tokens.get(0).startsWith(DEAL_MARK)) {
                     return;     // ignore
                 }
+                println("++++++++++++");
                 String[] resParts = res.split("\\s+");
                 int _declarerNum = 0;
                 int i = 0;
@@ -105,12 +109,13 @@ public class TestGameManager extends BaseTest {
                 i = 0;
                 int declarerNum = (_declarerNum + i) % NOP;
                 printf("declarer #%d\n", declarerNum);
-                int elderHand = (_elderHand + declarerNum) % NOP;
+                int elderHand = _elderHand;
                 CardList deck = new CardList(_deck);
                 CardList talon = new CardList(deck.subList(30, 32));
                 gameManager.elderHand = elderHand;
                 gameManager.deal(deck);
                 gameManager.prepareTest(declarerNum, expectedBid, talon);
+                gameManager.roundStage = GameManager.RoundStage.whistSelection;
                 if (Config.Bid.BID_ALL_PASS.equals(expectedBid)) {
                     gameManager.playRoundAllPass();
                 } else if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
@@ -178,7 +183,7 @@ public class TestGameManager extends BaseTest {
                 }
                 deck.verifyDeck();
                 CardList _talonCards = new CardList(deck.subList(30, 32));
-                Bot.debugDrop = new CardList(_talonCards);
+                Bot.debugDrop = new CardSet(_talonCards);
                 printf("declarer #%d\n", declarerNum);
                 int elderHand = _elderHand;
                 CardList talon = new CardList(deck.subList(30, 32));
@@ -216,6 +221,7 @@ public class TestGameManager extends BaseTest {
     public void testFreePlay() throws IOException {
         println("running: " + currMethodName());
         final int[] count = {0};
+        final int[] errCount = {0};
         final InputStream testInputStream = getInputStream("freeplay");
         gameManager.testInputStream = testInputStream;    // just to avoid duplicate line print
 
@@ -233,8 +239,7 @@ public class TestGameManager extends BaseTest {
                     deck.addAll(util.toCardList(token));
                 }
                 deck.verifyDeck();
-//                CardList _talonCards = new CardList(deck.subList(30, 32));
-                String[] resParts = res.split("\\s+|#");
+                String[] resParts = res.trim().split("\\s+|#");
                 int i = 0;
                 int declarerNum = 0;
                 if (resParts[0].length() == 1 && Character.isDigit(resParts[0].charAt(0))) {
@@ -247,20 +252,31 @@ public class TestGameManager extends BaseTest {
                     declarerTricks = Integer.parseInt(resParts[i + 1]);
                 }
                 printf("declarer #%d\n", declarerNum);
+                Bot.standingSeed = 1;
+                Bot.standingRandom = new Random(1);    // a deal does not depend on the ones before
                 int elderHand = _elderHand;
                 gameManager.deal(deck);
                 gameManager.elderHand = elderHand;
                 gameManager.prepareTest(-1, Config.Bid.BID_6S, null);
                 gameManager.playRound(deck);
-                if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
-                    Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
-                } else {
-                    Assert.assertNotNull("wrong bidding, All-pass", gameManager.getDeclarer());
-                    Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
-                    if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
-                        Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
+                try {
+                    if (expectedBid.equals(Config.Bid.BID_ALL_PASS)) {
+                        Assert.assertEquals("wrong bid all-pass", expectedBid, gameManager.getMinBid());
                     } else {
-                        Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
+                        Assert.assertNotNull("wrong bidding, All-pass", gameManager.getDeclarer());
+                        Assert.assertEquals("wrong bid", expectedBid, gameManager.getDeclarer().bid);
+                        if (gameManager.getMinBid().equals(Config.Bid.BID_MISERE)) {
+                            Assert.assertEquals("wrong misere res", declarerTricks > 0, gameManager.getDeclarer().getTricks() > 0);
+                        } else {
+                            Assert.assertEquals("wrong tricks", declarerTricks, gameManager.getDeclarer().getTricks());
+                        }
+                    }
+                } catch (AssertionError e) {
+                    if (RUN_ALL_TESTS) {
+                        ++errCount[0];
+                        println(String.format("test error %d, %s", errCount[0], e.getMessage()));
+                    } else {
+                        throw new RuntimeException(e);
                     }
                 }
                 gameManager.roundStage = GameManager.RoundStage.dealing;
@@ -268,6 +284,9 @@ public class TestGameManager extends BaseTest {
                 ++count[0];
             });
         printStatistics(count[0]);
+        if (errCount[0] > 0) {
+            throw new RuntimeException(String.format("test errors %d", errCount[0]));
+        }
     }
 
     @Test
@@ -313,9 +332,9 @@ public class TestGameManager extends BaseTest {
                         gameManager.deal(deck);
                         if (resParts0.length >= 3) {
                             CardList cardList = util.toCardList(resParts0[1]);
-                            Bot.debugDrop = new CardList(cardList.subList(0, 2));
+                            Bot.debugDrop = new CardSet(cardList.subList(0, 2));
                         } else {
-                            Bot.debugDrop = new CardList(deck.subList(30, 32));
+                            Bot.debugDrop = new CardSet(deck.subList(30, 32));
                         }
                         gameManager.prepareTest(declarerNum, Config.Bid.BID_MISERE, talonCards);
                         gameManager.playRoundMisere();

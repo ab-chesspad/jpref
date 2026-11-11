@@ -239,7 +239,8 @@ public class SettingsPopup extends JDialog {
             JList<?> jList = new JList<>(selection.values);
             jList.setCellRenderer((ListCellRenderer<Object>) (jList1, value, index, isSelected, cellHasFocus) -> {
                 JLabel jLabel;
-                String text = m(String.join(" ", value.toString().split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
+                String text = value.toString().replace("_", " ");
+                text = m(text.join(" ", text.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
                 if (isSelected) {
                     jLabel = new JLabel(text, selectedLineIcon, JLabel.LEFT);
                 } else {

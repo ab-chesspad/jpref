@@ -48,5 +48,9 @@ public class DButton extends Button {
         // theme/AppCompat button styles can carry a default backgroundTint
         // that gets composited over the background Drawable
         button.setBackgroundTintList(null);
+        // the Material button's StateListAnimator animates the elevation: 0 when disabled, 2dp when enabled,
+        // overriding MainView's setElevation(zOrder); a view with a higher Z is drawn over its siblings
+        // whatever their order, so an enabled Pass button could show through a disabled menu panel button
+        button.setStateListAnimator(null);
     }
 }

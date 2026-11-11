@@ -2,8 +2,8 @@ plugins {
     id 'java'
 }
 
-group 'com.ab.jpref'
-version '0.1'
+group = 'com.ab.jpref'
+version = '0.1'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

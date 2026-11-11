@@ -42,7 +42,9 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 public class TrickList implements Serializable{
     public static final boolean DEBUG_LOG = false;
@@ -92,6 +94,7 @@ String path;
     // sibling, so whatever nodes were already fully explored are returned as-is. This can
     // make the search less than the full minimax on a deal too big to finish in time (unlike
     // the PRUNE cutoffs above, which are always sound), so it's a last resort, not a target.
+    private static final Random dropRandom = new Random();     // the drop probes' order, see rebuild
     private transient long deadline;
     private transient boolean deadlineHit;
 
@@ -269,15 +272,15 @@ String path;
 
     // the declarer's tricks from this trick on after each candidate card, null if the search did not complete
     // evalCards() from the last build, when it was for this trick with these hands; null if not
-    int[] builtResults(Trick trick, CardSet declarerHand, CardList candidates) {
+    int[] builtResults(Trick trick, CardSet declarerHand, int candidates) {
         if (builtTricks == null || builtTrickData != trick.trickData || builtTrickNumber != trick.getNumber() ||
                 !builtHands[0].equals(declarerHand) || !builtHands[1].equals(targetBot.leftHand) ||
                 !builtHands[2].equals(targetBot.rightHand)) {
             return null;
         }
-        int[] res = new int[candidates.size()];
+        int[] res = new int[CardSet.size(candidates)];
         for (int i = 0; i < res.length; ++i) {
-            int k = builtCards.indexOf(candidates.get(i));
+            int k = builtCards.indexOf(CardSet.get(candidates, i));
             if (k < 0 || builtTricks[k] < 0) {
                 return null;    // the build took an equivalent card instead, or did not complete
             }
@@ -286,18 +289,18 @@ String path;
         return res;
     }
 
-    int[] evalCards(Trick trick, CardSet declarerHand, CardList candidates) {
+    int[] evalCards(Trick trick, CardSet declarerHand, int candidates) {
         similar = 0;
         trickPool.clear();
         positions.clear();
         final TrickNode root = new TrickNode(trick, trick.getNumber() - 1,
             declarerHand, targetBot.leftHand, targetBot.rightHand);
-        final int[] results = new int[candidates.size()];
+        final int[] results = new int[CardSet.size(candidates)];
         List<Thread> workers = new ArrayList<>();
-        for (int i = 0; i < candidates.size(); ++i) {
+        for (int i = 0; i < CardSet.size(candidates); ++i) {
             final int threadNum = i;
             final CardList cards = trick.cards2List();
-            cards.add(candidates.get(i));
+            cards.add(CardSet.get(candidates, i));
             Thread worker = new Thread(() -> {
                 TrickNode trickNode = new TrickNode();
                 trickNode.init(root);
@@ -317,7 +320,7 @@ String path;
         if (deadlineHit) {
             return null;
         }
-        int[] res = new int[candidates.size()];
+        int[] res = new int[CardSet.size(candidates)];
         for (int i = 0; i < res.length; ++i) {
             if (results[i] <= 0) {
                 return null;
@@ -363,65 +366,74 @@ String path;
         }
         // in case no probe completes
         CardSet fallbackDrops = new CardSet();
-        for (Card card : dropCandidates0.toCardList()) {
+        for (Card card : dropCandidates0) {
             if (fallbackDrops.size() >= diff) {
                 break;
             }
             fallbackDrops.add(card);
         }
+        // the pairs to probe; a game against the clock probes them in random order, the deadline
+        // may cut the last ones and a fixed order would always miss the same: ♠79K ♣X ♥789XJQ kept
+        // ♣X and dropped ♦9 ♣Q, the phone never got to it. Tests keep the order
+        List<Card[]> pairs = new ArrayList<>();
         int bit0 = 0;
         int bm = dropCandidates0.getBitmap();
         int bm0 = CardSet.bm4buildForward(bm);
-        int probeIndex = -1;
-probe:
         while ((bit0 = CardSet.next(bm0, bit0)) != 0) {
             Card card0 = Card.get(bit0);
-            Suit suit0 = card0.getSuit();
             dropCandidates0.remove(card0);
             CardSet dropCandidates1 = dropCandidates0;
             if (diff == 1) {
                 dropCandidates1 = new CardSet(card0);
             }
             int bit1 = 0;
-            bm = dropCandidates1.getBitmap();
-            int bm1 = CardSet.bm4buildForward(bm);
+            int bm1 = CardSet.bm4buildForward(dropCandidates1.getBitmap());
             while ((bit1 = CardSet.next(bm1, bit1)) != 0) {
-                Card card1 = Card.get(bit1);
-                Suit suit1 = card1.getSuit();
-                printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
-                targetBot.myHand.remove(card0);
-                targetBot.myHand.remove(card1);
-                // check the original lengths
-                int _maxSize = gameManager().initialDeclarerHand.list(suit0).size();
-                int size1 = gameManager().initialDeclarerHand.list(suit1).size();
-                if (_maxSize < size1) {
-                    _maxSize = size1;
-                }
-                // do analysis
-                build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
-                if (nodeIndex < 0) {
-                    break probe;
-                }
-                // drops are the declarer's choice: compare from the declarer's side, turn has to
-                // offset the probe's own starter (the list before the probe could start elsewhere)
-                int turn = (NOP - BaseTrick.getStartedBy(this.bestNodes[0].trickData)) % NOP;
-                int _diff = -1;
-                if (probesBestNodes[0].trickData != 0) {
-                    _diff = targetBot.compare(probesBestNodes[0].trickData, this.bestNodes[0].trickData, turn);
-                }
-                if (_diff < 0 || _diff == 0 && maxSize > _maxSize) {
-                    drops.clear();
-                    drops.add(card0);
-                    drops.add(card1);
-                    maxSize = _maxSize;
-                    copy(this.bestNodes, probesBestNodes);
-                    probeIndex = 0;
-                }
-                println();
-                // restore:
-                targetBot.myHand.add(card1);
-                targetBot.myHand.add(card0);
+                pairs.add(new Card[]{card0, Card.get(bit1)});
             }
+        }
+        if (Bot.standingTimeLimited) {
+            Collections.shuffle(pairs, dropRandom);
+        }
+        int probeIndex = -1;
+        for (Card[] pair : pairs) {
+            Card card0 = pair[0];
+            Card card1 = pair[1];
+            Suit suit0 = card0.getSuit();
+            Suit suit1 = card1.getSuit();
+            printf("probing drops %s, %s: ", card0.toColorString(), card1.toColorString());
+            targetBot.myHand.remove(card0);
+            targetBot.myHand.remove(card1);
+            // check the original lengths
+            int _maxSize = gameManager().initialDeclarerHand.list(suit0).size();
+            int size1 = gameManager().initialDeclarerHand.list(suit1).size();
+            if (_maxSize < size1) {
+                _maxSize = size1;
+            }
+            // do analysis
+            build(trick, targetBot.myHand, targetBot.leftHand, targetBot.rightHand);
+            if (nodeIndex < 0) {
+                break;
+            }
+            // drops are the declarer's choice: compare from the declarer's side, turn has to
+            // offset the probe's own starter (the list before the probe could start elsewhere)
+            int turn = (NOP - BaseTrick.getStartedBy(this.bestNodes[0].trickData)) % NOP;
+            int _diff = -1;
+            if (probesBestNodes[0].trickData != 0) {
+                _diff = targetBot.compare(probesBestNodes[0].trickData, this.bestNodes[0].trickData, turn);
+            }
+            if (_diff < 0 || _diff == 0 && maxSize > _maxSize) {
+                drops.clear();
+                drops.add(card0);
+                drops.add(card1);
+                maxSize = _maxSize;
+                copy(this.bestNodes, probesBestNodes);
+                probeIndex = 0;
+            }
+            println();
+            // restore:
+            targetBot.myHand.add(card1);
+            targetBot.myHand.add(card0);
         }
         if (probeIndex < 0) {
             // no probed drop combination ever completed - either the candidate space was

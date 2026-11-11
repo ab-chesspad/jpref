@@ -38,4 +38,7 @@ public class Couple<T> implements Serializable {
         return first.toString();
     }
 
+    public boolean equals(Couple<T> that) {
+        return this.first.equals(that.first) && this.second.equals(that.second);
+    }
 }

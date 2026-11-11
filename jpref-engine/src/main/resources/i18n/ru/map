@@ -1,5 +1,6 @@
 Accept->Принять
 All-pass->распас
+All Pass Sequence->Последовательность распасов
 Animation Time->Время анимации
 Back to Game->Вернуться к игре
 Cancel->Отменить
@@ -51,6 +52,7 @@ Settings->Настройки
 Show Cards->Открыть карты
 Single click -> Одиночный клик
 Standing->Стоя
+Stalingrad->Сталинград
 Submit->Послать
 Submit Log->Послать лог
 Table Color->Цвет стола
@@ -61,6 +63,7 @@ Trick Confirmation -> Подтверждение взятки
 Verify->Проверить
 What would you like to do?->Что вы хотите делать?
 Whist -> вист
+Whist standing -> Вист стоя
 Whist Totus -> Тотус вистуется
 Whist Type->Вид виста
 Without 3->без трех

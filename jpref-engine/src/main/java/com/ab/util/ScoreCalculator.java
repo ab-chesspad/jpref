@@ -22,6 +22,7 @@ package com.ab.util;
 
 import com.ab.jpref.config.Config;
 import static com.ab.jpref.config.Config.NOP;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 import com.ab.jpref.engine.GameManager;
 import com.ab.jpref.engine.Player;
 
@@ -71,8 +72,63 @@ public abstract class ScoreCalculator {
         return instance;
     }
 
+    // the price of a trick in a game of this goal
+    public static int factor(int goal) {
+        return factors.get(goal);
+    }
+
     public static int gameFactor() {
         return getScoreCalculator().gameFactor;
+    }
+
+    // The expected values of a round for a bot's choice between all-pass and a bid, in whists at half
+    // the scale of the settlement: the player's own pool or dump point is SHARE, an opponent's SHARE / 2,
+    // a whist 1 / 2. Peter (gameFactor 2) doubles the all-pass tricks, the dump points and the whists,
+    // not the pool point
+    public static final double SHARE = 10.0 / NOP;
+
+    // the price of an all-pass trick at the all-pass factor of the progression, see GameManager
+    public static int allPassTrickCost(int allPassFactor) {
+        return (allPassFactor + 1) * gameFactor();
+    }
+
+    // a player taking tricks on all-pass, the others the rest: his tricks on his mountain, theirs on theirs;
+    // none, a pool point instead
+    public static double allPassValue(int tricks, int trickCost) {
+        double res = SHARE * trickCost * ((ROUND_SIZE - tricks) / 2.0 - tricks);
+        if (tricks == 0) {
+            res += SHARE * trickCost;
+        }
+        return res;
+    }
+
+    // the declarer of bid taking made tricks, the game lost with both whisting; made with the defenders
+    // short of their goal, one whists and is fined, a half fine with GentlemanHalf. Greedy and Gentleman
+    // share the whists of a lost game differently between the defenders, the declarer pays the same
+    public static double gameValue(Config.Bid bid, int made) {
+        int goal = bid.goal();
+        int factor = factor(goal);
+        int gameFactor = gameFactor();
+        int down = Math.max(0, goal - made);
+        int defenderTricks = ROUND_SIZE - Math.min(made, ROUND_SIZE);   // overtricks leave them short
+        if (down > 0) {
+            return -factor * gameFactor * (SHARE * down + defenderTricks / 2.0 + down);
+        }
+        double fine = Math.max(0, bid.defenderGoal() - defenderTricks);
+        if (Config.WhistType.GentlemanHalf.equals(
+                GameManager.getInstance().config().whistType.get().getSelectedValue())) {
+            fine /= 2;
+        }
+        return factor * (SHARE + gameFactor * (fine * SHARE / 2 - defenderTricks / 2.0));
+    }
+
+    // the misère declarer taking tricks: none, the pool points; otherwise each trick on his mountain
+    public static double misereValue(int tricks) {
+        int factor = factor(Config.Bid.BID_MISERE.getValue());
+        if (tricks == 0) {
+            return SHARE * factor;
+        }
+        return -SHARE * factor * gameFactor() * tricks;
     }
 
     public static boolean isGameOver() {
@@ -102,7 +158,7 @@ public abstract class ScoreCalculator {
         } else if (Config.Bid.BID_MISERE.equals(declarer.getBid())) {
             instance.calculateMisere(players);
         } else {
-            instance.calculateForTricks(players);
+            instance.calculateForTricks();
         }
         instance.doHelp(players);
         instance.calculateStatus(players);
@@ -150,10 +206,26 @@ public abstract class ScoreCalculator {
         }
     }
 
-    private void calculateForTricks(Player[] players) {
-        Config.Bid bid = Config.Bid.BID_ALL_PASS;
-        int declarerTricks = 0;
-        int declarerNum = -1;
+    private void calculateForTricks() {
+        GameManager gameManager = GameManager.getInstance();
+        Player declarer = gameManager.getDeclarer();
+        Player[] players = gameManager.getPlayers();
+        Config.Bid bid = gameManager.getMinBid();
+        int declarerTricks = declarer.getTricks();
+
+        int goal = bid.goal();
+        int factor = factors.get(goal);
+        int declarerDiff = declarerTricks - goal;
+        boolean showTotus = goal == 10 && !config.whistTotus.get();
+        if (showTotus) {
+            if (declarerDiff == 0) {
+                declarer.getRoundResults().setPoints(poolPoints, factor);
+                return;
+            }
+        }
+
+        int defendersDiff = 10 - declarerTricks - bid.defenderGoal();
+        int declarerNum = declarer.getNumber();
         int whistNum = -1;
         int passNum = -1;
         int halfWhistNum = -1;
@@ -169,29 +241,13 @@ public abstract class ScoreCalculator {
                     whistNum = player.getNumber();
                     break;
                 case BID_HALF_WHIST:
-                    // do nothing
                     halfWhistNum = player.getNumber();
                     break;
-                default:
-                    bid = _bid;
-                    declarerTricks = player.getTricks();
-                    declarerNum = player.getNumber();
-                    break;
             }
         }
-        int goal = bid.goal();
-        int factor = factors.get(goal);
-        int declarerDiff = declarerTricks - goal;
-        int defendersDiff = 10 - declarerTricks - bid.defenderGoal();
-        boolean showTotus = goal == 10 && !config.whistTotus.get();
-        if (showTotus) {
-            if (declarerDiff == 0) {
-                players[declarerNum].getRoundResults().setPoints(poolPoints, factor);
-                return;
-            }
-        }
+
         if (halfWhistNum >= 0) {
-            players[declarerNum].getRoundResults().setPoints(poolPoints, factor);
+            declarer.getRoundResults().setPoints(poolPoints, factor);
             int where = leftPoints;
             if (halfWhistNum == (declarerNum + 1) % NOP) {
                 where = rightPoints;
@@ -199,18 +255,96 @@ public abstract class ScoreCalculator {
             players[halfWhistNum].getRoundResults().setPoints(where, ((10 - goal) / 2) * factor * gameFactor);
             return;
         }
-        if (whistNum >= 0 && passNum >= 0) {
+        if (whistNum < 0) {
+            declarer.getRoundResults().setPoints(poolPoints, factor);
+            return;
+        }
+
+        if (passNum >= 0) {
             players[whistNum].setTricks(players[whistNum].getTricks() + players[passNum].getTricks());
             players[passNum].setTricks(0);
         }
+        boolean gentlemanWhist = config.whistType.get().getSelectedValue().equals(Config.WhistType.Gentleman);
+        boolean gentlemanHalfWhist = config.whistType.get().getSelectedValue().equals(Config.WhistType.GentlemanHalf);
+        Player p1 = players[(declarerNum + 1) % NOP];
+        int d1 = bid.defenderGoal() / 2 - p1.getTricks();
+        Player p2 = players[(declarerNum + 2) % NOP];
+        int d2 = bid.defenderGoal() / 2 - p2.getTricks();
+        if (declarerDiff < 0) {
+            int extra = -declarerDiff * factor * gameFactor;
+            declarer.getRoundResults().setPoints(dumpPoints, extra);
+            if (passNum < 0 || !(gentlemanWhist || gentlemanHalfWhist)) {
+                p1.getRoundResults().setPoints(rightPoints, p1.getTricks() * factor * gameFactor);
+                p1.getRoundResults().addPoints(rightPoints, extra);
+                p2.getRoundResults().setPoints(leftPoints, p2.getTricks() * factor * gameFactor);
+                p2.getRoundResults().addPoints(leftPoints, extra);
+            } else {
+                int newPoints = (10 - declarerTricks) * factor * gameFactor / 2 + extra;
+                if (!p1.halfWhist) {
+                    p1.getRoundResults().setPoints(rightPoints, newPoints);
+                }
+                if (!p2.halfWhist) {
+                    p2.getRoundResults().setPoints(leftPoints, newPoints);
+                }
+            }
+            return;
+        }
+        declarer.getRoundResults().setPoints(poolPoints, factor);
+//        if (declarerDiff == 0 && defendersDiff >= 0) {
+        if (defendersDiff >= 0) {
+            p1.getRoundResults().setPoints(rightPoints, p1.getTricks() * factor * gameFactor);
+            p2.getRoundResults().setPoints(leftPoints, p2.getTricks() * factor * gameFactor);
+            return;
+        }
+
+        // defendersDiff < 0:
+        if (passNum >= 0) {
+            // single whister
+            int fine = -defendersDiff * factor * gameFactor;
+            if (gentlemanHalfWhist) {
+                fine /= 2;
+            }
+            players[whistNum].getRoundResults().addPoints(dumpPoints, fine);
+            if (whistNum == (declarerNum + 1) %NOP) {
+                players[whistNum].getRoundResults().setPoints(rightPoints, players[whistNum].getTricks() * factor * gameFactor);
+            } else {
+                players[whistNum].getRoundResults().setPoints(leftPoints, players[whistNum].getTricks() * factor * gameFactor);
+            }
+            return;
+        }
+        // two whists
+        double finePerTrick = factor * gameFactor;
+        if (gentlemanHalfWhist) {
+            finePerTrick /= 2;
+        }
+        p1.getRoundResults().setPoints(rightPoints, p1.getTricks() * factor * gameFactor);
+        p2.getRoundResults().setPoints(leftPoints, p2.getTricks() * factor * gameFactor);
+        if (d1 > -defendersDiff) {
+            d1 = -defendersDiff;
+        }
+        if (d2 > -defendersDiff) {
+            d2 = -defendersDiff;
+        }
+        if (goal <= 7) {
+            if (d1 > 0 && d2 > 0) {
+                p1.getRoundResults().setPoints(dumpPoints, (int)(d1 * finePerTrick));
+                p2.getRoundResults().setPoints(dumpPoints, (int)(d2 * finePerTrick));
+            } else if (d1 > 0) {
+                p1.getRoundResults().setPoints(dumpPoints, (int)(d1 * finePerTrick));
+            } else {
+                p2.getRoundResults().setPoints(dumpPoints, (int)(d2 * finePerTrick));
+            }
+        } else {
+            p2.getRoundResults().setPoints(dumpPoints, (int)(-defendersDiff * finePerTrick));
+        }
+
+/*
         Player player;
         player = players[(declarerNum + 1) % NOP];
         player.getRoundResults().setPoints(rightPoints, player.getTricks() * factor * gameFactor);
         player = players[(declarerNum + 2) % NOP];
         player.getRoundResults().setPoints(leftPoints, player.getTricks() * factor * gameFactor);
 
-        boolean gentlemanWhist = config.whistType.get().getSelectedValue().equals(Config.WhistType.Gentleman);
-        boolean gentlemanHalfWhist = config.whistType.get().getSelectedValue().equals(Config.WhistType.GentlemanHalf);
         if (declarerDiff < 0) {
             int extra = -declarerDiff * factor * gameFactor;
             players[declarerNum].getRoundResults().setPoints(dumpPoints, extra);
@@ -218,7 +352,7 @@ public abstract class ScoreCalculator {
                 players[(declarerNum + 1) % NOP].getRoundResults().addPoints(rightPoints, extra);
                 players[(declarerNum + 2) % NOP].getRoundResults().addPoints(leftPoints, extra);
             } else {
-                int newPoints = (10 - declarerTricks + extra);
+                int newPoints = (10 - declarerTricks) * factor * gameFactor / 2 + extra;
                 if (!players[(declarerNum + 1) % NOP].halfWhist) {
                     players[(declarerNum + 1) % NOP].getRoundResults().setPoints(rightPoints, newPoints);
                 }
@@ -234,21 +368,43 @@ public abstract class ScoreCalculator {
                     fine /= 2;
                 }
                 if (passNum >= 0) {
-                    if (whistNum >= 0) {
-                        // single whister
-                        players[whistNum].getRoundResults().addPoints(dumpPoints, fine);
-                    }
+                    // single whister
+                    players[whistNum].getRoundResults().addPoints(dumpPoints, fine);
                 } else {
+                    // both whist
                     if (goal <= 7) {
-                        for (int i = 0; i < 2; ++i) {
-                            player = players[(declarerNum + 1 + i) % NOP];
-                            int deficit = bid.defenderGoal() / 2 - player.getTricks();
-                            if (deficit > 0) {
-                                fine = deficit * factor * gameFactor;
-                                if (gentlemanHalfWhist) {
-                                    fine /= 2;
+                        Player p1 = players[(declarerNum + 1) % NOP];
+                        int d1 = bid.defenderGoal() / 2 - p1.getTricks();
+                        Player p2 = players[(declarerNum + 1) % NOP];
+                        int d2 = bid.defenderGoal() / 2 - p2.getTricks();
+
+                        if (d1 > 0) {
+                            if (d2 > 0) {
+                                p1.getRoundResults().addPoints(dumpPoints, fine / );
+
+                            }
+                        }
+
+
+                        int tot = 1;
+                        int totalFine = fine;
+                        int _fine = fine;
+                        if (passNum < 0) {
+                            tot = 2;
+                            _fine /= 2;
+                        }
+loop:
+                        for (int k = 0; k < tot; ++k) {
+                            for (int i = 0; i < 2; ++i) {
+                                player = players[(declarerNum + 1 + i) % NOP];
+                                int deficit = bid.defenderGoal() / 2 - player.getTricks();
+                                if (deficit > 0) {
+                                    player.getRoundResults().addPoints(dumpPoints, _fine);
+                                    totalFine -= _fine;
+                                    if (totalFine <= 0) {
+                                        break loop;
+                                    }
                                 }
-                                player.getRoundResults().setPoints(dumpPoints, fine);
                             }
                         }
                     } else {
@@ -257,6 +413,7 @@ public abstract class ScoreCalculator {
                 }
             }
         }
+ */
     }
 
     private void calculateStatus(Player[] players) {

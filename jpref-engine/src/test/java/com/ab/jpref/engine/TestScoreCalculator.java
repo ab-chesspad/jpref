@@ -23,12 +23,10 @@ package com.ab.jpref.engine;
 import com.ab.jpref.cards.Card;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
-import com.ab.jpref.ui.Host;
 import com.ab.util.Logger;
 import com.ab.util.ScoreCalculator;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static com.ab.util.Logger.println;
@@ -63,11 +61,19 @@ public class TestScoreCalculator extends BaseTest {
             "6 6 w 2 w 2 -> 6 -3 -3",
             "6 6 w 0 p 4 -> 6 1 -7",
             "6 6 w 3 p 1 -> 6 1 -7",
+            "6 7 w 0 w 3 -> 14 -20 6",
+            "6 7 w 3 w 0 -> 14 6 -20",
             "6 7 w 2 w 1 -> 14 4 -18",
+            "6 8 w 2 w 0 -> 22 11 -33",
+            "6 8 w 1 w 1 -> 22 -11 -11",
+            "6 9 w 1 w 0 -> 32 -5 -27",
+            "6 9 p 1 w 0 -> 32 13 -45",
+            "6 10 w 0 w 0 -> 40 -20 -20",
             "7f 7 p 0 p 0 -> -80 40 40",
             "7 5 w 5 w 0 -> -90 55 35",
             "7 6 w 4 w 0 -> -50 33 17",
             "7 7 w 1 w 2 -> 14 -9 -5",
+            "7 8 w 1 w 1 -> 18 -9 -9",
             "7 9 h 1 p 0 -> 22 -9 -13",
             "7 9 w 1 p 0 -> 36 -36 0",
             "7 9 w 1 w 0 -> 36 4 -40",
@@ -104,8 +110,9 @@ public class TestScoreCalculator extends BaseTest {
             "6 7 w 2 w 1 -> 14 4 -18",
             "9 10 p 0 w 0 -> 80 0 -80",
             "8 10 w 0 p 0 -> 60 -60 0",
-            "7 5 p 5 w 0 -> -80 40 40",
-            "7 6 p 4 w 0 -> -42 21 21",
+            "7 5 p 5 w 0 -> -90 45 45",
+            "7 6 p 4 w 0 -> -50 25 25",
+            "7 8 w 0 w 2 -> 18 -13 -5",
         };
         println("running: " + currMethodName());
         config.gameType.get().setSelectedValue(Config.GameType.Miami);
@@ -130,11 +137,12 @@ public class TestScoreCalculator extends BaseTest {
             "6 6 w 3 p 1 -> 6 1 -7",
             "6 7 w 2 w 1 -> 10 1 -11",
             "6 8 w 2 w 0 -> 16 4 -20",
+            "6 8 w 1 w 1 -> 16 -8 -8",
             "6 8 p 2 w 0 -> 16 0 -16",
-
+            "6 9 p 1 w 0 -> 22 3 -25",
+            "6 10 p 0 w 0 -> 26 7 -33",
             "7 5 w 5 w 0 -> -90 55 35",
             "7 6 w 4 w 0 -> -50 33 17",
-
             "7 9 w 1 p 0 -> 30 -23 -7",
             "7 9 w 1 w 0 -> 30 -3 -27",
             "7 10 w 0 w 0 -> 40 -20 -20",
@@ -207,12 +215,12 @@ public class TestScoreCalculator extends BaseTest {
             // f - without 3
             // for each: {bid, tricks} -> results
 ///
-            "6 5 w 3 p 2 -> -44 22 22",
+            "6 5 w 3 p 2 -> -54 27 27",
             "6 5 w 3 w 2 -> -54 29 25",
             "6 6 w 3 p 1 -> 10 3 -13",
             "6 7 w 2 w 1 -> 28 8 -36",
-            "7 5 p 5 w 0 -> -148 74 74",
-            "7 6 p 4 w 0 -> -78 39 39",
+            "7 5 p 5 w 0 -> -178 89 89",
+            "7 6 p 4 w 0 -> -102 51 51",
             "8 10 w 0 p 0 -> 120 -120 0",
             "9 10 p 0 w 0 -> 160 0 -160",
             "10 10 w 0 w 0 -> 200 0 -200",
@@ -271,6 +279,7 @@ public class TestScoreCalculator extends BaseTest {
             int declarerGoal = 1;
             gameManager.declarerNumber = -1;
             gameManager.declarer = null;
+            gameManager.setMinBid(Config.Bid.BID_ALL_PASS);
             for (int i = 0; i < NOP; ++i) {
                 Player p = gameManager.getPlayers()[i];
                 p.clear();
@@ -285,6 +294,7 @@ public class TestScoreCalculator extends BaseTest {
                         p.bid = Config.Bid.BID_MISERE;
                         gameManager.declarerNumber = i;
                         gameManager.declarer = p;
+                        gameManager.setMinBid(Config.Bid.BID_MISERE);
                         break;
                     case "p":
                         p.bid = Config.Bid.BID_PASS;
@@ -295,17 +305,21 @@ public class TestScoreCalculator extends BaseTest {
                     default:
                         gameManager.declarerNumber = i;
                         gameManager.declarer = p;
+                        Config.Bid roundBit;
+                        if (bid.equals("10")) {
+                            roundBit = Config.Bid.BID_XC;
+                        } else {
+                            roundBit = Config.Bid.fromName(bid.substring(0, 1) + Card.Suit.CLUB);
+                        }
+                        gameManager.setMinBid(roundBit);
                         if (bid.endsWith("f")) {
                             p.bid = Config.Bid.BID_WITHOUT_THREE;
-                            declarerGoal = Config.Bid.fromName(bid.substring(0, 1) + Card.Suit.CLUB).goal();
                         } else {
-                            if (bid.equals("10")) {
-                                p.bid = Config.Bid.BID_XC;
-                            } else {
-                                p.bid = Config.Bid.fromName(bid + Card.Suit.CLUB);
-                            }
-                            declarerGoal = p.bid.goal();
+                            p.bid = roundBit;
                         }
+                }
+                if (!gameManager.getMinBid().equals(Config.Bid.BID_ALL_PASS)) {
+                    declarerGoal = gameManager.getMinBid().goal();
                 }
                 p.setTricks(Integer.parseInt(params[2 * i + 1]));
             }

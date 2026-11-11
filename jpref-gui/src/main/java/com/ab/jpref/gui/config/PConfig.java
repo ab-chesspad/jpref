@@ -43,17 +43,6 @@ public class PConfig extends Config {
 
     public PConfig(Host host) {
         super(host);
-        Locale locale = Locale.getDefault();
-        String lang = locale.getLanguage();
-        int defaultLang = 0;
-        for (int i = 0; i < this.language.get().values.length; ++i) {
-            Couple<String> couple = this.language.get().values[i];
-            if (lang.equals(couple.second)) {
-                defaultLang = i;
-                break;
-            }
-        }
-        this.language.get().setSelected(defaultLang);
     }
 
     public PConfig refresh() {

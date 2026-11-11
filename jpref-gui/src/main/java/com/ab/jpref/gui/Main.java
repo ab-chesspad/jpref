@@ -51,7 +51,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Main implements Logger.LogHolder, Host {
-    static final boolean release = false;
+    static final boolean release = true;
     static boolean DEBUG_LOG = false;
     public static boolean SHOW_ALL = true;
     public static final double MAGIC_ASPECT_RATIO = 1109d / 1297d;
@@ -69,6 +69,7 @@ public class Main implements Logger.LogHolder, Host {
             TrickList.DEBUG_IGNORE_DEADLINE = false;
             TrickList.DEBUG_CHECK_HANDS = false;
         }
+        Config.release = release;
     }
 
     private PConfig config;
@@ -111,7 +112,6 @@ public class Main implements Logger.LogHolder, Host {
         if (config == null) {
             config = new PConfig(this);
         }
-        config.release.set(release);
         metrics = new Metrics(this);
         new I18n(this);
         if (args.length > 0) {

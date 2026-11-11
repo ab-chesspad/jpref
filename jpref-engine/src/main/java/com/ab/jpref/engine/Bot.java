@@ -20,21 +20,24 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.Card;
-import com.ab.jpref.cards.CardList;
 import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.Config.Bid;
+import static com.ab.jpref.config.Config.ROUND_SIZE;
 import com.ab.util.Bidder;
+import com.ab.util.ScoreCalculator;
 import com.ab.util.Bidder.PlayerBid;
-import com.ab.util.Logger;
+import static com.ab.util.Logger.printf;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 public class Bot extends Player implements Serializable {
-    public static CardList debugDrop = null;
+    public static CardSet debugDrop = null;
     public static DeclarerDrop declarerDrop = DeclarerDrop.Random;
 
     enum DeclarerDrop {
@@ -45,6 +48,34 @@ public class Bot extends Player implements Serializable {
     // when declarer is Bot, it uses the same logic for declarer and defenders
     // so playerBid is the same and can be shared
     static PlayerBid playerBid;
+
+    // the bots' open card searches, one at a time on the game thread: a series of searches
+    // (playStanding(), ForTricksBot.robustCard()) keeps the memo from one search to the next
+    static final OpenPlay seriesOpenPlay = new OpenPlay();
+
+    // whist standing, see playStanding()
+    static final int MIN_DEALS = 6;
+    static final int MAX_DEALS = 40;
+    // as few possible deals as this: every one of them, 40 random ones were noise; 6♠ ♠Q ♦7K ♥9Q
+    // at trick 5, no trumps out, ♠Q 26/40 over ♥9 22/40, all the 252 deals: ♥9 145, ♠Q 138
+    static final int EXACT_DEALS = 256;
+    static boolean standingTimeLimited = true;      // by a quarter of Config.maxMoveTime, MIN_DEALS are searched anyway; tests: no limit
+    static final int DEAL_TRIES = 50;       // a random deal can miss a void, try again
+    // a declarer's hand with no trick to spare is played the other way: ♠XKA ♣79XA ♥A against 7♠,
+    // 7.00 by Bidder, plays clubs at once to bring down the defenders' ♠Q; the trumps drawn first
+    // say it is not there. The best of the tries when none has the margin
+    static final double CONTRACT_MARGIN = 0.25;
+    static final int CONTRACT_TRIES = 20;   // the declarer's hand worth his contract, otherwise the best one
+    static final int WHIST_TRIES = 2000;    // the declarer's hands before the play, all the deals, see whistHands()
+    static final int MIN_WHIST_TRIES = 200; // tried even past the deadline
+    static final int BIG_GAME = 8;          // no half-whist: a single whister plays standing with sure tricks only, see standingHolds()
+    static final int LONG_SUIT = 4;         // the passer invited to play standing keeps it, see playStanding()
+    int longSuit;                           // its suit mask, 0: none
+    int declarerLeads;                      // the suit masks the declarer led, see defenderRules()
+
+    static Random standingRandom = new Random();    // tests: seeded
+    // tests and an input file: >= 0, each search reseeds standingRandom from it, see reseed()
+    static long standingSeed = -1;
 
     public transient Bot targetBot;  // either forTricksBot or misereBot
 
@@ -75,6 +106,7 @@ public class Bot extends Player implements Serializable {
     @Override
     public void clear() {
         super.clear();
+        declarerLeads = 0;
         playerBid = null;
         if (targetBot != null) {
             ForTricksBot.getInstance().clear();
@@ -96,12 +128,28 @@ public class Bot extends Player implements Serializable {
     public Bid getBid(Bid minBid, int elderHand) {
         elderHand = (this.number - elderHand + NOP) % NOP;  // relative to self
         ForTricksBot forTricksBot = ForTricksBot.getInstance(this);
+        long start = System.currentTimeMillis();
         PlayerBid playerBid = forTricksBot.getMaxPlayerBid(minBid, elderHand);
         Bid bid = playerBid.toBid();
+        printf("%s bid: %s, time %,d msec\n", this.getName(), bid, System.currentTimeMillis() - start);
         MisereBot misereBot = MisereBot.getInstance(this);
-        if (bid.compareTo(Bid.BID_XS) < 0 && misereBot.evalMisere(elderHand)) {
+        start = System.currentTimeMillis();
+        boolean misereOK = bid.compareTo(Bid.BID_XS) < 0 && misereBot.evalMisere(elderHand);
+        printf("%s bid, misere %b, time %,d msec\n", this.getName(), misereOK, System.currentTimeMillis() - start);
+        if (misereOK && misereBot.getEval4Misere(myHand) == 0 && cleanMisereAllPass()) {
+            printf("%s bid, clean misère, all-pass pays more\n", this.getName());
+            this.bid = Bid.BID_PASS;
+            return Bid.BID_PASS;
+        }
+        if (misereOK) {
             this.bid = Bid.BID_MISERE;
             return Bid.BID_MISERE;
+        }
+
+        if (bid.compareTo(minBid) < 0 && alwaysBid6S(minBid)) {
+            bid = minBid;
+        } else if (bid.compareTo(minBid) < 0 && overbidOnAllPass(minBid, elderHand)) {
+            bid = minBid;
         }
         if (bid.compareTo(minBid) >= 0) {
             bid = minBid;
@@ -110,6 +158,185 @@ public class Bot extends Player implements Serializable {
         }
         this.bid = bid;
         return bid;
+    }
+
+    // the high cards that always bid 6♠ on the first bid, any hand, 'сочетания фигур, при которых всегда
+    // следует объявлять «6 пик»' (Утяцкий 7.4): A, A, A, A; AK, A, A; AK, A, KQ; AK, A, KJ10; AK, A, Qxxx;
+    // AQJ, A, A; AK, AK. Each a different suit, a longer or higher holding does for a shorter one
+    static final int ALWAYS_A = 0, ALWAYS_AK = 1, ALWAYS_KQ = 2, ALWAYS_KJX = 3, ALWAYS_QXXX = 4, ALWAYS_AQJ = 5;
+    static final int MIN_QXXX = 4;
+    static final int[][] ALWAYS_6S = {
+        {ALWAYS_A, ALWAYS_A, ALWAYS_A, ALWAYS_A},
+        {ALWAYS_AK, ALWAYS_A, ALWAYS_A},
+        {ALWAYS_AK, ALWAYS_A, ALWAYS_KQ},
+        {ALWAYS_AK, ALWAYS_A, ALWAYS_KJX},
+        {ALWAYS_AK, ALWAYS_A, ALWAYS_QXXX},
+        {ALWAYS_AQJ, ALWAYS_A, ALWAYS_A},
+        {ALWAYS_AK, ALWAYS_AK},
+    };
+
+    boolean alwaysBid6S(Bid minBid) {
+        if (!Bid.BID_6S.equals(minBid)) {
+            return false;   // somebody bid a game already, or 7♠ after all-pass
+        }
+        int[] suits = new int[Card.Suit.values().length];
+        for (Card.Suit suit : Card.Suit.values()) {
+            suits[suit.getValue()] = (myHand.getBitmap() >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) &
+                CardSet.SUIT_MASK;
+        }
+        for (int[] pattern : ALWAYS_6S) {
+            if (matches(pattern, 0, suits, 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // the pattern's holdings from index on, each in one of the suits not used yet
+    private static boolean matches(int[] pattern, int index, int[] suits, int used) {
+        if (index == pattern.length) {
+            return true;
+        }
+        for (int s = 0; s < suits.length; ++s) {
+            if ((used & (1 << s)) == 0 && holds(pattern[index], suits[s]) &&
+                    matches(pattern, index + 1, suits, used | 1 << s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean holds(int holding, int cards) {
+        final int ACE = 1 << 7, KING = 1 << 6, QUEEN = 1 << 5, JACK = 1 << 4, TEN = 1 << 3;
+        switch (holding) {
+            case ALWAYS_A:
+                return (cards & ACE) != 0;
+            case ALWAYS_AK:
+                return (cards & (ACE | KING)) == (ACE | KING);
+            case ALWAYS_KQ:
+                return (cards & (KING | QUEEN)) == (KING | QUEEN);
+            case ALWAYS_KJX:
+                return (cards & (KING | JACK | TEN)) == (KING | JACK | TEN);
+            case ALWAYS_QXXX:
+                return (cards & QUEEN) != 0 && CardSet.size(cards) >= MIN_QXXX;
+            case ALWAYS_AQJ:
+                return (cards & (ACE | QUEEN | JACK)) == (ACE | QUEEN | JACK);
+        }
+        return false;
+    }
+
+    // a clean misère takes no trick on all-pass either: with both opponents passed already a pass
+    // makes the all-pass sure, see ScoreCalculator.allPassValue() and misereValue().
+    // The all-pass pays more from the price 2 on: 'на третьем круге Распасовки, имея на третьей руке
+    // чистый Мизер, гораздо выгоднее спасовать' (Утяцкий 6.2)
+    boolean cleanMisereAllPass() {
+        Player[] players = gameManager().getPlayers();
+        for (int i = 1; i < NOP; ++i) {
+            if (!Bid.BID_PASS.equals(players[(this.number + i) % NOP].getBid())) {
+                return false;
+            }
+        }
+        int trickCost = ScoreCalculator.allPassTrickCost(gameManager().getAllPassFactor());
+        return ScoreCalculator.allPassValue(0, trickCost) > ScoreCalculator.misereValue(0);
+    }
+
+    // to compare passing with declaring a game the hand does not quite hold
+    static final int ALL_PASS_SAMPLES = 32;
+
+    // the expected loss of a pass that leads to all-pass against the expected loss of declaring minBid,
+    // 'лучше без двух, чем распасы'; ALL_PASS_SAMPLES deals of the unknown cards, seeded by the hand:
+    // all-pass tricks: the unwanted tricks of each suit when they lead it,
+    // the game: the tricks of the best drop and contract with the talon,
+    // the chance of all-pass: the opponents yet to bid would pass too.
+    // The values, see ScoreCalculator.allPassValue() and gameValue().
+    boolean overbidOnAllPass(Bid minBid, int elderHand) {
+        GameManager gameManager = gameManager();
+        Player[] players = gameManager.getPlayers();
+        int absElder = (this.number - elderHand + NOP) % NOP;
+        List<Integer> waiting = new ArrayList<>();      // opponents yet to bid
+        for (int i = 1; i < NOP; ++i) {
+            int q = (this.number + i) % NOP;
+            Bid b = players[q].getBid();
+            if (Bid.BID_UNDEFINED.equals(b)) {
+                waiting.add(q);
+            } else if (!Bid.BID_PASS.equals(b)) {
+                return false;   // somebody plays, no all-pass
+            }
+        }
+
+        int hand = myHand.getBitmap();
+        List<Integer> unknown = new ArrayList<>();
+        for (int bit = 1; bit != 0; bit <<= 1) {
+            if ((hand & bit) == 0) {
+                unknown.add(bit);
+            }
+        }
+        if (unknown.size() != 2 + 2 * ROUND_SIZE) {
+            return false;
+        }
+        Random random = new Random(hand);
+        Bidder bidder = Bidder.getInstance();
+        int trickCost = ScoreCalculator.allPassTrickCost(gameManager.getAllPassFactor());
+        int[][] deals = new int[ALL_PASS_SAMPLES][];  // talon, left, right
+        double allPass = 0;
+        for (int n = 0; n < ALL_PASS_SAMPLES; ++n) {
+            Collections.shuffle(unknown, random);
+            int talon = unknown.get(0) | unknown.get(1);
+            int left = 0;
+            int right = 0;
+            for (int j = 2; j < 2 + ROUND_SIZE; ++j) {
+                left |= unknown.get(j);
+                right |= unknown.get(j + ROUND_SIZE);
+            }
+            deals[n] = new int[] {talon, left, right, unknown.get(0)};
+
+            int tricks = 0;
+            for (Card.Suit suit : Card.Suit.values()) {
+                CardSet mine = myHand.list(suit);
+                CardSet l = new CardSet(left).list(suit);
+                CardSet r = new CardSet(right).list(suit);
+                if (mine.isEmpty() || l.isEmpty() && r.isEmpty()) {
+                    continue;
+                }
+                tricks += mine.getUnwantedTricks(l, r).maxTheyStart;
+            }
+            tricks = Math.min(tricks, ROUND_SIZE);
+            allPass += ScoreCalculator.allPassValue(tricks, trickCost);
+        }
+        allPass /= ALL_PASS_SAMPLES;
+        if (allPass >= 0) {
+            return false;   // all-pass is no loss
+        }
+
+        double game = 0;
+        int allPassDeals = 0;
+        for (int[] deal : deals) {
+            int talon = deal[0];
+            int left = deal[1];
+            int right = deal[2];
+            int made = bidder.searchBid(new CardSet(hand | talon), minBid, elderHand).tricks;
+            game += ScoreCalculator.gameValue(minBid, made);
+
+            boolean nobody = true;
+            for (int q : waiting) {
+                int other = q == (this.number + 1) % NOP ? left : right;
+                int qElder = (q - absElder + NOP) % NOP;
+                CardSet cards = new CardSet(other | deal[3]);
+                if (bidder.getBid(cards, minBid, qElder, 1).toBid().compareTo(minBid) >= 0) {
+                    nobody = false;
+                    break;
+                }
+            }
+            if (nobody) {
+                ++allPassDeals;
+            }
+        }
+        game /= ALL_PASS_SAMPLES;
+        double chance = (double) allPassDeals / ALL_PASS_SAMPLES;
+        boolean overbid = game > chance * allPass;
+        printf("%s all-pass %.1f, chance %.2f, %s %.1f%s\n", getName(), allPass, chance, minBid, game,
+            overbid ? ", overbid" : "");
+        return overbid;
     }
 
     @Override
@@ -152,29 +379,468 @@ public class Bot extends Player implements Serializable {
         targetBot.drop(playerBid.drops);
     }
 
+    // whist or not by the expected score: the bot deals the cards it does not see as in playStanding()
+    // and counts the defenders' tricks in each deal with open cards; player1 does not count
+    // on player2's whist. On 6 and 7: player2 can say half-whist after player1 passed,
+    // then player1 has the 2nd chance and whists alone; both can whist. On 8 and up only one whists.
     @Override
     public void respondOnDeclaration() {
+        GameManager gameManager = gameManager();
+        int player1 = (gameManager.declarerNumber + 1) % NOP;
+        int player2 = (gameManager.declarerNumber + 2) % NOP;
+        Bid minBid = gameManager.getMinBid();
+        boolean withHalf = minBid.goal() <= 7;
+        WhistScore score = new WhistScore(minBid, gameManager.config().whistType.get().getSelectedValue());
+        long start = System.currentTimeMillis();
+        List<int[]> deals = whistDeals();     // the tricks of player1 and player2
+        int n = Math.max(1, deals.size());
+        double alone = 0;       // whisting alone
+        double both = 0;        // both whist, this bot's part
+        double passer = 0;      // the other whists alone
+        for (int[] deal : deals) {
+            int tricks = deal[0] + deal[1];
+            int own = number == player1 ? deal[0] : deal[1];
+            alone += score.alone(tricks);
+            both += score.both(own, tricks);
+            passer += score.passer(tricks);
+        }
+        alone /= n;
+        both /= n;
+        passer /= n;
+
+        // no move - no whist: on the lead without a good one the defender passes when both whist and
+        // play standing; the single whister lays and plays both hands, it does not apply.
+        // player1 leads with the declarer last, player2 with the declarer next
+        boolean noMove = gameManager.elderHand == number &&
+            goodLeads(myHand.getBitmap(), minBid.getTrump(), number == player1 ? 1 : 2) == 0;
+        // no sure trick: without an ace and a trick in trumps the tricks of kings and queens, ♠QK ♦XQK,
+        // are the open cards' finesses, the declarer guesses or ruffs them
+        boolean noTrick = !hasSureTrick(myHand.getBitmap(), minBid.getTrump(), minBid.goal()) ||
+            loneTrick(myHand.getBitmap(), minBid.getTrump(), minBid.goal());
+        boolean noWhist = noMove || noTrick;
         Bid bid;
-        int player1 = (gameManager().declarerNumber + 1) % NOP;
-        int player2 = (gameManager().declarerNumber + 2) % NOP;
-        // avoid playing with closed cards!
         if (this.number == player1) {
-            Bid otherBid = gameManager().getBid(player2);
-            if (otherBid.equals(Bid.BID_HALF_WHIST)) {
-                bid = Bid.BID_WHIST_LAYING;
-            } else {
-                bid = Bid.BID_PASS;
-            }
+            // first or on the 2nd chance: player1 cannot count on player2's whist,
+            // a pass gets nothing when the declarer makes his contract. No move counts only when
+            // player2 can still whist too: not on the 2nd chance, not on 8 and up. On the 2nd chance
+            // the single whister needs SECOND_CHANCE_TRICKS sure ones: ♠9A ♥789K whists against 7♠,
+            // ♠89 ♣789JA does not, 2 small trumps and an ace the declarer ruffs
+            boolean secondChance = Bid.BID_HALF_WHIST.equals(gameManager.getBid(player2));
+            boolean bothCanWhist = withHalf && !secondChance;
+            boolean weak = secondChance && sureTricks(myHand.getBitmap(), minBid.getTrump()) < SECOND_CHANCE_TRICKS;
+            // a whist in every side suit, A or Kx, makes up for no sure trick on the 2nd chance:
+            // ♠79QK ♣8K ♦XQ ♥XK against 7♦ needs 1 trick of 3 chances
+            boolean everySide = secondChance && guardedSides(myHand.getBitmap(), minBid.getTrump()) >= SIDE_SUITS;
+            bid = alone > score.noGame() && (everySide || !noTrick && !(noMove && bothCanWhist) && !weak) ?
+                Bid.BID_WHIST : Bid.BID_PASS;
+        } else if (gameManager.getBid(player1).isWhist()) {
+            // player2 lets player1 whist alone
+            bid = withHalf && both > passer && !noWhist ? Bid.BID_WHIST : Bid.BID_PASS;
+        } else if (withHalf) {
+            // the sure tricks that make the defenders' goal whist, the open cards' deals see the declarer's
+            // voids ruff the aces too often: ♠7XA ♣K ♦8A ♥79XQ against 7♣ needs 2 of ♠A ♦A ♥Q
+            boolean enough = sureTricks(myHand.getBitmap(), minBid.getTrump()) >= minBid.defenderGoal();
+            bid = (alone > score.half() || enough) && !noTrick ? Bid.BID_WHIST : Bid.BID_HALF_WHIST;
         } else {
-            Bid otherBid = gameManager().getBid(player1);
-            if (otherBid.equals(Bid.BID_WHIST)) {
-                bid = Bid.BID_PASS;
-            } else {
-                bid = Bid.BID_WHIST_LAYING;
+            bid = alone > score.noGame() && !noTrick ? Bid.BID_WHIST : Bid.BID_PASS;
+        }
+        if (GameManager.DEBUG_BOTH_WHIST && !minBid.equals(Bid.BID_MISERE)) {
+            bid = Bid.BID_WHIST;
+        }
+        printf("%s whist, deals %d: alone %.2f, both %.2f, passer %.2f," +
+                " half %.2f, no game %.2f -> %s, time %,d msec\n",
+            getName(), deals.size(), alone, both, passer, score.half(), score.noGame(), bid,
+            System.currentTimeMillis() - start);
+        this.bid = bid;     // BID_WHIST: standing or laying is selected later, see playWhistLaying()
+        halfWhist = bid.equals(Bid.BID_HALF_WHIST);
+    }
+
+    // the single whister selects, both whisters play standing anyway
+    @Override
+    public boolean playWhistLaying() {
+        Bid minBid = gameManager().getMinBid();
+        Card.Suit trump = minBid.getTrump();
+        long start = System.currentTimeMillis();
+        int position = (number - gameManager().declarerNumber + NOP) % NOP;
+        boolean standing = GameManager.DEBUG_STANDING_WHIST ||
+            somethingToHide(myHand.getBitmap(), trump, position) && standingHolds(myHand.getBitmap(), minBid) &&
+            !scattered(myHand.getBitmap(), trump, position);
+        bid = standing ? Bid.BID_WHIST_STANDING : Bid.BID_WHIST_LAYING;
+        printf("%s whist %s, time %,d msec\n", getName(), standing ? "standing" : "laying",
+            System.currentTimeMillis() - start);
+        return !standing;
+    }
+
+    // a trick in every suit, A, Kx or Qxx, and no good lead: standing, the passer cannot tell which
+    // cards to play to them, laying the whister plays the right ones, ♠8XK ♣7XK ♦XK ♥8A against 6♦
+    static boolean scattered(int hand, Card.Suit trump, int position) {
+        if (goodLeads(hand, trump, position) != 0) {
+            return false;
+        }
+        for (Card.Suit suit : Card.Suit.values()) {
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if (!sureTrick(cards)) {
+                return false;
             }
         }
-        this.bid = bid;
-        halfWhist = bid.equals(Bid.BID_HALF_WHIST);
+        return true;
+    }
+
+    // standing alone, the whister cannot see the passer's cards: in no-trump he has no clue what to
+    // keep after a few tricks, ♠8 ♦9XQK ♥789XQ against 7-; on BIG_GAME and up he needs a sure trick,
+    // A, Kx or Qxx, in trumps or in 2 suits at least, otherwise he lays
+    static boolean standingHolds(int hand, Bid minBid) {
+        Card.Suit trump = minBid.getTrump();
+        if (trump == null) {
+            return false;
+        }
+        if (minBid.goal() < BIG_GAME) {
+            return true;
+        }
+        int sure = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if (!sureTrick(cards)) {
+                continue;
+            }
+            if (suit.equals(trump)) {
+                return true;
+            }
+            ++sure;
+        }
+        return sure >= 2;
+    }
+
+    // an ace, KQJ, its J is a safe lead too, ♣8JQK against 7♠, or a trick in trumps, A, Kx or Qxx,
+    // see respondOnDeclaration()
+    // against LONG_SIDE_GOAL and up a side suit of LONG_SIDE cards or more has no sure trick, the declarer
+    // is void: ♠8 ♣8XJKA ♦79X ♥8 against 9♠ whisted on the ♣A, the declarer had no club;
+    // against 8 ♠7JQKA ♣J ♦7J ♥8K whists, Утяцкий #33
+    static final int LONG_SIDE = 5;
+    static final int LONG_SIDE_GOAL = 9;
+    static boolean hasSureTrick(int hand, Card.Suit trump, int goal) {
+        final int ACE = 1 << 7, KQJ = 7 << 4;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if (suit.equals(trump)) {
+                if (sureTrick(cards)) {
+                    return true;
+                }
+                continue;
+            }
+            if (goal >= LONG_SIDE_GOAL && CardSet.size(cards) >= LONG_SIDE) {
+                continue;
+            }
+            if ((cards & ACE) != 0 || (cards & KQJ) == KQJ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // against LONG_SIDE_GOAL and up one sure trick with 1 or 2 small trumps is no whist: the declarer
+    // holds the other trumps and makes voids, ♠89 ♣79XJ ♦J ♥8XA against 9♠ whisted on the ♥A,
+    // the declarer dropped ♥79
+    static boolean loneTrick(int hand, Card.Suit trump, int goal) {
+        if (trump == null || goal < LONG_SIDE_GOAL) {
+            return false;
+        }
+        int trumps = (hand >>> (trump.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+        int n = CardSet.size(trumps);
+        return n >= 1 && n <= 2 && !sureTrick(trumps) && sureTricks(hand, trump) <= 1;
+    }
+
+    // the whister's sure tricks: a trick in trumps, A, Kx or Qxx; side A and K of AK, KQJ, Kxx
+    static final int SECOND_CHANCE_TRICKS = 2;
+    static int sureTricks(int hand, Card.Suit trump) {
+        final int ACE = 1 << 7, KING = 1 << 6, KQJ = 7 << 4;
+        int res = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if (suit.equals(trump)) {
+                if (sureTrick(cards)) {
+                    ++res;
+                }
+                continue;
+            }
+            if ((cards & ACE) != 0) {
+                ++res;
+                if ((cards & KING) != 0) {
+                    ++res;
+                }
+            } else if ((cards & KQJ) == KQJ || (cards & KING) != 0 && CardSet.size(cards) >= 3) {
+                ++res;
+            }
+        }
+        return res;
+    }
+
+    // the side suits with A or Kx, see respondOnDeclaration()
+    static final int SIDE_SUITS = 3;
+    static int guardedSides(int hand, Card.Suit trump) {
+        final int ACE = 1 << 7, KING = 1 << 6;
+        int res = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            if (suit.equals(trump)) {
+                continue;
+            }
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if ((cards & ACE) != 0 || (cards & KING) != 0 && CardSet.size(cards) >= 2) {
+                ++res;
+            }
+        }
+        return res;
+    }
+
+    // the ranks of a suit: A, Kx or Qxx
+    static boolean sureTrick(int cards) {
+        final int ACE = 1 << 7, KING = 1 << 6, QUEEN = 1 << 5;
+        int n = CardSet.size(cards);
+        return (cards & ACE) != 0 || (cards & KING) != 0 && n >= 2 || (cards & QUEEN) != 0 && n >= 3;
+    }
+
+    // laying shows the whister's hand to the declarer, standing keeps him guessing about
+    // the trick in trumps without a spare trump, A, Kx or Qxx, with a side suit of 2 cards or less:
+    // once it is out, the declarer's small card of that suit makes the honor ruff, ♥9K with ♣7J,
+    // the declarer's ♣9 after ♣KA took ♥K instead of partner's ♣Q. With xxA or xxK a small trump
+    // ruffs, nothing to hide. Long trumps, 789J, keep the declarer guessing how they split.
+    // A system, XQA or 9JK, is the declarer's to hide, not the whister's. Not in trumps: nothing
+    // to ruff with, see also standingHolds()
+    // A bare ace takes its trick anyway, hidden only while the whister does not lead trumps, and his
+    // other leads need a good one: from a weak short suit the declarer continues it and the ace
+    // ruffs anyway, ♠8J ♣A ♦8X ♥789JA against 7♣ has none, its ♥A lead is as good laying.
+    // Kx or Qxx laid, the declarer plays around it: ♠Q ♣79JQ ♦9JA ♥XK against 7♥ stands
+    static final int SHORT_SIDE_SUIT = 2;
+    static final int LONG_TRUMPS = 4;
+    static boolean somethingToHide(int hand, Card.Suit trump, int position) {
+        if (trump == null) {
+            return false;
+        }
+        int trumps = (hand >>> (trump.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+        if (CardSet.size(trumps) >= LONG_TRUMPS) {
+            return true;
+        }
+        int trick = trumpTrickCards(trumps);
+        if (trick == 0 || CardSet.size(trumps) > trick) {
+            return false;
+        }
+        if (trick == 1 && goodLeads(hand, trump, position) == 0) {
+            return false;
+        }
+        for (Card.Suit suit : Card.Suit.values()) {
+            if (suit.equals(trump)) {
+                continue;
+            }
+            int cards = (hand >>> (suit.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK;
+            if (CardSet.size(cards) <= SHORT_SIDE_SUIT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // the cards the trick in trumps takes: A 1, Kx 2, Qxx 3, 0 without one
+    static int trumpTrickCards(int trumps) {
+        final int ACE = 1 << 7, KING = 1 << 6, QUEEN = 1 << 5;
+        int n = CardSet.size(trumps);
+        if ((trumps & ACE) != 0) {
+            return 1;
+        }
+        if ((trumps & KING) != 0 && n >= 2) {
+            return 2;
+        }
+        if ((trumps & QUEEN) != 0 && n >= 3) {
+            return 3;
+        }
+        return 0;
+    }
+
+    // a defender's opening lead that most probably gives the declarer no trick, not in trumps;
+    // position 2, the declarer plays next: a small card, not the smallest, of the longest suit that
+    // promises no trick to the leader (no A, Kx, Qxx); position 1, the declarer plays last:
+    // the top of a short strong suit, AK, KQ or QJX with up to 3 cards, or Q of QJxx with a trick
+    // in trumps, ♠Q ♣79JQ ♦9JA ♥XK against 7♥ leads ♣Q standing; either position: J of KQJ
+    static int goodLeads(int hand, Card.Suit trump, int position) {
+        final int ACE = 1 << 7, KING = 1 << 6, QUEEN = 1 << 5, JACK = 1 << 4;
+        boolean trumpTrick = trump != null &&
+            trumpTrickCards((hand >>> (trump.getValue() * CardSet.SUIT_LIST_LENGTH)) & CardSet.SUIT_MASK) != 0;
+        int res = 0;
+        int sequences = 0;
+        int longest = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            if (suit.equals(trump)) {
+                continue;
+            }
+            int offset = suit.getValue() * CardSet.SUIT_LIST_LENGTH;
+            int cards = (hand >>> offset) & CardSet.SUIT_MASK;
+            int n = CardSet.size(cards);
+            if ((cards & (KING | QUEEN | JACK)) == (KING | QUEEN | JACK)) {
+                sequences |= JACK << offset;
+            }
+            if (position == 2) {
+                if (n < 3 || n < longest || (cards & (ACE | KING | QUEEN)) != 0) {
+                    continue;
+                }
+                if (n > longest) {
+                    longest = n;
+                    res = 0;
+                }
+                int rest = cards & ~Integer.lowestOneBit(cards);
+                res |= Integer.lowestOneBit(rest) << offset;
+            } else {
+                if (n == 4 && trumpTrick && CardSet.msb(cards) == QUEEN && (cards & JACK) != 0) {
+                    res |= QUEEN << offset;
+                    continue;
+                }
+                if (n < 2 || n > 3) {
+                    continue;
+                }
+                int top = CardSet.msb(cards);
+                boolean strong = (cards & (top >>> 1)) != 0 && top >= KING ||
+                    (cards & (top >>> 1)) != 0 && (cards & (top >>> 2)) != 0 && top == QUEEN;
+                if (strong) {
+                    res |= top << offset;
+                }
+            }
+        }
+        return res | sequences;
+    }
+
+    // the deals for respondOnDeclaration(): the tricks of player1 and player2 with open cards,
+    // the defenders take all they can together
+    // the random deals of a search depend on the player and the moment only: a human in a seat
+    // does not use the random numbers a bot would, the other bots' searches stay the same
+    void reseed(int trickNumber, int position) {
+        if (standingSeed >= 0) {
+            standingRandom = new Random(standingSeed * 1_000_003L + ((trickNumber + 1) * NOP + position) * NOP + number);
+        }
+    }
+
+    private List<int[]> whistDeals() {
+        reseed(-1, 0);
+        GameManager gameManager = gameManager();
+        int declarer = gameManager.declarerNumber;
+        Bid minBid = gameManager.getMinBid();
+        Card.Suit trump = minBid.getTrump();
+        int trumpMask = trump == null ? 0 : CardSet.suitMask(trump);
+        int defenders = ((1 << NOP) - 1) & ~(1 << declarer);
+        int[] sizes = new int[NOP];
+        int[] possible = possibleHands(sizes);
+        List<int[]> res = new ArrayList<>();
+        long deadLine = Long.MAX_VALUE;
+        long dealDeadLine = Long.MAX_VALUE;
+        long hardDeadLine = Long.MAX_VALUE;
+        long dealHardDeadLine = Long.MAX_VALUE;
+        if (standingTimeLimited) {
+            // both defenders decide, one after the other: up to a half of Config.maxMoveTime each.
+            // The declarer's hands are searched for a quarter of it and until MIN_DEALS of them declare
+            // the contract, not past a half: a phone tried a few dozen in an eighth, its 6 deals were
+            // mostly other contracts, ♠8 ♣8XJKA ♦79X ♥8 whisted against 9♠. The deals are played in the rest,
+            // MIN_DEALS of them past a half of it
+            long now = System.currentTimeMillis();
+            long budget = gameManager.config().maxMoveTime.get() * 1000L / 2;
+            dealDeadLine = now + budget / 4;
+            dealHardDeadLine = now + budget / 2;
+            hardDeadLine = now + budget;
+        }
+        List<int[]> hands = whistHands(possible, sizes, declarer, minBid,
+            (declarer - gameManager.elderHand + NOP) % NOP, dealDeadLine, dealHardDeadLine);
+        if (standingTimeLimited) {
+            long now = System.currentTimeMillis();
+            deadLine = now + Math.max(0, hardDeadLine - now) / 2;
+        }
+        for (int[] h : hands) {
+            long now = System.currentTimeMillis();
+            if (res.size() >= MIN_DEALS && now >= deadLine || !res.isEmpty() && now >= hardDeadLine) {
+                break;
+            }
+            h[number] = myHand.getBitmap();
+            int[] tricks = seriesOpenPlay.futureTricksByPlayer(Arrays.copyOf(h, NOP), gameManager.elderHand,
+                new int[NOP], 0, trumpMask, new int[0], defenders, defenders);
+            int[] deal = {tricks[(declarer + 1) % NOP], tricks[(declarer + 2) % NOP]};
+            // a weaker declarer's hand, too few exact ones in the time: a phone's 9♠ deals were mostly 8♠,
+            // their declarer is stronger by the tricks short, the defenders' tricks are fewer by them
+            for (int k = h.length > NOP + 1 ? h[NOP + 1] : 0; k > 0 && deal[0] + deal[1] > 0; --k) {
+                if (deal[0] >= deal[1]) {
+                    --deal[0];
+                } else {
+                    --deal[1];
+                }
+            }
+            res.add(deal);
+        }
+        return res;
+    }
+
+    // a defender's score for the round in whists by the contract's factor, as ScoreCalculator counts it:
+    // a pool or dump point is worth 10 whists shared by all three, 20/3 off its owner, 10/3 to each other
+    static class WhistScore {
+        static final double SHARE = 10.0 / NOP;
+        final int goal;
+        final int defenderGoal;
+        final boolean gentleman;    // the declarer down, the whister shares his tricks with the passer
+        final boolean halfFine;
+
+        WhistScore(Bid minBid, Config.WhistType whistType) {
+            goal = minBid.goal();
+            defenderGoal = minBid.defenderGoal();
+            gentleman = !whistType.equals(Config.WhistType.Greedy);
+            halfFine = whistType.equals(Config.WhistType.GentlemanHalf);
+        }
+
+        // the declarer's tricks short of his contract
+        int down(int defenderTricks) {
+            return defenderTricks - (ROUND_SIZE - goal);
+        }
+
+        // the declarer's pool point, or his dump points when down
+        double declarer(int defenderTricks) {
+            int down = down(defenderTricks);
+            return down > 0 ? SHARE * down : -SHARE;
+        }
+
+        double fine(int deficit) {
+            if (deficit <= 0) {
+                return 0;
+            }
+            return 2 * SHARE * (halfFine ? deficit / 2.0 : deficit);
+        }
+
+        // both passed, the declarer gets his contract
+        double noGame() {
+            return -SHARE;
+        }
+
+        // player2's half-whist, player1 passed again
+        double half() {
+            return (ROUND_SIZE - goal) / 2 - SHARE;
+        }
+
+        double alone(int defenderTricks) {
+            int down = down(defenderTricks);
+            if (down > 0) {
+                return (gentleman ? defenderTricks / 2.0 : defenderTricks) + down + declarer(defenderTricks);
+            }
+            return defenderTricks - fine(defenderGoal - defenderTricks) + declarer(defenderTricks);
+        }
+
+        double passer(int defenderTricks) {
+            int down = down(defenderTricks);
+            if (down > 0) {
+                return (gentleman ? defenderTricks / 2.0 : 0) + down + declarer(defenderTricks);
+            }
+            return declarer(defenderTricks);
+        }
+
+        // both whist, each is responsible for a half of the defenders' goal
+        double both(int own, int defenderTricks) {
+            int down = down(defenderTricks);
+            if (down > 0) {
+                return own + down + declarer(defenderTricks);
+            }
+            double fine = defenderTricks < defenderGoal ? fine(defenderGoal / 2 - own) : 0;
+            return own - fine + declarer(defenderTricks);
+        }
     }
 
     @Override
@@ -184,6 +850,16 @@ public class Bot extends Player implements Serializable {
         }
         if (trick.minBid == null) {
             return playAllPass(trick);
+        }
+        if (gameManager().standing) {
+            return playStanding(trick);
+        }
+        if (trick.getNumber() == 0 && trick.isEmpty() && number == gameManager().declarerNumber &&
+                !Bid.BID_MISERE.equals(trick.minBid)) {
+            // the declarer leads first blind, the defenders' cards are laid after it: the closed cards
+            // dealt as in the standing play. ♠QKA ♣KA ♥79XJQ against 8♥ leads ♥, ♠A lets a defender
+            // void in ♠ ruff with ♥A and lead ♦ for the declarer to ruff, 7 tricks when ♠ split 4 - 0
+            return playStanding(trick);
         }
         if (targetBot == null) {
             // a defender: a bot declarer's target knows the declarer's hand
@@ -207,6 +883,921 @@ public class Bot extends Player implements Serializable {
             }
         }
         return targetBot.play(trick);
+    }
+
+    // Whist standing: every player sees only their own cards, the bot does not know the other two hands.
+    // It deals the cards it does not see at random, as far as it knows them: the voids shown, the talon
+    // with the declarer, a declarer's hand worth his contract, and searches each deal with open cards,
+    // OpenPlay. The goals are as with open cards: the card that makes the contract (the declarer)
+    // or sets it (a defender) in the most deals, then the most (the fewest) declarer's tricks.
+    Card playStanding(Trick trick) {
+        return topOfSequence(trick, searchStanding(trick));
+    }
+
+    // a defender leads the top of his touching honors: the search keeps the lowest of the equivalent
+    // cards, ♣J of ♣79JQ against 7♥; ♣Q tells partner the ♣J is with the leader, with ♣Kx he ducks
+    Card topOfSequence(Trick trick, Card card) {
+        if (trick.size() > 0 || number == gameManager().declarerNumber) {
+            return card;
+        }
+        final int JACK = 1 << 4;
+        int offset = card.getSuit().getValue() * CardSet.SUIT_LIST_LENGTH;
+        int cards = (myHand.getBitmap() >>> offset) & CardSet.SUIT_MASK;
+        int bit = CardSet.bit(card) >>> offset;
+        int top = bit;
+        while ((cards & (top << 1)) != 0) {
+            top <<= 1;
+        }
+        if (top == bit || top < JACK) {
+            return card;
+        }
+        return Card.get(top << offset);
+    }
+
+    Card searchStanding(Trick trick) {
+        reseed(trick.getNumber(), trick.size());
+        GameManager gameManager = gameManager();
+        Player[] players = gameManager.getPlayers();
+        if (myHand.size() == ROUND_SIZE) {
+            longSuit = longSuit(myHand.getBitmap(), gameManager.getMinBid().getTrump());
+        }
+        if (trick.size() > 0 && trick.getStartedBy() == gameManager.declarerNumber) {
+            declarerLeads |= CardSet.suitMask(trick.getStartingSuit());
+        }
+        int candidates = candidates(trick);
+        if (CardSet.size(candidates) < 2) {
+            return CardSet.first(candidates);
+        }
+        if (trick.size() == NOP - 1) {
+            // the last to play who wins the trick wins it with his lowest winner: a higher card takes
+            // every trick a lower one does later. The search over few deals is noisy here, ♣A of ♣QA
+            // after ♣9 ♣X gave the declarer's singleton ♣K a trick
+            int winners = 0;
+            int bit = 0;
+            while ((bit = CardSet.next(candidates, bit)) != 0) {
+                Card card = Card.get(bit);
+                Card top = trick.topCard;
+                if (card.getSuit().equals(top.getSuit()) ? card.compareInTrick(top) > 0
+                        : card.getSuit().equals(trick.getTrumpSuit())) {
+                    winners |= bit;
+                }
+            }
+            if (CardSet.size(winners) >= 2) {
+                candidates &= ~winners | Integer.lowestOneBit(winners);
+                if (CardSet.size(candidates) < 2) {
+                    return CardSet.first(candidates);
+                }
+            }
+        }
+        int me = number;
+        int declarer = gameManager.declarerNumber;
+        int goal = gameManager.getMinBid().goal();
+        Card.Suit trump = gameManager.getMinBid().getTrump();
+        if (trick.number == 0 && trick.size() == 0 && me != declarer) {
+            // the opening lead: the search cannot tell a lead that gives the declarer a trick in some deals
+            // candidates() keeps the lowest of touching cards, ♣J for ♣JQ: a good lead counts as the
+            // highest candidate of its suit not above it, topOfSequence() plays it back as ♣Q
+            int goodBits = goodLeads(myHand.getBitmap(), trump, (me - declarer + NOP) % NOP);
+            int good = 0;
+            int bit = 0;
+            while ((bit = CardSet.next(goodBits, bit)) != 0) {
+                int below = candidates & CardSet.suitMask(Card.get(bit).getSuit()) & ((bit << 1) - 1);
+                if (below != 0) {
+                    good |= Integer.highestOneBit(below);
+                }
+            }
+            if (good != 0) {
+                candidates = good;
+                if (CardSet.size(candidates) < 2) {
+                    return CardSet.first(candidates);
+                }
+            }
+        }
+        if (me != declarer) {
+            int rest = defenderRules(trick, candidates, declarer, trump);
+            if (rest != candidates) {
+                candidates = rest;
+                if (CardSet.size(candidates) < 2) {
+                    return CardSet.first(candidates);
+                }
+            }
+        }
+        if (me != declarer && !bid.isWhist() && longSuit != 0) {
+            // invited to play standing: the passer keeps his long suit and leads it, its leads force
+            // the declarer to ruff; ♠8XQ ♦8JA ♥79XQ against 6♣: discarding ♥7 on ♣K let it make,
+            // a spade set it, and then ♥X led set it, ♠8 did not. Following suit or ruffing,
+            // the candidates are all in one suit and stay; a good opening lead stays, see goodLeads().
+            // A discard keeps 2 of it at least, the last one is no threat. With A and without K
+            // it keeps it and leads another suit: ♦89XQA against 8♣, ♦X lets the declarer's ♦K take
+            // a trick, ♦A sets it up, and the whister may be void and has to trump; ♠9 is safer.
+            // The other suit: the A on top, ♠A of ♠JQA, or no K and Q to lead away from, ♠9 of ♠9X, not ♥8XK
+            int keep = myHand.getBitmap() & longSuit & candidates;
+            boolean lead = trick.size() == 0;
+            int suit = myHand.getBitmap() & longSuit;
+            int ace = Integer.highestOneBit(longSuit);
+            if (lead && (suit & ace) != 0 && (suit & ace >>> 1) == 0) {
+                int other = candidates & ~longSuit;
+                int safe = safeOtherLeads(myHand.getBitmap() & ~longSuit & ~(trump == null ? 0 : CardSet.suitMask(trump))) & other;
+                if (safe != 0) {
+                    other = safe;
+                }
+                if (other != 0) {
+                    candidates = other;
+                    if (CardSet.size(candidates) < 2) {
+                        return CardSet.first(candidates);
+                    }
+                }
+            } else if (keep != 0 && keep != candidates && (lead || CardSet.size(suit) >= 2)) {
+                // a long suit with its top honor alone, ♠789XK with ♠Q out, gives way to a suit with
+                // touching honors, ♦QK: it sets up a trick and gives the declarer none, against 6♥
+                int dense = lead && denseLeads(suit) == 0 ?
+                    denseLeads(myHand.getBitmap() & ~longSuit & ~(trump == null ? 0 : CardSet.suitMask(trump))) & candidates : 0;
+                if (dense != 0) {
+                    return CardSet.first(dense);
+                }
+                // the hand, not the candidates: they keep one of equivalent cards, ♥9 for ♥9X
+                int allowed = lead ? longSuitLead(myHand.getBitmap() & longSuit) : candidates & ~keep;
+                candidates = allowed;
+                if (CardSet.size(candidates) < 2) {
+                    return CardSet.first(candidates);
+                }
+            }
+        }
+        if (me == declarer && trick.size() == 0 && trump != null) {
+            // the declarer without trump control, 2 of the defenders' trumps above his second one,
+            // leads a side suit of losers only to bring their trumps down, keeps his side winners: they draw
+            // trumps themselves when in, his top card is a trick for them later; ♠JA ♣8X ♥789JA
+            // against 7♥ with ♥XQK out, ♣8 led, not ♠A
+            int suit = CardSet.suitMask(trump);
+            int mine = myHand.getBitmap() & suit;
+            int out = leftHand.getBitmap() | rightHand.getBitmap();
+            int second = Integer.highestOneBit(mine & ~Integer.highestOneBit(mine));
+            int above = out & suit & ~((second << 1) - 1);
+            if (second != 0 && CardSet.size(above) >= 2) {
+                int losers = 0;
+                int bit = 0;
+                while ((bit = CardSet.next(candidates & ~suit, bit)) != 0) {
+                    // a suit of losers only: ♠J of ♠JA stays, it gives ♠Q a trick and sets up ♠K
+                    int suitMask = CardSet.suitMask(Card.get(bit).getSuit());
+                    int winners = 0;
+                    int b = 0;
+                    while ((b = CardSet.next(myHand.getBitmap() & suitMask, b)) != 0) {
+                        if (isTop(b, out)) {
+                            winners |= b;
+                        }
+                    }
+                    if (winners == 0) {
+                        losers |= bit;
+                    }
+                }
+                if (losers != 0) {
+                    candidates = losers;
+                    if (CardSet.size(candidates) < 2) {
+                        return CardSet.first(candidates);
+                    }
+                }
+            }
+        }
+        if (me == declarer && trick.size() == 0 && trump != null) {
+            // the declarer whose trumps all take tricks draws them first: open cards see no ruff
+            // to lose, ♣Q led from ♠7JK ♣Q ♦89JQKA against 6♦ gives the lead away and lets a defender
+            // ruff a spade with ♦7; ♦J draws ♦7 and ♦X. His trumps above all the outstanding ones,
+            // as many as those, take every trick in trumps
+            int suit = CardSet.suitMask(trump);
+            int out = (leftHand.getBitmap() | rightHand.getBitmap()) & suit;
+            if (out != 0) {
+                int high = myHand.getBitmap() & suit & ~((Integer.highestOneBit(out) << 1) - 1);
+                if (CardSet.size(high) >= CardSet.size(out)) {
+                    int draw = candidates & high;
+                    if (draw == 0) {
+                        return CardSet.first(high);
+                    }
+                    candidates = draw;
+                    if (CardSet.size(candidates) < 2) {
+                        return CardSet.first(candidates);
+                    }
+                }
+            }
+        }
+        int trumpMask = trump == null ? 0 : CardSet.suitMask(trump);
+        int[] sizes = new int[NOP];
+        int[] possible = possibleHands(sizes);
+
+        int n = CardSet.size(candidates);
+        int[] goals = new int[n];   // deals where the card makes (declarer) or sets (defender) the contract
+        int[] total = new int[n];   // declarer's tricks over the deals
+        double[] score = new double[n];     // the declarer's score over the deals, see declarerScore()
+        int pastTricks = players[declarer].getTricks();
+        int k = trick.size();
+        int[] cards = new int[NOP];
+        for (int i = 0; i < k; ++i) {
+            cards[i] = CardSet.bit(trick.getCard(i));
+        }
+        // one memo for the move: the positions repeat for the candidates of a deal, some across the deals
+        seriesOpenPlay.startSeries(trumpMask, 1 << declarer, 1 << declarer);
+        long start = System.currentTimeMillis();
+        long deadLine = Long.MAX_VALUE;
+        if (standingTimeLimited) {
+            deadLine = start + gameManager.config().maxMoveTime.get() * 1000L / 4;
+        }
+        List<int[]> all = allDealsStanding(possible, sizes, EXACT_DEALS);
+        if (all != null && me != declarer) {
+            all = worthContract(all, declarer, possible[declarer], goal, trump);
+        }
+        int maxDeals = all == null ? MAX_DEALS : all.size();
+        int deals = 0;
+        while (deals < maxDeals && (deals < MIN_DEALS || System.currentTimeMillis() < deadLine)) {
+            int[] h;
+            if (all != null) {
+                h = all.get(deals).clone();
+            } else {
+                h = me == declarer ? dealStanding(possible, sizes) : dealForDefender(possible, sizes, declarer, goal, trump);
+            }
+            if (h == null) {
+                break;      // no deal agrees with what the bot knows, should not happen
+            }
+            h[me] = players[me].myHand.getBitmap();
+            int i = 0;
+            int bit = 0;
+            while ((bit = CardSet.next(candidates, bit)) != 0) {
+                int[] hands = h.clone();
+                hands[me] &= ~bit;
+                int[] played = cards.clone();
+                played[k] = bit;
+                int tricks = pastTricks + seriesOpenPlay.countTricks(hands, trick.getStartedBy(), played, k + 1,
+                    goal - pastTricks);
+                if ((tricks >= goal) == (me == declarer)) {
+                    ++goals[i];
+                }
+                score[i] += declarerScore(tricks, goal);
+                total[i++] += tricks;
+            }
+            ++deals;
+        }
+        if (deals == 0) {
+            return CardSet.first(candidates);
+        }
+        int best = 0;
+        boolean discarding = me != declarer && trick.size() > 0 &&
+            (myHand.getBitmap() & CardSet.suitMask(trick.getStartingSuit())) == 0;
+        for (int i = 1; i < n; ++i) {
+            int diff = goals[i] - goals[best];
+            if (discarding && Math.abs(diff) <= Math.max(1, deals / 20) &&
+                    Math.abs(total[i] - total[best]) * 4 <= deals) {
+                // a defender's discard within 5% of the deals and a quarter trick of the best: a suit
+                // that keeps its guard, then one that loses it, a strong suit last; ♥7 of ♥79K,
+                // not ♦8 of ♦89Q or ♣8 of ♣8JQK on ♠K against 7♠, ♦8 set it in 4 of 40 deals, ♥7 in 2
+                int rank = discardRank(CardSet.bit(CardSet.get(candidates, i)), trumpMask);
+                int bestRank = discardRank(CardSet.bit(CardSet.get(candidates, best)), trumpMask);
+                if (rank != bestRank) {
+                    diff = rank - bestRank;
+                }
+            }
+            if (me == declarer) {
+                // the declarer by his score: a contract seldom made is played for the fewest tricks down,
+                // 6♥ ♣8X ♦8JQ ♥9JQ with ♥XK out, ♥J made it in 1015 of 2000 deals, 3.09 tricks more,
+                // ♦J in 812, 3.41; ♥J lost the trump control and a trick to the spade forces
+                double d = score[i] - score[best];
+                diff = Math.abs(d) < 1e-9 ? 0 : d > 0 ? 1 : -1;
+            }
+            if (diff == 0 && me != declarer && trick.size() == 0) {
+                // a defender's lead setting it as often: not in trumps, the declarer ruffs the other
+                // suits and keeps his trumps short; ♠89QK ♣89A ♦JQ against 7♦ ♦7XKA, ♦J and ♠Q
+                // set it in 26 of 40 deals, ♦Q drew a trump for him, ♠K makes him ruff
+                // the top trump is a trick of its own, led it draws one of his: ♠Q of ♠Q ♣A ♥XJQA
+                // with ♠79X left against 7♠, not ♥A
+                int bit = CardSet.bit(CardSet.get(candidates, i));
+                int bestBit = CardSet.bit(CardSet.get(candidates, best));
+                int out = leftHand.getBitmap() | rightHand.getBitmap();
+                boolean trumpBit = (bit & trumpMask) != 0 && !isTop(bit, out);
+                boolean trumpBest = (bestBit & trumpMask) != 0 && !isTop(bestBit, out);
+                diff = Integer.compare(trumpBest ? 1 : 0, trumpBit ? 1 : 0);
+            }
+            if (diff == 0) {
+                diff = me == declarer ? total[i] - total[best] : total[best] - total[i];
+            }
+            if (diff == 0 && me != declarer && trick.size() == 0) {
+                // then the top card of its suit: it takes the trick or forces a trump, a lower one
+                // gives the declarer's higher card a trick; ♦J of ♦JA with ♦QK gone, not ♠Q
+                // under ♠A, ♠Q ♦JA against 7♥
+                int out = leftHand.getBitmap() | rightHand.getBitmap();
+                diff = Integer.compare(isTop(CardSet.bit(CardSet.get(candidates, i)), out) ? 1 : 0,
+                    isTop(CardSet.bit(CardSet.get(candidates, best)), out) ? 1 : 0);
+            }
+            if (diff == 0 && me == declarer && trick.size() == 0) {
+                // open cards see no ruff to fear, the closed cards do: the declarer draws trumps,
+                // ♠QKA ♣KA ♥79XJQ against 8♥, ♠Q ♣K ♥9 all make it, ♥9 first
+                int bit = CardSet.bit(CardSet.get(candidates, i));
+                int bestBit = CardSet.bit(CardSet.get(candidates, best));
+                diff = Integer.compare((bit & trumpMask) != 0 ? 1 : 0, (bestBit & trumpMask) != 0 ? 1 : 0);
+            }
+            if (diff > 0) {
+                best = i;
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; ++i) {
+            sb.append(String.format(" %s %d/%.1f", CardSet.get(candidates, i), goals[i], (double) total[i] / deals));
+            if (me == declarer) {
+                sb.append(String.format("/%.2f", score[i] / deals));
+            }
+        }
+        printf("trick %d, standing, deals %d, %s the contract/declarer's tricks:%s -> %s, %,d msec\n",
+            trick.getNumber(), deals, me == declarer ? "make" : "set", sb, CardSet.get(candidates, best),
+            System.currentTimeMillis() - start);
+        return CardSet.get(candidates, best);
+    }
+
+    // the declarer's score for the round in whists of WhistScore's scale, both whisting: his pool
+    // point less the defenders' whists, or his dump points, their whists and the consolation when down
+    static double declarerScore(int tricks, int goal) {
+        int defenderTricks = ROUND_SIZE - tricks;
+        int down = goal - tricks;
+        if (down <= 0) {
+            return WhistScore.SHARE - defenderTricks / 2.0;
+        }
+        return -(WhistScore.SHARE * down + defenderTricks / 2.0 + down);
+    }
+
+    // a standing defender's candidates without the cards the search does not see the harm of: it plays
+    // each deal with open cards and finds every guess later, so cashing a top card early costs it nothing.
+    // On lead, no ace from 3 cards without the king while the king is out: ♣89A against
+    // the declarer's ♣JK set his king up, 7♦ made; AK or AKQ are fine. From 4 cards the ace is cashed
+    // before the declarer ruffs it, ♠A of ♠89XA ♣8XA ♥7A against 6♦. No small card led away from
+    // an ace, it gives the declarer's king or queen a trick: ♣8 of ♣8XA, unless nothing else is left.
+    // Not the declarer's suit,
+    // not in trumps: he led it for a trick there, ♠7 from ♠JK against 6♦, ♠Q back gave him ♠K.
+    // Following partner's card that
+    // wins the trick, none higher in its suit: ♠A on partner's ♠K competes with him
+    int defenderRules(Trick trick, int candidates, int declarer, Card.Suit trump) {
+        int hand = myHand.getBitmap();
+        int out = leftHand.getBitmap() | rightHand.getBitmap();
+        int res = candidates;
+        if (trick.size() == 0) {
+            // a plain suit no one else can follow: its card takes a trick or forces the declarer's
+            // trump, the defender keeps his own trump trick; ♣7 with every other club gone, not ♠Q
+            // of ♠Q ♣7 ♦JA ♥XK against 7♥
+            int alone = 0;
+            for (Card.Suit suit : Card.Suit.values()) {
+                int suitMask = CardSet.suitMask(suit);
+                if (!suit.equals(trump) && (out & suitMask) == 0) {
+                    alone |= candidates & suitMask;
+                }
+            }
+            if (alone != 0) {
+                return alone;
+            }
+            for (Card.Suit suit : Card.Suit.values()) {
+                if (suit.equals(trump)) {
+                    continue;
+                }
+                int suitMask = CardSet.suitMask(suit);
+                int ace = Integer.highestOneBit(suitMask);
+                int king = ace >>> 1;
+                if ((hand & ace) != 0 && CardSet.size(hand & suitMask) == 3 && (out & king) != 0) {
+                    res &= ~asAce(hand, out, suitMask);
+                }
+            }
+            // the candidates keep the lowest of equivalent cards: ♦J stands for ♦JA with ♦QK gone,
+            // it is the ace, not a small card under it
+            int under = 0;
+            for (Card.Suit suit : Card.Suit.values()) {
+                int suitMask = CardSet.suitMask(suit);
+                int ace = Integer.highestOneBit(suitMask);
+                if (!suit.equals(trump) && (hand & ace) != 0) {
+                    under |= suitMask & ~asAce(hand, out, suitMask);
+                }
+            }
+            if ((res & ~under) != 0) {
+                res &= ~under;
+            }
+            int trumpMask = trump == null ? 0 : CardSet.suitMask(trump);
+            int other = res & ~(declarerLeads & ~trumpMask);
+            if (other != 0) {
+                res = other;
+            }
+        } else {
+            int trumpMask = trump == null ? 0 : CardSet.suitMask(trump);
+            if ((hand & CardSet.suitMask(trick.getStartingSuit())) == 0 && (candidates & trumpMask) == 0) {
+                res = discard(res, declarer, trumpMask);
+            }
+            // following the declarer's lead under his card no one can beat: the lowest one, a higher
+            // card is a trick later or a guard; ♠9Q under ♠A after ♠K against 7♠, ♠Q is the top trump
+            // left, it gave the declarer his 8th trick. The partner's lead may need an unblock, not here
+            int suitMask = CardSet.suitMask(trick.getStartingSuit());
+            int follow = res & suitMask;
+            if (follow != 0 && trick.getStartedBy() == declarer && trick.getTop() == declarer &&
+                    trick.topCard.getSuit().equals(trick.getStartingSuit())) {
+                int topBit = CardSet.bit(trick.topCard);
+                int above = suitMask & ~((topBit << 1) - 1);
+                if (((hand | out) & above) == 0) {
+                    res = Integer.lowestOneBit(follow);
+                }
+            }
+            int partner = (declarer + 1) % NOP == number ? (declarer + 2) % NOP : (declarer + 1) % NOP;
+            if (trick.getTop() == partner) {
+                int topBit = CardSet.bit(trick.topCard);
+                int higher = CardSet.suitMask(trick.topCard.getSuit()) & ~((topBit << 1) - 1);
+                boolean declarerPlayed = (declarer - trick.getStartedBy() + NOP) % NOP < trick.size();
+                int declarerCards = (number + 1) % NOP == declarer ? leftHand.getBitmap() : rightHand.getBitmap();
+                if (declarerPlayed || (declarerCards & higher) == 0) {
+                    res &= ~higher;
+                }
+            }
+        }
+        return res == 0 ? candidates : res;
+    }
+
+    // a discard: 3 a suit the declarer cannot hold, nothing to guard there, ♣J of ♣JQK ♦Q with
+    // the declarer out of clubs and ♦XJ left; 2 keeps the suit's top honor guarded, J by 3 cards,
+    // Q by 2, K by 1, or the suit has none; 1 leaves it short of its guards or throws it;
+    // 0 a suit with touching honors, a trick source to keep, ♣8JQK; a trump is not a discard, 2
+    int discardRank(int bit, int trumpMask) {
+        final int JACK = 1 << 4;
+        if ((bit & trumpMask) != 0) {
+            return 2;
+        }
+        Card.Suit suit = Card.get(bit).getSuit();
+        int declarer = gameManager().declarerNumber;
+        int declarerCards = (number + 1) % NOP == declarer ? leftHand.getBitmap() : rightHand.getBitmap();
+        if ((declarerCards & CardSet.suitMask(suit)) == 0) {
+            return 3;
+        }
+        int offset = suit.getValue() * CardSet.SUIT_LIST_LENGTH;
+        int cards = (myHand.getBitmap() >>> offset) & CardSet.SUIT_MASK;
+        if (denseLeads(myHand.getBitmap() & CardSet.suitMask(suit)) != 0) {
+            return 0;
+        }
+        int top = Integer.highestOneBit(cards);
+        if (top < JACK || top == JACK << 3) {
+            return 2;   // no honor to guard, or the A needs none
+        }
+        int b = bit >>> offset;
+        if (b == top) {
+            return 1;
+        }
+        int need = top == JACK << 2 ? 1 : top == JACK << 1 ? 2 : 3;
+        return CardSet.size(cards & ~top & ~b) >= need ? 2 : 1;
+    }
+
+    // no card someone else may hold is above it in its suit
+    static boolean isTop(int bit, int out) {
+        int suitMask = CardSet.suitMask(Card.get(bit).getSuit());
+        return (out & suitMask & ~((bit << 1) - 1)) == 0;
+    }
+
+    // my cards of the suit equivalent to my ace: down from it, past the played ones,
+    // up to a card someone else may hold
+    static int asAce(int hand, int out, int suitMask) {
+        int ace = Integer.highestOneBit(suitMask);
+        int res = 0;
+        for (int bit = ace; (bit & suitMask) != 0 && (bit & out) == 0; bit >>>= 1) {
+            res |= bit & hand;
+        }
+        return res;
+    }
+
+    // a discard from Ax is the x: the ace stands alone, longer suits keep their guards against
+    // the declarer's length, ♣8XA ♥JA against 6♦ with ♣9QK: ♣8 set up his ♣9, ♥J was idle;
+    int discard(int candidates, int declarer, int trumpMask) {
+        int hand = myHand.getBitmap();
+        int res = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int suitMask = CardSet.suitMask(suit);
+            int cards = hand & suitMask;
+            int ace = Integer.highestOneBit(suitMask);
+            if ((suitMask & trumpMask) == 0 && (cards & ace) != 0 && CardSet.size(cards) == 2) {
+                res |= candidates & cards & ~ace;
+            }
+        }
+        if (res != 0) {
+            return res;
+        }
+        // then a suit the declarer showed out of: while he surely has a trump, one partner cannot hold,
+        // or with a single card there and partner holding the rest of the suit, ♠A after his ruff
+        // with ♠K out against 6♦; not ♥Q of ♥9Q with ♥8 out, a winner once his trumps are gone, 6♣.
+        // The last card of it stays to the search: led, it forces his trump; ♣J ♦9XJA ♥K on ♠J
+        // against 6♠, ♠Q his last trump, ♣J let him make 7, ♦9 kept him to 6
+        boolean leftDeclarer = (number + 1) % NOP == declarer;
+        int declarerCards = leftDeclarer ? leftHand.getBitmap() : rightHand.getBitmap();
+        int partnerCards = leftDeclarer ? rightHand.getBitmap() : leftHand.getBitmap();
+        boolean sureTrump = (declarerCards & trumpMask & ~partnerCards) != 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int suitMask = CardSet.suitMask(suit);
+            if ((suitMask & trumpMask) != 0 || (declarerCards & suitMask) != 0) {
+                continue;
+            }
+            int cards = hand & suitMask;
+            if (sureTrump ? CardSet.size(cards) >= 2 : CardSet.size(cards) == 1 && (partnerCards & suitMask) != 0) {
+                res |= candidates & suitMask;
+            }
+        }
+        return res == 0 ? candidates : res;
+    }
+
+    // the suit mask of the longest suit of the dealt hand, not in trumps, of LONG_SUIT cards or more;
+    // 0 on a tie
+    static int longSuit(int hand, Card.Suit trump) {
+        int res = 0;
+        int longest = LONG_SUIT - 1;
+        for (Card.Suit suit : Card.Suit.values()) {
+            if (suit.equals(trump)) {
+                continue;
+            }
+            int n = CardSet.size(hand & CardSet.suitMask(suit));
+            if (n > longest) {
+                longest = n;
+                res = CardSet.suitMask(suit);
+            } else if (n == longest) {
+                res = 0;
+            }
+        }
+        return res;
+    }
+
+    // the long suit's lead: not the smallest card, the next one, or the top of the cards equivalent
+    // to it, none the others can hold between them; ♥79XQ with ♥8 out leads ♥X, ♥9 is the same
+    // and ♥7 stays to duck
+    // the passer's lead outside his long suit: the A on top of a suit, else the suits without K and Q
+    // the suits whose top card is Q or higher with the next one below it: the lowest card of
+    // that top run, ♦Q of ♦8QK, the one the candidates keep; topOfSequence() leads its top
+    static int denseLeads(int hand) {
+        final int QUEEN = 1 << 5;
+        int res = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int offset = suit.getValue() * CardSet.SUIT_LIST_LENGTH;
+            int cards = (hand >>> offset) & CardSet.SUIT_MASK;
+            int top = Integer.highestOneBit(cards);
+            if (top < QUEEN || (cards & top >>> 1) == 0) {
+                continue;
+            }
+            while ((cards & top >>> 1) != 0) {
+                top >>>= 1;
+            }
+            res |= top << offset;
+        }
+        return res;
+    }
+
+    static int safeOtherLeads(int hand) {
+        final int ACE = 1 << 7, KING = 1 << 6, QUEEN = 1 << 5;
+        int aces = 0;
+        int plain = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            int offset = suit.getValue() * CardSet.SUIT_LIST_LENGTH;
+            int cards = (hand >>> offset) & CardSet.SUIT_MASK;
+            if ((cards & ACE) != 0) {
+                aces |= ACE << offset;
+            } else if (cards != 0 && (cards & (KING | QUEEN)) == 0) {
+                plain |= cards << offset;
+            }
+        }
+        return aces != 0 ? aces : plain;
+    }
+
+    private int longSuitLead(int keep) {
+        if (CardSet.size(keep) < 2) {
+            return keep;
+        }
+        int out = leftHand.getBitmap() | rightHand.getBitmap();
+        int card = Integer.lowestOneBit(keep & ~Integer.lowestOneBit(keep));
+        for (int next = card << 1; (next & longSuit) != 0 && (next & out) == 0; next <<= 1) {
+            if ((next & keep) != 0) {
+                card = next;
+            }
+        }
+        return card;
+    }
+
+    // the cards each of the others can hold, their hand sizes into sizes
+    private int[] possibleHands(int[] sizes) {
+        GameManager gameManager = gameManager();
+        Player[] players = gameManager.getPlayers();
+        int declarer = gameManager.declarerNumber;
+        int left = (number + 1) % NOP;
+        int right = (number + 2) % NOP;
+        int[] possible = new int[NOP];
+        possible[left] = leftHand.getBitmap();
+        possible[right] = rightHand.getBitmap();
+        if (number != declarer) {
+            // the talon went to the declarer, he kept it or dropped it
+            int partner = left == declarer ? right : left;
+            possible[partner] &= ~gameManager.talonShown.getBitmap();
+        }
+        sizes[left] = players[left].totalCards();
+        sizes[right] = players[right].totalCards();
+        return possible;
+    }
+
+    // a defender: the declarer's hand worth his contract, his cards played and the 2 dropped
+    // ones with it, as Bidder estimates it
+    static int[] dealForDefender(int[] possible, int[] sizes, int declarer, int goal, Card.Suit trump) {
+        GameManager gameManager = GameManager.getInstance();
+        int[] best = null;
+        double bestEstimate = Double.NEGATIVE_INFINITY;
+        for (int t = 0; t < CONTRACT_TRIES; ++t) {
+            int[] h = dealStanding(possible, sizes);
+            if (h == null) {
+                return best;
+            }
+            bidderDrop(h, declarer, possible[declarer], trump);
+            CardSet dealtHand = new CardSet(h[declarer]);
+            dealtHand.add(gameManager.declarerPlayed);
+            CardSet dealt = new CardSet(dealtHand);
+            dealt.add(new CardSet(h[NOP]));     // the dropped ones
+            double estimate = Bidder.getInstance().estimateTricks(dealtHand, dealt, trump);
+            if (estimate >= goal + CONTRACT_MARGIN) {
+                return h;
+            }
+            if (estimate > bestEstimate) {
+                bestEstimate = estimate;
+                best = h;
+            }
+        }
+        return best;
+    }
+
+    // the declarer's 12 cards of a deal keep Bidder's drop for his trump, not a random one: the drop
+    // makes voids and keeps the talon's ♣X under ♣Q, ♠JA ♣8XA ♦7X ♥789JA dropped ♦7X against 7♥;
+    // unchanged when Bidder has none or it puts a card the declarer cannot hold in his hand
+    static void bidderDrop(int[] h, int declarer, int possibleDeclarer, Card.Suit trump) {
+        GameManager gameManager = GameManager.getInstance();
+        int unplayed = h[declarer] | h[NOP];
+        int dealt = unplayed | gameManager.declarerPlayed.getBitmap();
+        int elderHand = (declarer - gameManager.elderHand + NOP) % NOP;
+        CardSet drops = Bidder.getInstance().trumpDrops(new CardSet(dealt), trump, elderHand, unplayed);
+        if (drops == null) {
+            return;
+        }
+        int dropped = drops.getBitmap();
+        if ((unplayed & ~dropped & ~possibleDeclarer) != 0) {
+            return;
+        }
+        h[NOP] = dropped;
+        h[declarer] = unplayed & ~dropped;
+    }
+
+    // every deal dealStanding() can make, in random order, cut short by a deadline they stay a uniform
+    // sample; null when there are more than limit of them
+    static List<int[]> allDealsStanding(int[] possible, int[] sizes, int limit) {
+        int pool = 0;
+        for (int i = 0; i < NOP; ++i) {
+            pool |= possible[i];
+        }
+        int[] poolCards = new int[Integer.bitCount(pool)];
+        int m = 0;
+        int poolBit = 0;
+        while ((poolBit = CardSet.next(pool, poolBit)) != 0) {
+            poolCards[m++] = poolBit;
+        }
+        int dropped = m;
+        for (int i = 0; i < NOP; ++i) {
+            dropped -= sizes[i];
+        }
+        if (dropped < 0) {
+            return null;
+        }
+        int[] room = Arrays.copyOf(sizes, NOP + 1);
+        room[NOP] = dropped;
+        int[] possibleAll = Arrays.copyOf(possible, NOP + 1);
+        possibleAll[NOP] = pool;
+        List<int[]> res = new ArrayList<>();
+        int[] nodes = {limit * 64};
+        if (!allDeals(poolCards, 0, possibleAll, room, new int[NOP + 1], res, limit, nodes)) {
+            return null;
+        }
+        if (res.isEmpty()) {
+            return null;
+        }
+        Collections.shuffle(res, standingRandom);
+        return res;
+    }
+
+    // false when past the limit or the search is too long
+    private static boolean allDeals(int[] poolCards, int i, int[] possible, int[] room, int[] h,
+            List<int[]> res, int limit, int[] nodes) {
+        if (--nodes[0] < 0) {
+            return false;
+        }
+        if (i == poolCards.length) {
+            if (res.size() >= limit) {
+                return false;
+            }
+            res.add(h.clone());
+            return true;
+        }
+        int bit = poolCards[i];
+        for (int to = 0; to <= NOP; ++to) {
+            if (room[to] == 0 || (possible[to] & bit) == 0) {
+                continue;
+            }
+            --room[to];
+            h[to] |= bit;
+            boolean ok = allDeals(poolCards, i + 1, possible, room, h, res, limit, nodes);
+            h[to] &= ~bit;
+            ++room[to];
+            if (!ok) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // a defender: the deals with the declarer's hand worth his contract as dealForDefender() wants it,
+    // otherwise the ones with the best estimate
+    static List<int[]> worthContract(List<int[]> all, int declarer, int possibleDeclarer, int goal,
+            Card.Suit trump) {
+        GameManager gameManager = GameManager.getInstance();
+        // the deals with Bidder's drop, see bidderDrop(); all of them when none has it
+        List<int[]> dropped = new ArrayList<>();
+        for (int[] h : all) {
+            int[] copy = h.clone();
+            bidderDrop(copy, declarer, possibleDeclarer, trump);
+            if (copy[NOP] == h[NOP]) {
+                dropped.add(h);
+            }
+        }
+        if (!dropped.isEmpty()) {
+            all = dropped;
+        }
+        List<int[]> res = new ArrayList<>();
+        double bestEstimate = Double.NEGATIVE_INFINITY;
+        for (int[] h : all) {
+            CardSet dealtHand = new CardSet(h[declarer]);
+            dealtHand.add(gameManager.declarerPlayed);
+            CardSet dealt = new CardSet(dealtHand);
+            dealt.add(new CardSet(h[NOP]));
+            double estimate = Math.min(goal, Bidder.getInstance().estimateTricks(dealtHand, dealt, trump));
+            if (estimate > bestEstimate) {
+                bestEstimate = estimate;
+                res.clear();
+            }
+            if (estimate == bestEstimate) {
+                res.add(h);
+            }
+        }
+        return res;
+    }
+
+    // a defender deciding to whist, up to MAX_DEALS deals: the declarer's 12 cards declare his contract
+    // as Bidder declares them for a bot, and the drop Bidder chooses; otherwise the closest ones.
+    // Worth the contract was not enough: 6♠ is the lowest bid, 6♣ or 7♥ hands passed for it,
+    // ♠KA ♥78QKA as 6♠, and the defenders saw it set easily. The tries are for all the deals at once,
+    // up to WHIST_TRIES, MIN_WHIST_TRIES and MIN_DEALS of the contract at least unless past the hard deadline:
+    // 4 hands of 20000 bid 7-, the closest ones are 6-
+    static List<int[]> whistHands(int[] possible, int[] sizes, int declarer, Bid minBid, int elderHand,
+            long deadLine, long hardDeadLine) {
+        List<int[]> hands = new ArrayList<>();
+        List<Integer> distances = new ArrayList<>();
+        int exact = 0;
+        for (int t = 0; t < WHIST_TRIES && exact < MAX_DEALS; ++t) {
+            long now = System.currentTimeMillis();
+            if (t >= MIN_WHIST_TRIES && exact >= MIN_DEALS && now >= deadLine ||
+                    t >= MIN_DEALS && now >= hardDeadLine) {
+                break;
+            }
+            int[] h = dealStanding(possible, sizes);
+            if (h == null) {
+                break;      // no deal agrees with what the bot knows, should not happen
+            }
+            CardSet hand = new CardSet(h[declarer] | h[NOP]);
+            PlayerBid playerBid = Bidder.getInstance().getBid(hand, Bid.BID_6S, elderHand, 2);
+            if (playerBid.drops.size() == 2) {
+                h[NOP] = playerBid.drops.getBitmap();
+                h[declarer] = hand.getBitmap() & ~h[NOP];
+            }
+            int distance = bidDistance(playerBid, minBid);
+            if (distance == 0) {
+                ++exact;
+            }
+            // a weaker hand in the contract's trump: its tricks short of the contract, see whistDeals()
+            Bid bid = playerBid.toBid();
+            h = Arrays.copyOf(h, NOP + 2);
+            if (!bid.equals(Bid.BID_PASS) && bid.getTrump() == minBid.getTrump() && bid.goal() < minBid.goal()) {
+                h[NOP + 1] = minBid.goal() - bid.goal();
+            }
+            hands.add(h);
+            distances.add(distance);
+        }
+        // the closest first, in the order dealt
+        Integer[] order = new Integer[hands.size()];
+        for (int i = 0; i < order.length; ++i) {
+            order[i] = i;
+        }
+        Arrays.sort(order, (i0, i1) -> Integer.compare(distances.get(i0), distances.get(i1)));
+        List<int[]> res = new ArrayList<>();
+        for (int i = 0; i < order.length && res.size() < MAX_DEALS; ++i) {
+            if (exact >= MIN_DEALS && distances.get(order[i]) > 0) {
+                break;
+            }
+            res.add(hands.get(order[i]));
+        }
+        return res;
+    }
+
+    // how far Bidder's bid is from the contract: 0 the same, then the tricks apart in the same trump,
+    // a weaker hand after a stronger one the same tricks apart, another trump after them all, a pass
+    // the farthest. A declarer may declare less than his hand is worth, weaker hands set the contract
+    // too often: 8♠ hands filled up 32 of 40 deals against 9♠, ♠89 ♣79XJ ♦J ♥8XA whisted alone
+    static int bidDistance(PlayerBid playerBid, Bid contract) {
+        Bid bid = playerBid.toBid();
+        if (bid.equals(Bid.BID_PASS)) {
+            return Integer.MAX_VALUE - 1;
+        }
+        int diff = bid.goal() - contract.goal();
+        int distance = diff >= 0 ? 2 * diff : -2 * diff + 1;
+        if (bid.getTrump() != contract.getTrump()) {
+            distance += 2 * ROUND_SIZE;
+        }
+        return distance;
+    }
+
+    // hands of the other two by their sizes from the cards each can hold, the rest in h[NOP],
+    // the declarer's drop; the cards fewer players can hold go first, a card goes to a player
+    // by his room left, about uniform
+    static int[] dealStanding(int[] possible, int[] sizes) {
+        int pool = 0;
+        for (int i = 0; i < NOP; ++i) {
+            pool |= possible[i];
+        }
+        int[] poolCards = new int[Integer.bitCount(pool)];
+        int m = 0;
+        int poolBit = 0;
+        while ((poolBit = CardSet.next(pool, poolBit)) != 0) {
+            poolCards[m++] = poolBit;
+        }
+        int dropped = m;
+        for (int i = 0; i < NOP; ++i) {
+            dropped -= sizes[i];
+        }
+        if (dropped < 0) {
+            return null;
+        }
+        for (int t = 0; t < DEAL_TRIES; ++t) {
+            // shuffle, then the cards with fewer owners first
+            for (int i = m - 1; i > 0; --i) {
+                int j = standingRandom.nextInt(i + 1);
+                int tmp = poolCards[i];
+                poolCards[i] = poolCards[j];
+                poolCards[j] = tmp;
+            }
+            int[] order = new int[m];
+            int o = 0;
+            for (int count = 1; count <= NOP; ++count) {     // the other two and the drop
+                for (int bit : poolCards) {
+                    int owners = 0;
+                    for (int i = 0; i < NOP; ++i) {
+                        if (sizes[i] > 0 && (possible[i] & bit) != 0) {
+                            ++owners;
+                        }
+                    }
+                    if (dropped > 0) {
+                        ++owners;
+                    }
+                    if (owners == count) {
+                        order[o++] = bit;
+                    }
+                }
+            }
+            int[] h = new int[NOP + 1];
+            int[] room = sizes.clone();
+            int dropRoom = dropped;
+            boolean ok = true;
+            for (int bit : order) {
+                int totalRoom = 0;
+                for (int i = 0; i < NOP; ++i) {
+                    if ((possible[i] & bit) != 0) {
+                        totalRoom += room[i];
+                    }
+                }
+                totalRoom += dropRoom;
+                if (totalRoom == 0) {
+                    ok = false;
+                    break;
+                }
+                int r = standingRandom.nextInt(totalRoom);
+                int to = NOP;
+                for (int i = 0; i < NOP; ++i) {
+                    if ((possible[i] & bit) != 0) {
+                        if (r < room[i]) {
+                            to = i;
+                            break;
+                        }
+                        r -= room[i];
+                    }
+                }
+                h[to] |= bit;
+                if (to == NOP) {
+                    --dropRoom;
+                } else {
+                    --room[to];
+                }
+            }
+            if (ok) {
+                return h;
+            }
+        }
+        return null;
     }
 
     // the card for this trick when the list's card relies on what the player cannot know,
@@ -740,8 +2331,13 @@ public class Bot extends Player implements Serializable {
 
     // the risk of the declarer's hand after a drop, the lower ones are the likelier drops,
     // a tie-break in dropGuesses()
-    int dropRisk(CardSet dealtHand) {
+    int dropRisk(CardSet dealtHand, CardSet dropped) {
         return 0;
+    }
+
+    // a drop the declarer would choose from, see dropGuesses()
+    boolean likelyDrop(int risk, int minRisk) {
+        return false;
     }
 
     // the declarer can drop the card, see dropGuesses()
@@ -793,24 +2389,22 @@ public class Bot extends Player implements Serializable {
         // the dropped cards not shown yet, 1 or 2
         List<CardSet> hands = new ArrayList<>();
         List<Integer> evals = new ArrayList<>();
-        CardList cards = knownHand.toCardList();
-        for (int i = 0; i < cards.size(); ++i) {
-            if (!droppable(cards.get(i))) {
+        int cards = knownHand.getBitmap();
+        for (int bit0 = CardSet.next(cards, 0); bit0 != 0; bit0 = CardSet.next(cards, bit0)) {
+            if (!droppable(Card.get(bit0))) {
                 continue;
             }
-            // one card: j == i only, the pairs after it would leave the declarer a card short
-            int end = diff == 1 ? i + 1 : cards.size();
-            for (int j = diff == 1 ? i : i + 1; j < end; ++j) {
-                if (!droppable(cards.get(j))) {
+            // one card: bit1 == bit0 only, the pairs after it would leave the declarer a card short
+            for (int bit1 = diff == 1 ? bit0 : CardSet.next(cards, bit0); bit1 != 0;
+                    bit1 = diff == 1 ? 0 : CardSet.next(cards, bit1)) {
+                if (!droppable(Card.get(bit1))) {
                     continue;
                 }
-                CardSet hand = new CardSet(knownHand);
-                hand.remove(cards.get(i));
-                hand.remove(cards.get(j));
+                CardSet hand = new CardSet(cards & ~(bit0 | bit1));
                 // evaluate the hand as it was after the drop
                 CardSet dealtHand = new CardSet(hand);
                 dealtHand.add(gameManager.declarerPlayed);
-                int eval = dropRisk(dealtHand);
+                int eval = dropRisk(dealtHand, new CardSet(bit0 | bit1));
                 int k = evals.size();
                 while (k > 0 && evals.get(k - 1) > eval) {
                     --k;
@@ -819,7 +2413,23 @@ public class Bot extends Player implements Serializable {
                 hands.add(k, hand);
             }
         }
-        // not the likely drops, the various ones, even illogical: every card the declarer can hold
+        // first the likely drops: ♠79QA ♣79X ♦J ♥79JQ, ♦J ♠A dropped was not among the various ones,
+        // ♦7 let him discard ♠Q
+        for (int i = 0; i < hands.size() && res.size() < MIN_DROP_GUESSES; ++i) {
+            if (!likelyDrop(evals.get(i), evals.get(0))) {
+                break;
+            }
+            CardSet hand = hands.get(i);
+            if (res.contains(hand) || implausible.contains(hand)) {
+                continue;
+            }
+            if (!plausibleDrop(hand)) {
+                implausible.add(hand);
+                continue;
+            }
+            res.add(hand);
+        }
+        // then not the likely drops, the various ones, even illogical: every card the declarer can hold
         // is dropped under some guess and kept under some other, the least risks can all drop the
         // same card: ♣QK, ♣K ♠7, ♣K ♦J... and miss the declarer that kept ♣K, dropped ♣Q ♦X;
         // each next guess covers the most cards not covered yet, on a tie the least risk
@@ -855,7 +2465,7 @@ public class Bot extends Player implements Serializable {
             notKept.remove(next);
         }
         if (!implausible.isEmpty()) {
-            Logger.printf("the declarer's plays rule out %d drops, kept %s\n", implausible.size(), res);
+            printf("the declarer's plays rule out %d drops, kept %s\n", implausible.size(), res);
         }
         if (res.size() < 2) {
             // he misplayed under every guess, so any of them
@@ -870,7 +2480,7 @@ public class Bot extends Player implements Serializable {
     }
 
     // legal cards of the defender to move, one of the cards with no other card between them
-    CardList candidates(Trick trick) {
+    int candidates(Trick trick) {
         GameManager gameManager = gameManager();
         CardSet hand = gameManager.getPlayers()[trick.getTurn()].myHand;
         CardSet legal = hand.list(trick.getStartingSuit());
@@ -883,27 +2493,29 @@ public class Bot extends Player implements Serializable {
         CardSet others = CardSet.union(gameManager.declarerHand, leftHand, rightHand,
             trick.cards2CardSet());
         others.remove(hand);
-        CardList res = new CardList();
+        int res = 0;
         Card prev = null;
-        for (Card card : legal.toCardList()) {
+        for (Card card : legal) {
             if (prev != null && prev.getSuit().equals(card.getSuit()) && !anyBetween(others, prev, card)) {
                 continue;
             }
-            res.add(card);
+            res |= CardSet.bit(card);
             prev = card;
         }
         return res;
     }
 
     // the candidates equivalent to card under the guess, the declarer's hand
-    CardList sameRun(Trick trick, CardList candidates, Card card, CardSet guess) {
+    int sameRun(Trick trick, int candidates, Card card, CardSet guess) {
         CardSet hand = gameManager().getPlayers()[trick.getTurn()].myHand;
         CardSet others = CardSet.union(guess, leftHand, rightHand, trick.cards2CardSet());
         others.remove(hand);
-        CardList res = new CardList();
-        for (Card candidate : candidates) {
+        int res = 0;
+        int bit = 0;
+        while ((bit = CardSet.next(candidates, bit)) != 0) {
+            Card candidate = Card.get(bit);
             if (candidate.getSuit().equals(card.getSuit()) && !anyBetween(others, candidate, card)) {
-                res.add(candidate);
+                res |= bit;
             }
         }
         return res;
@@ -916,7 +2528,7 @@ public class Bot extends Player implements Serializable {
             card0 = card1;
             card1 = card;
         }
-        for (Card other : others.list(card0.getSuit()).toCardList()) {
+        for (Card other : others.list(card0.getSuit())) {
             if (other.compareInTrick(card0) > 0 && other.compareInTrick(card1) < 0) {
                 return true;
             }

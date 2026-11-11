@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
     static final boolean release = true;
     static boolean DEBUG_LOG = true;
     public static boolean SHOW_ALL = true;
-    public static boolean DEBUG_INPUT = false;
+    public static boolean DEBUG_INPUT = true;
 
     public static final String LOG_EXT = ".log";
     public static final long LOG_THRESHOLD = 24 * 3600 * 1000;    // 1 day msec
@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
             TrickList.DEBUG_IGNORE_DEADLINE = false;
             TrickList.DEBUG_CHECK_HANDS = false;
         }
+        Config.release = release;
     }
     public static final long buildDate = BuildConfig.TIMESTAMP;
 
@@ -165,7 +166,6 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         if (config == null) {
             config = new DConfig(this);
         }
-        config.release.set(release);
         DMetrics = new DMetrics(this);
         new I18n(this);
         DConfig.setNonColoredLog();
@@ -187,6 +187,7 @@ public class MainActivity extends AppCompatActivity implements Logger.LogHolder,
         if (DEBUG_INPUT) {
             try {
                 testInputStream = getAssets().open("tests/freeplay");
+                GameManager.REPLAY_TIME_LIMITED = true;     // a phone is slow, replay as a real game
                 Logger.println(testInputStream.toString());
             } catch (IOException e) {
                 Logger.println(e.getMessage());

@@ -41,6 +41,11 @@ public class GameManager implements Serializable {
     public static boolean DEBUG_LOG = false;
     public static boolean DEBUG_END_OF_GAME = false;
     public static boolean DEBUG_ALL_PASS = false;
+    public static boolean DEBUG_STANDING_WHIST = false;
+    public static boolean DEBUG_BOTH_WHIST = false;     // the bots whist on every contract
+    // an input file keeps the bots' time limits: the app replays tests/freeplay at the speed of a real game,
+    // the tests need no limits to be repeatable
+    public static boolean REPLAY_TIME_LIMITED = false;
 
     public static final boolean[] BOTS = new boolean[NOP];
     static {
@@ -111,6 +116,9 @@ public class GameManager implements Serializable {
     CardSet declarerHand;           // with talon, as defenders know it
     CardSet initialDeclarerHand;    // with talon
     public boolean cardsRevealed;
+    // whist standing: every player sees only his own cards, see Bot.playStanding()
+    public boolean standing;
+    final CardSet talonShown = new CardSet();   // the talon the declarer took, all saw it
 
     public GameManager() {}
 
@@ -279,10 +287,18 @@ public class GameManager implements Serializable {
                     player.getGameHistory().add(roundResults);
                 }
             }
+            allPassFactor = 1;
         }
         if (testInputStream == null) {
             runGame();
         } else {
+            // an input file plays its deals as the tests do, see BaseTest and TestGameManager:
+            // no random drops, no time limits unless REPLAY_TIME_LIMITED, the same random deals for each deal
+            Bot.DeclarerDrop savedDrop = Bot.declarerDrop;
+            boolean savedTimeLimited = Bot.standingTimeLimited;
+            long savedSeed = Bot.standingSeed;
+            Bot.declarerDrop = Bot.DeclarerDrop.First;
+            Bot.standingTimeLimited = REPLAY_TIME_LIMITED;
             try {
                 util.getList(testInputStream,
                     (res, tokens) -> {
@@ -303,6 +319,8 @@ public class GameManager implements Serializable {
                         deck.verifyDeck();
                         RestartCommand next;
                         do {
+                            Bot.standingSeed = 1;
+                            Bot.standingRandom = new Random(1);    // a deal does not depend on the ones before
                             allPassFactor = 0;
                             playedAllPass = false;
                             minBid = Bid.BID_6S;
@@ -319,6 +337,10 @@ public class GameManager implements Serializable {
                     });
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } finally {
+                Bot.declarerDrop = savedDrop;
+                Bot.standingTimeLimited = savedTimeLimited;
+                Bot.standingSeed = savedSeed;
             }
         }
     }
@@ -358,7 +380,21 @@ public class GameManager implements Serializable {
             player.clearHistory();
         }
         allPassFactor = 0;
+        playedAllPass = false;
         // Main will continue launching games
+    }
+
+    // the all-pass factor after another all-pass, by Config.allPassSequence: x1 x1 stays 0,
+    // x1 x2 x3 x1 x2 x3 cycles, x1 x2 x3 x3 x3 stays at 2; a made game resets it to 0 anyway
+    int nextAllPassFactor(int factor) {
+        switch (config().allPassSequence.get().getSelectedValue()) {
+            case x1_x1:
+                return 0;
+            case x1_x2_x3_x3_x3:
+                return Math.min(factor + 1, 2);
+            default:
+                return (factor + 1) % 3;
+        }
     }
 
     Bid getBid(int playerNum) {
@@ -367,6 +403,9 @@ public class GameManager implements Serializable {
 
     // for debug
     public void prepareTest(int declarerNum, Bid bid, CardList talonCards) {
+        // the round before may have left its avatars in place, playRound() alone restores the players:
+        // avatars4Round() keeps them then, a defender played his partner's cards in the next deal
+        updateFromAvatars();
         CardSet discarded = CardSet.getDeck();
         for (Player p : players) {
             if (declarerNum != p.getNumber()) {
@@ -379,7 +418,12 @@ public class GameManager implements Serializable {
             }
         }
         declarer = null;
+        standing = false;
+        cardsRevealed = false;      // a misère round left it set: the next laying round revealed nothing
+        talonShown.clear();
         this.trick.clear(elderHand);
+        allPassFactor = 0;
+        playedAllPass = false;
         if (bid.equals(Bid.BID_ALL_PASS)) {
             this.declarerNumber = -1;
             this.declarer = null;
@@ -387,8 +431,6 @@ public class GameManager implements Serializable {
             this.trick.minBid = null;
             return;
         }
-        allPassFactor = 0;
-        playedAllPass = false;
         biddingPassCount = 0;
         if (declarerNum >= 0) {
             this.declarerNumber = declarerNum;
@@ -405,6 +447,7 @@ public class GameManager implements Serializable {
         }
         if (this.declarer != null) {
             if (talonCards != null) {
+                talonShown.set(new CardSet(talonCards));
                 this.declarer.takeTalon(talonCards);
                 this.talonCards.clear();
             }
@@ -454,6 +497,7 @@ public class GameManager implements Serializable {
                 case bidding:
                     declarerNumber = -1;
                     cardsRevealed = false;
+                    standing = false;
                     declarer = bidding();
                     // fall through
 
@@ -469,6 +513,7 @@ public class GameManager implements Serializable {
                                 break;
                             }
                         }
+                        talonShown.set(new CardSet(talonCards));
                         declarer.takeTalon(talonCards);
                         declarerHand = new CardSet(declarer.myHand);
                         initialDeclarerHand = new CardSet(declarerHand);
@@ -526,6 +571,21 @@ public class GameManager implements Serializable {
             }
             ScoreCalculator.calculate(param);
             ++lineCount;
+            // the round scored, the all-pass factor follows it here: a replay chosen on the scores
+            // screen skipped it, a game made with a whist and then replayed kept the factor
+            if (minBid.equals(Bid.BID_ALL_PASS)) {
+                playedAllPass = true;
+                allPassFactor = nextAllPassFactor(allPassFactor);
+            } else if (declarerNumber >= 0) {
+                Bid bid = declarer.getBid();
+                boolean forTricks = !bid.equals(Bid.BID_MISERE) && !bid.equals(Bid.BID_WITHOUT_THREE);
+                boolean whist = players[(declarerNumber + 1) % NOP].getBid().isWhist() ||
+                    players[(declarerNumber + 2) % NOP].getBid().isWhist();
+                if (forTricks && whist && declarer.tricks >= bid.goal()) {
+                    allPassFactor = 0;
+                    playedAllPass = false;
+                }
+            }
         }
         if (eventObserver == null) {
             next = RestartCommand.newRound;
@@ -535,22 +595,6 @@ public class GameManager implements Serializable {
         }
         replayMode = RestartCommand.verify.equals(next) ||
             RestartCommand.replay.equals(next) && trick.getNumber() == 9;
-        if (!replayMode) {
-            if (minBid.equals(Bid.BID_ALL_PASS)) {
-                playedAllPass = true;
-                allPassFactor = ++allPassFactor % 3;
-            } else if (declarerNumber >= 0) {
-                boolean whist = players[(declarerNumber + 1) % NOP].getBid().equals(Bid.BID_PASS) ||
-                    players[(declarerNumber + 2) % NOP].getBid().equals(Bid.BID_PASS);
-                int defenderTricks = players[(declarerNumber + 1) % NOP].getTricks() +
-                    players[(declarerNumber + 2) % NOP].getTricks();
-                if (declarer.tricks >= declarer.getBid().goal() && whist &&
-                        defenderTricks >= declarer.getBid().defenderGoal()) {
-                    allPassFactor = 0;
-                    playedAllPass = false;
-                }
-            }
-        }
         TrickList.getInstance().initBuild(null);
         return next;
     }
@@ -590,9 +634,10 @@ loop:
                     continue;
                 }
                 Bid savedBid = minBid;
-                if (adjustMinBid && biddingPassCount == 1 && nextBidder == elderHand &&
+                if (adjustMinBid && biddingPassCount == 1 && declarer != null &&
+                        (nextBidder - elderHand + NOP) % NOP < (declarer.getNumber() - elderHand + NOP) % NOP &&
                         !(misereDeclared && Bid.BID_9S.equals(minBid))) {
-                    // allow 'здесь'
+                    // allow 'здесь' to the earlier of the two remaining bidders
                     minBid = minBid.prev();
                     if (savedBid.equals(Bid.BID_9S)) {
                         minBid = minBid.prev();
@@ -602,6 +647,7 @@ loop:
                 if (bidder instanceof HumanPlayer) {
                     update(null);
                 }
+                long start = System.currentTimeMillis();
                 if (DEBUG_ALL_PASS) {
                     if (bidder instanceof HumanPlayer) {
                         bid = bidder.getBid(minBid, elderHand);
@@ -614,7 +660,6 @@ loop:
                 if (bidder instanceof HumanPlayer) {
                     newGame = false;
                 }
-                printf("%s bid: %s\n", bidder.getName(), bid);
                 if (Bid.BID_MISERE.equals(bid)) {
                     misereDeclared = true;
                 }
@@ -835,9 +880,15 @@ loop:
                 }
             } else {
                 avatars[declarer.getNumber()] = newBot(declarer);
-                if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
+                if (standing) {
+                    // each defender plays his own cards
+                    for (Player defender : new Player[] {defender0, defender1}) {
+                        avatars[defender.getNumber()] = defender instanceof HumanPlayer ?
+                            new HumanPlayer(defender, clickable) : newBot(defender);
+                    }
+                } else if (defender0 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
                         defender0 instanceof HumanPlayer && defender0.getBid().equals(Bid.BID_WHIST_LAYING) ||
-                        defender1 instanceof HumanPlayer && defender0.getBid().equals(Config.Bid.BID_WHIST) ||
+                        defender1 instanceof HumanPlayer && defender1.getBid().equals(Config.Bid.BID_WHIST) ||
                         defender1 instanceof HumanPlayer && defender1.getBid().equals(Bid.BID_WHIST_LAYING)) {
                     avatars[defender0.getNumber()] =
                             new HumanPlayer(defender0, clickable);
@@ -899,41 +950,45 @@ loop:
                 // fall through
 
             case whistSelection:
-                update(RoundStage.whistSelection);
-                if (this.minBid.goal() < 10 || config().whistTotus.get()) {
+                if (config().stalingrad.get() && Bid.BID_6S.equals(this.minBid)) {
+                    // Stalingrad: 6♠ is whisted by both defenders, nobody is asked
                     p1 = players[(declarer.getNumber() + 1) % NOP];
-                    p1.setBid(Bid.BID_UNDEFINED);
                     p2 = players[(declarer.getNumber() + 2) % NOP];
-                    p2.setBid(Bid.BID_UNDEFINED);
-                    if ((p1 instanceof Bot) && (p2 instanceof Bot)) {
-                        p1.respondOnDeclaration();  // selects pass
-                        printf("%s whist: %s\n", p1.getName(), p1.getBid());
-                        p2.respondOnDeclaration();  // selects whist
-                        printf("%s whist: %s\n", p2.getName(), p2.getBid());
-                    } else {
-                        update(RoundStage.whistSelection);
+                    p1.setBid(Bid.BID_WHIST);
+                    p2.setBid(Bid.BID_WHIST);
+                    p1.halfWhist = false;
+                    p2.halfWhist = false;
+                    printf("Stalingrad: %s and %s whist\n", p1.getName(), p2.getName());
+                    update(null);
+                    // fall through to selectWhistOption: both whist standing
+                } else {
+                    update(RoundStage.whistSelection);
+                    if (this.minBid.goal() < 10 || config().whistTotus.get()) {
+                        p1 = players[(declarer.getNumber() + 1) % NOP];
+                        p1.setBid(Bid.BID_UNDEFINED);
+                        p2 = players[(declarer.getNumber() + 2) % NOP];
+                        p2.setBid(Bid.BID_UNDEFINED);
+                        long start = System.currentTimeMillis();
                         p1.respondOnDeclaration();
-                        printf("%s whist: %s\n", p1.getName(), p1.getBid());
                         p2.respondOnDeclaration();
-                        printf("%s whist: %s\n", p2.getName(), p2.getBid());
                         if (p2.getBid().equals(Bid.BID_HALF_WHIST)) {
-                            // 2nd chance
+                            // 2nd chance, p1 whists alone
                             p1.respondOnDeclaration();
-                            printf("%s whist: %s\n", p1.getName(), p1.getBid());
-                            if (p1.getBid().equals(Bid.BID_WHIST_LAYING)) {
-                                p2.setBid(Bid.BID_PASS);
-                                printf("%s whist: %s\n", p2.getName(), p2.getBid());
+                            if (p1.getBid().isWhist()) {
+                                p2.setBid(Bid.BID_PASS);    // halfWhist stays: no gentleman's share for him
+                                printf("%s whisting: %s\n", p2.getName(), p2.getBid());
                             }
                         }
+                        update(null);
+                        if (!p1.getBid().isWhist() && !p2.getBid().isWhist()) {
+                            // both passed, or half-whist and pass
+                            declarer.setTricks(declarer.getBid().goal());
+                            return;
+                        }
+                        sleep(10);     // give jPrefPanel a chance to paint
+                    } else {
+                        update(RoundStage.selectWhistOption);
                     }
-                    if (p1.getBid().equals(Bid.BID_PASS) && p2.getBid().equals(Bid.BID_PASS)) {
-                        // when 8♠ or higher
-                        declarer.setTricks(declarer.getBid().goal());
-                        return;
-                    }
-                    sleep(10);     // give jPrefPanel a chance to paint
-                } else {
-                    update(RoundStage.selectWhistOption);
                 }
                 // fall through
 
@@ -942,17 +997,54 @@ loop:
                     p1 = players[(declarer.getNumber() + 1) % NOP];
                     p2 = players[(declarer.getNumber() + 2) % NOP];
                     Player p = null;
-                    if (p1 instanceof HumanPlayer && p1.getBid().equals(Bid.BID_WHIST)) {
-                        p = p1;
+                    if (p1.getBid().isWhist() && p2.getBid().isWhist()) {
+                        // both whist: each plays his own cards
+                        p1.setBid(Bid.BID_WHIST_STANDING);
+                        p2.setBid(Bid.BID_WHIST_STANDING);
+                    } else if (p1.getBid().equals(Bid.BID_WHIST)) {
+                        p = p1;    // the single whister, he selects
+                    } else if (p2.getBid().equals(Bid.BID_WHIST)) {
+                        p = p2;    // the single whister, he selects
                     }
-                    if (p2 instanceof HumanPlayer && p2.getBid().equals(Bid.BID_WHIST)) {
-                        p = p2;
+                    if (p != null && trick.getNumber() == 0 && trick.isEmpty() &&
+                            trick.getTurn() == declarerNumber) {
+                        // the declarer on the 1st lead plays his card before the single whister selects
+                        // laying or standing; he sees no defender's cards for it, the cards are revealed after it
+                        update(RoundStage.play);
+                        sleep(100);     // give jPrefPanel a chance to paint
+                        Card card = declarer.play(trick);
+                        if (card == null) {
+                            // sanity check
+                            throw new RuntimeException(String.format("declarer %d, %s, trick %s", declarerNumber, declarer, trick));
+                        }
+                        trick.add(card);
+                        if (declarer instanceof Bot) {
+                            sleep(config().pauseBetweenMoves.get());
+                        }
+                        update(RoundStage.selectWhistOption);
                     }
-                    if (p != null) {
+                    if (p instanceof HumanPlayer) {
                         update(RoundStage.selectWhistOption);
                         sleep(100);     // give jPrefPanel a chance to paint
-                        p.playWhistLaying();
+                        standing = p.playWhistLaying();
                         sleep(100);     // give jPrefPanel a chance to paint
+                    } else if (p != null) {
+                        standing = p.playWhistLaying();    // a bot plays standing when he has something to hide
+                    }
+                    standing = p1.getBid().equals(Bid.BID_WHIST_STANDING) ||
+                        p2.getBid().equals(Bid.BID_WHIST_STANDING);
+                    if (standing && p != null && eventObserver != null && trick.isEmpty()) {
+                        // one defender only, a bot whister chose it, the passer on the 1st lead;
+                        // a whister knows it already; both whisters play standing anyway;
+                        // the declarer on the 1st lead has played his card already, he sees the closed cards;
+                        // otherwise the user sees it by the closed cards before his move
+                        for (Player player : players) {
+                            if (player instanceof HumanPlayer && !player.getBid().isWhist() &&
+                                    player.getNumber() == elderHand) {
+                                update(RoundStage.play);
+                                eventObserver.showMessage("Whist", "Whist standing", "Continue");
+                            }
+                        }
                     }
                 } else {
                     if (declarer instanceof HumanPlayer) {
@@ -988,10 +1080,14 @@ loop:
                     println(sb);
                     update(RoundStage.play);
                     Player lastPlayer = null;
+                    if (c == 0 && trick.size() == 1 && trick.getStartedBy() == declarerNumber && !standing &&
+                            !cardsRevealed) {
+                        revealCards();      // laying selected after the declarer's 1st card
+                    }
                     for (int j = trick.size(); j < players.length; ++j) {
                         Player player = players[trick.getTurn()];
                         Card card;
-                        if (c == 0 && j == 0 && player != declarer) {
+                        if (c == 0 && j == 0 && player != declarer && !standing) {
                             revealCards();
                         }
                         card = player.play(trick);
@@ -1001,7 +1097,7 @@ loop:
                         }
                         trick.add(card);
                         lastPlayer = player;
-                        if (c == 0 && j == 0 && player == declarer) {
+                        if (c == 0 && j == 0 && player == declarer && !standing) {
                             revealCards();
                         }
                         if (player instanceof Bot) {
@@ -1029,9 +1125,14 @@ loop:
     }
 
     protected void playRoundMisere() {
-        if (roundStage.equals(RoundStage.showTalon) ||
-                roundStage.equals(RoundStage.declareRound)) {
-            declarer.declareRound(minBid, elderHand, null);
+        // the defenders' bids and the avatars before the play starts, also when the round comes
+        // declared, a fixed-bid test at whistSelection: skipped, the defenders kept the bids and
+        // the avatars of the round before and played each other's cards in the next one
+        if (roundStage.compareTo(RoundStage.play) < 0) {
+            if (roundStage.equals(RoundStage.showTalon) ||
+                    roundStage.equals(RoundStage.declareRound)) {
+                declarer.declareRound(minBid, elderHand, null);
+            }
             Player player1 = players[(this.declarerNumber + 1) % NOP];
             Player player2 = players[(this.declarerNumber + 2) % NOP];
             if (declarer instanceof HumanPlayer) {
@@ -1121,5 +1222,7 @@ loop:
         void setCurrentPlayer(Player player);
         void update(RoundStage roundStage);
         RestartCommand showScores();
+        // blocks until a button is clicked, returns its index
+        int showMessage(String title, String text, String... buttons);
     }
 }

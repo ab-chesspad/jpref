@@ -2,43 +2,80 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Config.VERSION x.y.z: the first apk build of a day sets z to 0, every next one that day adds 1,
+// x.y set by hand gets .0; the day of the last build is kept on the VERSION line, // built yyyy-MM-dd.
+// A release build keeps the version as it is, the release script cleans it to x.y
+def configFile = rootProject.file('../jpref-engine/src/main/java/com/ab/jpref/config/Config.java')
+def versionLine = /VERSION = "(\d+\.\d+)(?:\.(\d+))?";[^\n]*/
+def buildDay = new Date().format('yyyy-MM-dd')
+def releaseBuild = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+def buildVersion = {
+    def m = configFile.text =~ versionLine
+    if (releaseBuild) {
+        return (configFile.text =~ /VERSION = "([^"]+)"/)[0][1]
+    }
+    def line = m[0][0]
+    def lastDay = (line =~ /built (\d{4}-\d{2}-\d{2})/).with { it.find() ? it.group(1) : '' }
+    int patch = lastDay == buildDay && m[0][2] != null ? (m[0][2] as int) + 1 : 0
+    return m[0][1] + '.' + patch
+}()
+
+def bumpVersion = tasks.register('bumpVersion') {
+    outputs.upToDateWhen { false }
+    // apk and bundle builds only, not test, lint or a sync
+    onlyIf {
+        !releaseBuild && gradle.taskGraph.allTasks.any { it.name ==~ /(assemble|bundle|install|package).*/ }
+    }
+    doLast {
+        configFile.text = configFile.text.replaceFirst(versionLine,
+            'VERSION = "' + buildVersion + '";     // built ' + buildDay + ', see DPref/app/build.gradle')
+        println "Config.VERSION $buildVersion"
+    }
+}
+// Config.java is compiled with the new version
+rootProject.project(':jpref-engine').tasks.matching { it.name == 'compileJava' }.configureEach {
+    dependsOn bumpVersion
+}
+
 android {
-    namespace 'com.ab.droid.jpref'
+    namespace = 'com.ab.droid.jpref'
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId "com.ab.droid.jpref"
-        minSdk 23
-        targetSdk 36
-        versionCode 2       // must grow with every upload to Google Play
-        // the same version the app shows, Config.VERSION
-        versionName((rootProject.file('../jpref-engine/src/main/java/com/ab/jpref/config/Config.java').text =~
-            /VERSION = "([^"]+)"/)[0][1])
+        applicationId = "com.ab.droid.jpref"
+        minSdk = 23
+        targetSdk = 36
+        versionCode = 3       // must grow with every upload to Google Play
+        // the same version the app shows, Config.VERSION after bumpVersion
+        versionName = buildVersion
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
         buildConfigField "String", "ROOT_PROJECT_NAME", "\"${rootProject.name}\""
     }
 
     buildTypes {
+        debug {
+            debuggable = false    // runs as fast as release, to compare
+        }
         release {
-            shrinkResources false
-            debuggable false
-            minifyEnabled false
+            shrinkResources = false
+            debuggable = false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
-        viewBinding true
-         buildConfig = true
-   }
+        viewBinding = true
+        buildConfig = true
+    }
 }
 
 dependencies {

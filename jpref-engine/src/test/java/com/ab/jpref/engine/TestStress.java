@@ -11,6 +11,7 @@
 package com.ab.jpref.engine;
 
 import com.ab.jpref.cards.CardList;
+import com.ab.jpref.cards.CardSet;
 import com.ab.jpref.config.Config;
 import com.ab.util.Logger;
 
@@ -139,7 +140,7 @@ public class TestStress extends BaseTest {
                         GameManager gameManager = freshGameManager();
                         config.maxMoveTime.set(maxMoveTime);
                         CardList talon = new CardList(deck.subList(30, 32));
-                        Bot.debugDrop = new CardList(talon);
+                        Bot.debugDrop = new CardSet(talon);
                         gameManager.elderHand = elderHand;
                         gameManager.deal(deck);
                         gameManager.prepareTest(declarerNumF, bid, talon);
@@ -175,7 +176,7 @@ public class TestStress extends BaseTest {
                         config.maxMoveTime.set(20);
                         Bot.declarerDrop = dropStrategy;
                         CardList talon = new CardList(deck.subList(30, 32));
-                        Bot.debugDrop = new CardList(talon);
+                        Bot.debugDrop = new CardSet(talon);
                         gameManager.elderHand = elderHand;
                         gameManager.deal(deck);
                         gameManager.prepareTest(declarerNumF, Config.Bid.BID_MISERE, talon);

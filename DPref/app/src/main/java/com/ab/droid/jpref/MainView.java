@@ -510,6 +510,9 @@ public class MainView extends View implements TableLayout.GUI {
     private void addWaitBar(Context context) {
         waitBar = new ProgressBar(context);
         waitBar.setVisibility(GONE);
+        // above the widgets' elevation, their zOrder, see _update(): a higher Z draws over a later child,
+        // the bidding buttons in the middle covered it
+        waitBar.setElevation(100);
         LayoutParams rlp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         rlp.addRule(RelativeLayout.CENTER_IN_PARENT);
         MainActivity.mainLayout.addView(waitBar, rlp);

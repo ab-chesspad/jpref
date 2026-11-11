@@ -7,6 +7,8 @@ import com.ab.util.Util;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
+import java.util.Random;
+
 public class BaseTest {
     protected static TestHost host;
     protected static TestConfig config;
@@ -18,6 +20,7 @@ public class BaseTest {
         host = new TestHost();
         config = new TestConfig(host);
         config.maxMoveTime.set(20);
+        config.stalingrad.set(false);
         util = new TestUtil(host);
     }
 
@@ -28,6 +31,9 @@ public class BaseTest {
         Bot.debugDrop = null;
         Bot.playerBid = null;
         Bot.declarerDrop = Bot.DeclarerDrop.First;      // тест results must not depend on chance
+        Bot.standingSeed = 1;
+        Bot.standingRandom = new Random(1);
+        Bot.standingTimeLimited = false;               // nor on the machine speed
     }
 
     public static class TestConfig extends Config {

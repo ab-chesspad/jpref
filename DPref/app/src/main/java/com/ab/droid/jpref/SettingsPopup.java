@@ -22,6 +22,7 @@ import com.ab.droid.jpref.config.DMetrics;
 import com.ab.droid.jpref.util.DUtil;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.config.I18n;
+import static com.ab.jpref.config.I18n.m;
 import com.ab.jpref.engine.GameManager;
 import com.ab.util.Logger;
 
@@ -113,14 +114,14 @@ public class SettingsPopup {
         LinearLayout buttonsPanel = new LinearLayout(host);
         buttonsPanel.setOrientation(LinearLayout.HORIZONTAL);
         buttonsPanel.setGravity(Gravity.CENTER);
-        okButton = styledButton(I18n.m(SAVE));
+        okButton = styledButton(m(SAVE));
         okButton.setOnClickListener(v -> save());
         okButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
         LinearLayout.LayoutParams okParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         okParams.rightMargin = fontSize / 3;
         buttonsPanel.addView(okButton, okParams);
-        cancelButton = styledButton(I18n.m(CANCEl));
+        cancelButton = styledButton(m(CANCEl));
         cancelButton.setOnClickListener(v -> cancel());
         cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
         buttonsPanel.addView(cancelButton, new LinearLayout.LayoutParams(
@@ -223,8 +224,8 @@ public class SettingsPopup {
         TextView labelView = new TextView(host);
         labelView.setTextSize(sectionFontSize);
         labelView.setTextColor(Color.BLACK);
-        labelView.setText(I18n.m(label));
-        labelRefreshers.add(() -> labelView.setText(I18n.m(label)));
+        labelView.setText(m(label));
+        labelRefreshers.add(() -> labelView.setText(m(label)));
 
         if (propValue instanceof Integer) {
             // like Swing: the number field followed by its label on one row, no header
@@ -327,8 +328,9 @@ public class SettingsPopup {
     // String.join() is API 26+ (minSdk is 23) - TextUtils.join() does the
     // same thing and has been available since API 1.
     private String localizeSelectionText(Object value) {
+        String text = value.toString().replace("_", " ");
         return I18n.m(TextUtils.join(" ",
-                value.toString().split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
+                text.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])")));
     }
 
     private View buildBooleanEditor(Config.Property<Boolean> property) {
@@ -336,8 +338,8 @@ public class SettingsPopup {
         CheckBox checkBox = new CheckBox(host);
         checkBox.setTextSize(sectionFontSize);
         checkBox.setTextColor(Color.BLACK);
-        checkBox.setText(I18n.m(label));
-        labelRefreshers.add(() -> checkBox.setText(I18n.m(label)));
+        checkBox.setText(m(label));
+        labelRefreshers.add(() -> checkBox.setText(m(label)));
         checkBox.setButtonDrawable(stateDrawable(checkBoxImage, checkBoxSelectedImage));
         checkBox.setChecked(property.get());
         commitActions.add(() -> property.set(checkBox.isChecked()));
@@ -390,8 +392,8 @@ public class SettingsPopup {
 
     private void onVisualPropertyChanged() {
         I18n.getInstance().refresh();
-        okButton.setText(I18n.m(SAVE));
-        cancelButton.setText(I18n.m(CANCEl));
+        okButton.setText(m(SAVE));
+        cancelButton.setText(m(CANCEl));
         for (Runnable refresher : labelRefreshers) {
             refresher.run();
         }

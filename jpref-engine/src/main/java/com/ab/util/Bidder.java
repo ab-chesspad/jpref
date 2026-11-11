@@ -154,6 +154,44 @@ public class Bidder {
     // called with:
     // 11 cards to guess max bid (getMaxPlayerBid), after human declarer's 1st move
     // 12 cards to define drops and declare round (getDrop)
+    // the 2 cards to drop from 12 for a game in trump, as searchBid() chooses them with the trump known;
+    // only cards of droppable, the ones not played yet; null without a trump or a drop that keeps one,
+    // elderHand relative to the declarer as in getBid(). The defenders' deals standing give the declarer
+    // this drop, not a random one: ♠JA ♣8XA ♦7X ♥789JA + ♥9 ♣X against 7♥ drops ♦7X, the ♣X
+    // taken from the talon stays, and ♣Q over it is no lead
+    public CardSet trumpDrops(CardSet hand, Suit trump, int elderHand, int droppable) {
+        if (trump == null || hand.size() != ROUND_SIZE + 2) {
+            return null;
+        }
+        int bitmap = hand.getBitmap();
+        Candidate best = null;
+        int bit0 = 0;
+        int allowed = bitmap & droppable;
+        while ((bit0 = CardSet.next(allowed, bit0)) != 0) {
+            int bit1 = bit0;
+            while ((bit1 = CardSet.next(allowed, bit1)) != 0) {
+                int drops = bit0 | bit1;
+                int dropSuitLengths = 0;
+                int bit = 0;
+                while ((bit = CardSet.next(drops, bit)) != 0) {
+                    CardSet suitCards = hand.list(Card.get(bit).getSuit());
+                    if (suitCards.last().getRank().compare(Rank.JACK) >= 0) {
+                        dropSuitLengths += suitCards.size();
+                    }
+                }
+                CardSet rest = new CardSet(bitmap & ~drops);
+                List<SuitTricks> pairs = toSuitChunks(rest);
+                for (SuitTricks pair : pairs) {
+                    if (pair.suit == trump) {
+                        best = evalContract(rest, pairs, drops, dropSuitLengths, pair, trump.getValue() + 1,
+                            false, Bid.BID_6S, elderHand, best);
+                    }
+                }
+            }
+        }
+        return best == null ? null : new CardSet(best.drops);
+    }
+
     public PlayerBid getBid(CardSet hand, Bid minBid, int elderHand, int nDrops) {
         PlayerBid playerBid;
         Card added = null;
@@ -258,7 +296,7 @@ public class Bidder {
     // try every drop and every denomination, the max bid in suit order wins:
     // ♠ < ♣ < ♦ < ♥ < no trump; tricks are counted with the suit table,
     // the trump suit as if on lead; no trump only with enough cushions in all suits
-    PlayerBid searchBid(CardSet hand, Bid minBid, int elderHand) {
+    public PlayerBid searchBid(CardSet hand, Bid minBid, int elderHand) {
         int bitmap = hand.getBitmap();
         // from the hand before drops, a drop must not dodge it
         Suit notTrump = getNotTrump(toSuitChunks(hand), elderHand);
@@ -277,6 +315,7 @@ public class Bidder {
 
         PlayerBid playerBid = new PlayerBid();
         playerBid.drops = new CardSet(best.drops);
+        playerBid.tricks = best.value / 10;
         if (best.shortfall == 0) {
             playerBid.value = best.value;
         } else if (hand.size() < 12) {
@@ -446,6 +485,15 @@ public class Bidder {
             }
             if (kept >= 3) {
                 c.longSide = Math.max(c.longSide, kept);
+            }
+            if (suitNum != 5) {
+                int top = Rank.ACE.getValue();
+                int bit = 0;
+                int bits = rest.list(suit).getBitmap();
+                while ((bit = CardSet.prev(bits, bit)) != 0 && Card.get(bit).getRank().getValue() == top) {
+                    ++c.topSideTricks;
+                    --top;
+                }
             }
             CardSet suitDropped = dropped.list(suit);
             if (suitNum != 5 && kept == 1 && suitDropped.size() == 1) {
@@ -682,6 +730,9 @@ public class Bidder {
         // drops from side suits: from 4 or 3 drop from 3, from 3 and 3 both from
         // one suit - keep the longest 3+ card side suit
         int longSide;
+        // trump contract: side cards from the ace down, sure tricks; a long side suit's last card needs
+        // the defenders' cards to fall: ♠9QKA ♣KA ♦7 ♥79XJQ 8♥ drops ♠9 ♦7, ♣K takes a trick, ♠9 not with ♠J 4 - 0
+        int topSideTricks;
         // the same tricks: sure ones, not the ones that need more moves than they take,
         // ♠79XJ ♣XJQKA ♥JKA, 7♣ on lead: ♣ and ♥AK are 7 sure tricks, ♠79XJ (1 for 3 moves) may give none
         int unsureTricks;
@@ -747,6 +798,9 @@ public class Bidder {
             }
             if (Math.abs(extraChance - that.extraChance) > 1e-9) {
                 return (extraChance > that.extraChance) ? 1 : -1;
+            }
+            if (topSideTricks != that.topSideTricks) {
+                return (topSideTricks > that.topSideTricks) ? 1 : -1;
             }
             // the same tricks: keep the long side suit, drop a short one whole, ♠A ♣QK ♦89XJA ♥8XJK
             // 6♦ at elderhand 1: ♣QK, not ♥8X - ♥8XJK takes 2 tricks when the ♥ split 2 - 2, ♣ is ruffed
@@ -820,6 +874,7 @@ public class Bidder {
     public static class PlayerBid implements Serializable {
         public CardSet drops = new CardSet();
         public int value;
+        public int tricks;      // searchBid(): the expected tricks of the chosen contract
 
         public PlayerBid() {}
 

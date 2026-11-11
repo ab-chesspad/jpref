@@ -19,14 +19,10 @@
  */
 package com.ab.droid.jpref.config;
 
-import com.ab.droid.jpref.util.DUtil;
 import com.ab.jpref.config.Config;
 import com.ab.jpref.ui.Host;
-import com.ab.util.Couple;
 
 import android.graphics.Color;
-
-import java.util.Locale;
 
 public class DConfig extends Config {
     // update serialVersionUID every time a property is being added/changed!
@@ -36,17 +32,6 @@ public class DConfig extends Config {
 
     public DConfig(Host host) {
         super(host);
-        Locale locale = Locale.getDefault();
-        String lang = locale.getLanguage();
-        int defaultLang = 0;
-        for (int i = 0; i < this.language.get().values.length; ++i) {
-            Couple<String> couple = this.language.get().values[i];
-            if (lang.equals(couple.second)) {
-                defaultLang = i;
-                break;
-            }
-        }
-        this.language.get().setSelected(defaultLang);
     }
 
     public DConfig refresh() {
